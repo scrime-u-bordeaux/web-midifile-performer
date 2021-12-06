@@ -4,7 +4,6 @@
 
 This is a minimal website about Jean Haury's MetaPiano and the Midifile
 Performer software.
-
 It also includes a simplified JavaScript version of Midifile Performer which is
 playable in the browser.
 
@@ -14,12 +13,10 @@ The website is a SPA (single page application) mostly written with VueJS and bun
 with Webpack.
 
 To develop, run `npm run dev` :
-
 This will launch a local server that will hot-reload your page on any change
 during development.
 
 To build, run `npm run build` :
-
 This will result in the creation of a `dist` folder which will contain an
 `index.html` and all the necessary resources, on which you can run any static
 http server.
