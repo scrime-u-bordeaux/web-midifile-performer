@@ -1,5 +1,9 @@
-# MIDI file performer
-### website and online version
+# Midifile Performer
 
-## TODO
-* Integrate [guido](https://guido.grame.fr/jsdoc/) for score follower display
+### website and online application
+
+This is a minimal website about Jean Haury's MetaPiano and the Midifile
+Performer software.
+
+It also includes a simplified JavaScript version of Midifile Performer which is
+playable in the browser.
