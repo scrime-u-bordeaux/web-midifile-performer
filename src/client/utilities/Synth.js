@@ -53,7 +53,10 @@ class Synth {
       const { buffer, player, playing } = note;
       
       if (playing) {
-        player.volume.gain.setValueAtTime(0, this.ctx.currentTime + this.releaseTime);
+        player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
+        const val = player.volume.gain.value;
+        player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
+        player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
       }
       
       note.player = this.makePlayer(buffer);
@@ -86,7 +89,10 @@ class Synth {
       const { buffer, player, playing } = note;
 
       if (playing) {
-        player.volume.gain.setValueAtTime(0, this.ctx.currentTime + this.releaseTime);
+        player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
+        const val = player.volume.gain.value;
+        player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
+        player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
         note.playing = false;
       }
     }
@@ -109,7 +115,6 @@ class Synth {
     source.buffer = buffer;
     source.connect(biquad);
     
-      
     biquad.type = 'lowpass';
     biquad.Q.value = 0;
     biquad.frequency.value = 20000;
