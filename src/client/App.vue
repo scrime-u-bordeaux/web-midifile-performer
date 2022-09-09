@@ -13,17 +13,18 @@
 </template>
 
 <script>
-import { mapState, mapMutations }   from 'vuex';
-import { parseArrayBuffer }         from 'midi-json-parser';
+import { mapState, mapMutations, mapActions }   from 'vuex';
+// import { parseArrayBuffer }         from 'midi-json-parser';
 import { encode }                   from 'json-midi-encoder';
-import MidiPlayer                   from 'midi-player-js';
+// import MidiPlayer                   from 'midi-player-js';
+// import MidifilePerformer from './utilities/MidifilePerformer';
 import LeMenu                       from './components/LeMenu.vue';
 import PopUp                        from './components/PopUp.vue';
 import Guide                        from './pages/Guide.vue';
 import LookForScores                from './pages/LookForScores.vue';
 
 export default {
-  inject: [ 'performer', 'synth' ], // get instance vars (set with provide())
+  inject: [ 'ioctl', 'performer', 'synth' ], // get instance vars (set with provide())
   components: { LeMenu, PopUp, Guide, LookForScores },
   data() {
     return {
@@ -42,28 +43,57 @@ export default {
   },
   methods: {
     ...mapMutations([
+      'setInputs',
+      'setOutputs',
+      'setCurrentInputId',
+      'setCurrentOutputId',
       // 'setKeyboardState',
       'noteOn',
       'noteOff',
+      'allNotesOff',
       'setSequenceLength',
       'setSequenceStart',
       'setSequenceEnd',
       'setSequenceIndex',
-      'setMidiBuffer',
     ]),
-    onKeyDown(e) {
-      this.performer.keyDown(e);
+    onInputsChanged(inputs) {
+      this.setInputs(inputs);
     },
-    onKeyUp(e) {
-      this.performer.keyUp(e);
+    onOutputsChanged(outputs) {
+      this.setOutputs(outputs);
+    },
+    onCurrentInputIdChanged(id) {
+      //this.ioctl.allNotesOff();
+      this.setCurrentInputId(id);
+    },
+    onCurrentOutputIdChanged(id) {
+      //this.ioctl.allNotesOff();
+      this.setCurrentOutputId(id);
+    },
+    // THIS IS WHERE WE ACTUALLY USE THE MIDIFILE PERFORMER STUFF :
+    onCommand(cmd) {
+      // const noteEvents = this.performer.command(cmd);
+      this.performer.command(cmd);
+      // this.ioctl.noteEvents(noteEvents);
     },
     onNoteOn(note) {
-      this.synth.noteOn(note);
+      //this.synth.noteOn(note);
       this.noteOn(note); // update keyboard state
+      const { noteNumber, velocity, channel } = note;
+      this.ioctl.noteEvents([
+        { on: true, pitch: noteNumber, velocity, channel }
+      ]);
     },
     onNoteOff(note) {
-      this.synth.noteOff(note);
+      //this.synth.noteOff(note);
       this.noteOff(note); // update keyboard state
+      const { noteNumber, velocity, channel } = note;
+      this.ioctl.noteEvents([
+        { on: false, pitch: noteNumber, velocity, channel }
+      ]);
+    },
+    onAllNotesOff() {
+      this.allNotesOff(); // update keyboard state
     },
     onSequenceChanged(sequenceData) {
       const { length, start, end } = sequenceData;
@@ -72,6 +102,7 @@ export default {
       this.setSequenceEnd(end);
     },
     onSequenceIndex(index) {
+      // console.log('calling setSequenceIndex(' + index + ')');
       this.setSequenceIndex(index);
     },
     async onUserClick(e) {
@@ -88,13 +119,29 @@ export default {
     },
   },
   async created() {
+    // await this.$store.dispatch('loadMidiBuffers');
+    // await this.performer.initialize();
+
     document.addEventListener('click', this.onUserClick);
-    document.addEventListener('keydown', this.onKeyDown);
-    document.addEventListener('keyup', this.onKeyUp);
     this.performer.addListener('noteon', this.onNoteOn);
     this.performer.addListener('noteoff', this.onNoteOff);
+    this.performer.addListener('allnotesoff', () => {
+      this.ioctl.allNotesOff();
+      this.allNotesOff();
+    });
     this.performer.addListener('sequence', this.onSequenceChanged);
     this.performer.addListener('index', this.onSequenceIndex);
+    // this.performer.addListener('start', this.onSequenceStart);
+    // this.performer.addListener('end', this.onSequenceEnd);
+
+    this.ioctl.setInternalSampler(this.synth);
+    this.ioctl.addListener('inputs', this.onInputsChanged);
+    this.ioctl.addListener('outputs', this.onOutputsChanged);
+    this.ioctl.addListener('currentInputId', this.onCurrentInputIdChanged);
+    this.ioctl.addListener('currentOutputId', this.onCurrentOutputIdChanged);
+    this.ioctl.addListener('command', this.onCommand);
+    this.ioctl.addListener('allnotesoff', this.allNotesOff);
+    this.ioctl.updateInputsAndOutputs();
 
     // navigator.requestMIDIAccess() not supported in FF :(
     // => must implement own General MIDI-like piano synth (see Synth class)
@@ -140,6 +187,7 @@ export default {
 
     /////////// GENERATE MIDI FILES :
 
+    /*
     const track = [];
 
     for (let i = 0; i < 12; ++i) {
@@ -174,6 +222,8 @@ export default {
     };
 
     const arrayBuffer = await encode(json);
+    // now find a way to propose a download to the user
+    //*
 
     // midiPlayer.loadArrayBuffer(arrayBuffer);
     //midiPlayer.play();
@@ -193,8 +243,8 @@ export default {
     .then(res => res.json())
     .then(res => console.log(res));
     //*/
-  },
-  async mounted() {
+  // },
+  // async mounted() {
     const midifiles = [
       {
         id: 'bach-c-prelude-the-well-tempered-clavier',
@@ -213,27 +263,27 @@ export default {
       },
     ];
 
+    /*
     const promises = [];
     midifiles.forEach(file => {
+      // const { id, title, url } = file;
       promises.push(new Promise((resolve, reject) => {
         fetch(file.url)
         .then(res => res.arrayBuffer())
         .then(buffer => {
-          // const { id, title, url } = file;
           this.setMidiBuffer({ ...file, buffer });
-          resolve();
+          resolve({ ...file, buffer });
         });
       }));
     });
+    //*/
 
-    // await this.synth.loadSounds();
-    const mididata = await Promise.all(promises);
-    // await this.performer.loadArrayBuffer(mididata[0].buffer);
-    // this.performer.setSequenceBounds([ 0, 63 ]);
+    // const mididata = await Promise.all(promises);
+    // console.log(mididata);
   },
   beforeUnmount() {
-    document.removeEventListener('keydown', this.onKeyDown);
-    document.removeEventListener('keyup', this.onKeyUp);
+    // document.removeEventListener('keydown', this.onKeyDown);
+    // document.removeEventListener('keyup', this.onKeyUp);
     this.performer.removeListener('noteon', this.onNoteOn);
     this.performer.removeListener('noteoff', this.onNoteOff);
     this.performer.removeListener('sequence', this.onPerformerBufferChanged);
