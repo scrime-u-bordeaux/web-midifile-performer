@@ -1,13 +1,16 @@
 <template>
   <div style="text-align: center;">
 
+    <IOManager
+      class="manager"/>
+
     <div class="file-input-wrapper">
     <div class="file-input">
-      <input type="file" id="file" class="file" @change="onFileInput"/>
+      <input type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
       <label for="file">
         Charger un fichier MIDI
       </label>
-      <div class="file-name">{{ fileName }}</div>
+      <div class="file-name">{{ mfpMidiFile.title }}</div>
       <div class="search-score-hint">
         Vous n'avez pas de partitions ? Trouvez-en de nouvelles
         <span class="link" @click="$router.push('/look-for-scores')">
@@ -16,7 +19,7 @@
       </div>
     </div>
     </div>
-
+    
     <Keyboard
       class="keyboard"
       :minNote="minKeyboardNote"
@@ -29,7 +32,10 @@
       :start="sequenceStart"
       :end="sequenceEnd"
       :index="sequenceIndex"
-      @index="onIndexChange"/>
+      :size="sequenceLength"
+      @index="onIndexChange"
+      @start="onStartChange"
+      @end="onEndChange"/>
 
     <div>
       <button
@@ -61,6 +67,12 @@
 </template>
 
 <style scoped>
+.manager {
+  display: inline-block;
+  width: 100%;
+  max-width: var(--score-width);
+  text-align: left;
+}
 .file-input-wrapper {
   max-width: var(--score-width);
   margin: 0 auto;
@@ -89,7 +101,8 @@ span.link {
 </style>
 
 <script>
-import { mapState } from 'vuex';
+import { mapMutations, mapState } from 'vuex';
+import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 
@@ -97,7 +110,7 @@ const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'performer' ],
-  components: { Keyboard, ScrollBar },
+  components: { IOManager, Keyboard, ScrollBar },
   data() {
     return {
       currentMode: 'silent',
@@ -107,15 +120,31 @@ export default {
   },
   computed: {
     ...mapState([
+      'mfpMidiFile',
       'minKeyboardNote',
       'maxKeyboardNote',
       'keyboardState',
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
+      'sequenceLength',
     ]),
   },
+  async mounted() {
+    this.performer.clear();
+
+    if (this.mfpMidiFile.buffer !== null) {
+      console.log('buffer already full');
+      await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer);
+    } else {
+      console.log('wtf ? no buffer ?');
+    }
+
+  },
   methods: {
+    ...mapMutations([
+      'setMfpMidiFile',
+    ]), 
     async onFileInput(e) {
       return new Promise((resolve, reject) => {
         const file = e.target.files[0];
@@ -126,29 +155,48 @@ export default {
 
         reader.addEventListener('loadend', async e => {
           if (e.target.readyState === FileReader.DONE) {
-            await this.performer.loadArrayBuffer(e.target.result);
-            this.currentMode = 'silent';
-            this.performer.setMode(this.currentMode);
-            this.performer.setSequenceIndex(0);
+            const mfpFile = {
+              id: 'mfp',
+              title: file.name,
+              url: '',
+              buffer: e.target.result,
+            };
+            console.log(mfpFile);
+            this.setMfpMidiFile(mfpFile);
+            await this.loadMfpMidiBuffer(mfpFile.buffer);
             resolve();
           }
         });
         reader.readAsArrayBuffer(file);
       });
     },
+    async loadMfpMidiBuffer(buffer) {
+      await this.performer.loadArrayBuffer(buffer);
+      this.currentMode = 'silent';
+      this.performer.setMode(this.currentMode);
+      this.performer.setSequenceIndex(0);
+    },
+    onStartChange(i) {
+      this.performer.setSequenceBounds(i, this.sequenceEnd);
+    },
     onIndexChange(i) {
       // scrollbar callback, i is chordSequence index
-      // do something with i like display a cursor at the right position
+      // do something with it like display a cursor at the right position
+      console.log('new index : ' + i);
+      this.performer.setSequenceIndex(i);
+    },
+    onEndChange(i) {
+      this.performer.setSequenceBounds(this.sequenceStart, i);
     },
     onClickListen() {
       this.currentMode = this.currentMode === 'silent' ? 'listen' : 'silent';
       this.performer.setMode(this.currentMode);
-      this.performer.setSequenceIndex(0);
+      //this.performer.setSequenceIndex(0);
     },
     onClickPerform() {
       this.currentMode = this.currentMode === 'silent' ? 'perform' : 'silent';
       this.performer.setMode(this.currentMode);
-      this.performer.setSequenceIndex(0);
+      // this.performer.setSequenceIndex(0);
     },
   }
 };
