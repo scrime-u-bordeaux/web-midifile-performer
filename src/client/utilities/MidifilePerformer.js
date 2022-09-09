@@ -1,235 +1,304 @@
-import EventEmitter           from 'events';
-import { parseArrayBuffer }   from 'midi-json-parser';
-import { encode }             from 'json-midi-encoder';
-import MidiPlayer             from 'midi-player-js';
+import EventEmitter         from 'events';
+import { parseArrayBuffer } from 'midi-json-parser';
+import { encode }           from 'json-midi-encoder';
+import MidiPlayer           from 'midi-player-js';
+import Performer            from 'midifile-performer';
 
-const alphabet = ' abcdefghijklmnopqrstuvwxyz';
+const chordDeltaMsDateThreshold = 20;
 
-// todo : improve this by allowing threshold in ms
-// according to midi file bpm and resolution data
-const chordDeltaDateThreshold = 1;
+// typedefs ////////////////////////////////////////////////////////////////////
 
-// async function midiArrayBufferToChordSequence(buffer) {
+/**
+ * @typedef midiEvent - An object with at least a delta field representing a MIDI event
+ * @type {object}
+ * @property {number} delta - Delta time with the previous event in ticks
+ * 
+ * @typedef midiJson - 
+ * @type {object}
+ * @property {number} division - PPQ (ticks per quarter) of the MIDI file
+ * @property {number} type - MIDI file type : 0, 1 or 2
+ * @property {midiEvent[][]} tracks - An array of arrays of {@link midiEvent} objects
+ */
+
+// parsing /////////////////////////////////////////////////////////////////////
+
+/**
+ * We make a copy of the buffer argument to prevent modifications, and we parse
+ * the copy with parseArrayBuffer (which will leave the copy in a transferred
+ * and detached state)
+ * @param buffer - A MIDI ArrayBuffer
+ * @returns {midiJson} a {@link midiJson} object
+ */
+
 async function parseMidiArrayBuffer(buffer) {
-  const allNoteOnEvents = [];
-
-  // we need to copy because the array buffer will be transfered and detached
-  // by parseArrayBuffer
   const bufferCopy = new ArrayBuffer(buffer.byteLength);
   new Uint8Array(bufferCopy).set(new Uint8Array(buffer));
 
   const json = await parseArrayBuffer(bufferCopy);
-  const { division, format, tracks } = json;
-  console.log({ division, format });
+  return Promise.resolve(json);
+}
 
-  // append all tracks note on events in a single array
+// converting delta times from ticks to (tempo-inferred) milliseconds //////////
+
+/**
+ * We want to compute the absolute date or global delta time in milliseconds
+ * for all events in a SMF (Standard MIDI File)
+ * 
+ * This is required to provide a correct dt value when calling
+ * performer.pushEvent(dt, noteData) and to enable playback of the chronology.
+ * 
+ * A SMF provides a division and a tempo parameter.
+ * - Assuming the division is in PPQ (not frames per second) unit,
+ *   it represents the number of pulses/ticks per quarter/beat.
+ * - The tempo represents the number of microseconds per quarter/beat, has a
+ *   default value of 500000, and can vary over time when setTempo events
+ *   occur.
+ * 
+ * In short : current tick duration in microseconds = current tempo / division
+ * 
+ * NB : the time signature of the file, and eventual further time signature
+ * events in the file, are not involved in computing a tick's duration (right ?) 
+ * see : https://www.recordingblogs.com/wiki/time-division-of-a-midi-file
+ * 
+ * Problem :
+ * Many SMFs have several tracks, and the delta times of all the events in a
+ * track follow their own timeline, specific to this track.
+ * Plus we have to take setTempo events into account, which make the
+ * duration of a tick vary over time, and can occur anytime in any track.
+ * 
+ * Solution :
+ * - compute the absolute date in ticks for each event of interest (setTempo,
+ *   noteOn and noteOff), in each track.
+ * - sort all these events by absolute date in ticks.
+ * - iterate over the sorted events to reconstruct tempo-independent delta times
+ *   in whatever unit (us, ms, ...)
+ * 
+ * NB : only format 1 files will work for now because events of different tracks
+ * are merged as if they were simultaneous. Handling format 2 would require to
+ * modify the mergeTracks function a little bit : accumulate all deltas instead
+ * of resetting them to zero on each track
+ */
+function mergeTracks({ division, format, tracks }) {
+  const defaultMicroSecondsPerQuarter = 500000;
+  const defaultTickDuration = Math.floor(
+    defaultMicroSecondsPerQuarter / division
+  );
+
+  const allEvents = [];
+
   tracks.forEach((track, i) => {
-    let date = 0;
+    let tickDate = 0;
 
     track.forEach(obj => {
-      date += obj.delta;
-
-      // if (!(obj.hasOwnProperty('noteOn') || obj.hasOwnProperty('noteOff'))) {
-      //   console.log(obj);
-      // }
+      tickDate += obj.delta;
 
       if (obj.hasOwnProperty('setTempo')) {
-        console.log(obj);
-        const { delta, setTempo } = obj;
-        const { microsecondsPerQuarter } = setTempo;
-      }
-
-      if (obj.hasOwnProperty('timeSignature')) {
-        console.log(obj);
-        const { delta, timeSignature } = obj;
-        const {
-          numerator,
-          denominator,
-          metronome,
-          thirtyseconds
-        } = timeSignature;
-      }
-
-      if (obj.hasOwnProperty('noteOn')) {
+        const { microsecondsPerQuarter } = obj.setTempo;
+        const tickDuration = Math.floor(microsecondsPerQuarter / division);
+        allEvents.push({
+          tickDate, type: 'tempo',
+          tickDuration
+        });
+      } else if (obj.hasOwnProperty('noteOn')) {
         const { channel, noteOn } = obj;
         const { noteNumber, velocity } = noteOn;
-        allNoteOnEvents.push({ date, track: i, channel, noteNumber, velocity });
+        allEvents.push({
+          tickDate, type: 'note',
+          on: velocity > 0, track: i, channel, noteNumber, velocity
+        });
+      } else if (obj.hasOwnProperty('noteOff')) {
+        const { channel, noteOff } = obj;
+        const { noteNumber, velocity } = noteOff;
+        allEvents.push({
+          tickDate, type: 'note',
+          on: false, track: i, channel, noteNumber, velocity
+        });
       }
-    });
-  });
+      
+      // if (
+      //   !obj.hasOwnProperty('controlChange') &&
+      //   !obj.hasOwnProperty('noteOn') &&
+      //   !obj.hasOwnProperty('noteOff')
+      // ) {
+      //   console.log(obj);
+      // }
+    }); // track
+  }); // tracks
 
-  // sort the array so that all note on events from all tracks are merged
-  allNoteOnEvents.sort((a,b) => {
-    if (a.date < b.date) return -1;
-    if (a.date > b.date) return 1;
+  allEvents.sort((a, b) => {
+    if (a.tickDate < b.tickDate) return -1;
+    
+    if (a.tickDate > b.tickDate) return 1;
+    
+    if (a.tickDate === b.tickDate) { // make sure tempo events always come first
+      if (a.type === 'tempo' && !b.type === 'tempo') return -1;
+      if (!a.type === 'tempo' && b.type === 'tempo') return 1;
+    }
+
     return 0;
   });
 
-  const sequenceIndices = [];
+  const allNoteEvents = [];
 
-  // reduce to an array of single notes or chords (notes gathered by same date)
-  // and create array of sequence indices from inside reduction function
-  const chordSequence = allNoteOnEvents
-  .map((e, index) => {
-    return { ...e, index };
-  })
-  .reduce((prev, current, i, arr) => {
-    const res = prev;
+  // in case there is no tempo definition in the file
+  let tickDuration = defaultTickDuration;
+  let prevTickDate = 0;
+  let msDate = 0;
+  let prevMsDate = 0; 
+  
+  allEvents.forEach((e, i) => {
+    // reconstruct delta times in ticks and convert them to milliseconds :
+    // (tick dates and tickDuration are guaranteed to be integers)
+    const msDelta = (e.tickDate - prevTickDate) * tickDuration * 0.001;
+    msDate += msDelta;
 
-    // if (res.length > 0 && arr[i].date - arr[i - 1].date < chordDeltaDateThreshold) {
-    if (res.length > 0 && arr[i].date === arr[i - 1].date) {
-      res[res.length - 1].push(current);
-    } else {
-      res.push([current]);
+    switch (e.type) {
+      case 'note':
+        const { type, tickDate, ...allOthers } = e;
+        allNoteEvents.push({ delta: msDate - prevMsDate, ...allOthers });
+        prevMsDate = msDate;
+        break;
+      case 'tempo':
+        // we don't update prevMsDate so that delta times are only computed
+        // for note events
+        tickDuration = e.tickDuration;
+        break;
+      default:
+        break;
     }
 
-    sequenceIndices.push(res.length - 1);
-    return res;
-  }, []);
+    prevTickDate = e.tickDate;
+  });
 
-  return {
-    chordSequence,
-    sequenceIndices,
-  };
+  return allNoteEvents;
+}
+
+/**
+ * Another utility : generate midi note events from a vector of noteData.
+ * Used by MidifilePerformer.loadArrayBuffer when setting up the note events
+ * callback : this.performer.setNoteEventsCallback(() => { ... });
+ */
+function noteEventsFromNoteDataVector(notes) {
+  const res = [];
+  for (let i = 0; i < notes.size(); ++i) {
+    const e = notes.get(i);
+    const { on, pitch, velocity, channel } = e;
+    res.push({
+      event: on ? 'noteon' : 'noteoff',
+      data: { noteNumber: pitch, velocity, channel }
+    });
+  }
+  return res;
 }
 
 /* * * * * * * * * * * * MIDI FILE PERFORMER PLAYER CLASS * * * * * * * * * * */
 
-/*
-loadArrayBuffer(buffer)
-setMode(mode) // 'silent', 'listen' or 'perform'
-keyDown(e)
-keyUp(e)
-//*/
-
 class MidifilePerformer extends EventEmitter {
   constructor() {
     super();
-    this.chordSequence = [];
-    this.sequenceIndices = [];
+    this.performer = null;
+
+    this.index = 0;
     this.sequenceStartIndex = 0;
     this.sequenceEndIndex = 0;
-    this.index = 0;
-
-    this.noteKeys = new Array(128).map(() => null);
-    this.activeNotesByKey = new Map();
 
     this.mode = 'silent'; // could be 'listen' or 'perform'
-    
-    this.playerSpeed = 1;
-    this.player = new MidiPlayer.Player();
-    this.noteOnIndex = 0;
+  }
 
-    this.player.on('midiEvent', e => {
-      if (e.name === 'Note on' ||
-          e.name === 'Note off') {
+  async initialize() {
+    this.mfp = await Performer();
 
-        const { noteNumber, velocity } = e;
-
-        if (e.name === 'Note on' && velocity > 0) {
-          const index = this.getSequenceIndex(this.noteOnIndex++);
-
-          if (index > this.sequenceEndIndex) {
-            this.player.stop();
-            this.allNotesOff();
-            return;
-          }
-
-          this.emit('noteon', { noteNumber, velocity });
-          this.emit('index', index);          
-        } else {
-          this.emit('noteoff', { noteNumber, velocity });
-        }
-      } else if (e.name === 'Set Tempo') {
-        // always multiply current tempo by a speed factor :
-        // this.player.setTempo(e.data * this.playerSpeed);
-      }
+    this.performer = new this.mfp.Performer({
+      unmeet: true,
+      complete: false,
+      shiftMode: this.mfp.shiftMode.pitchAndChannel,
+      temporalResolution: chordDeltaMsDateThreshold,
     });
+    this.performer.setChordVelocityMappingStrategy(
+      this.mfp.chordStrategy.none,
+      // this.mfp.chordStrategy.clippedScaledFromMax,
+    );
+    this.performer.setLooping(true);
   }
 
   async loadArrayBuffer(buffer) {
-    this.index = 0;
-    this.player.stop();
-    this.allNotesOff();
-    this.player.loadArrayBuffer(buffer);
-    // this.chordSequence = await midiArrayBufferToChordSequence(buffer);
-    const {
-      chordSequence,
-      sequenceIndices
-    } = await parseMidiArrayBuffer(buffer);
+    // this.emit('allnotesoff');
+    const midiJson = await parseMidiArrayBuffer(buffer);
+    const allNoteEvents = mergeTracks(midiJson);
 
-    this.chordSequence = chordSequence;
-    this.sequenceIndices = sequenceIndices;
-    this.sequenceStartIndex = 0;
-    this.sequenceEndIndex = Math.max(chordSequence.length - 1, 0);
+    // FEED THE PERFORMER //////////////////////////////////////////////////////
 
-    //this.emit('loaded');
+    this.performer.clear();
+    
+    // we only manipulate channels between 1 and 16
+    // we set them directly here when parsing the MIDI file and we set them
+    // back to between 0 to 15 just before sending the MIDI events out in
+    // IOController.js
+    allNoteEvents.forEach(e => {
+      const { delta, on, noteNumber, velocity, channel } = e;
+      console.log(delta);
+      this.performer.pushEvent(delta, {
+        on,
+        pitch: noteNumber,
+        velocity,
+        channel: channel + 1,
+      });
+    });
+
+    this.performer.finalize();
+
+    this.performer.setNoteEventsCallback(notes => {
+      const events = noteEventsFromNoteDataVector(notes);
+      events.forEach(({ event, data }) => {
+        this.emit(event, data);
+      });
+    });
+
+    this.performer.setLoopIndices(0, this.performer.size() - 1);
+    this.sequenceStartIndex = this.performer.getLoopStartIndex();
+    this.sequenceEndIndex = this.performer.getLoopEndIndex();
+    // this.performer.setCurrentIndex(0);
+    this.setSequenceIndex(0);
+
+    // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////
+
     this.emit('sequence', {
-      length: this.chordSequence.length,
+      length: this.performer.size(),
       start: this.sequenceStartIndex,
       end: this.sequenceEndIndex,
     });
   }
 
   clear() {
-    this.chordSequence = [];
-    this.sequenceIndices = [];
-    this.sequenceStartIndex = 0;
-    this.sequenceEndIndex = 0;
-
-    this.emit('sequence', {
-      length: this.chordSequence.length,
-      start: this.sequenceStartIndex,
-      end: this.sequenceEndIndex,
-    });
-  }
-
-  // really need this ?
-  // we should instead call play each time we want to restart,
-
-  reset() {
-    this.index = this.sequenceStartIndex;
+    this.performer.clear();
+    this.emit('sequence', { length: 0, start: 0, end: 0 });
   }
 
   setSequenceIndex(sequenceIndex) {
-    const index = Math.max(Math.min(sequenceIndex, this.sequenceEndIndex), this.sequenceStartIndex);
-    this.index = index;
-    this.noteOnIndex = this.getNoteOnIndex(index);
+    // const index = Math.max(Math.min(sequenceIndex, this.sequenceEndIndex), this.sequenceStartIndex);
+    // this.index = index;
+    // this.performer.setCurrentIndex(this.index);
+    // this.emit('index', this.index);
+
+    this.index = this.performer.setCurrentIndex(sequenceIndex);
     this.emit('index', this.index);
   }
 
-  setSequenceBounds([ min, max ]) {
-    const clipBounds = (v, min, max) => Math.min(Math.max(v, min), max);
-
-    const tmp = max;
-    if (min > max) {
-      max = min;
-      min = tmp;
-    }
-
-    this.sequenceStartIndex = clipBounds(min, 0, this.chordSequence.length - 1);
-    this.sequenceEndIndex = clipBounds(max, 0, this.chordSequence.length - 1);
-    this.index = clipBounds(this.index, min, max);
+  setSequenceBounds(min, max) {
+    this.performer.setLoopIndices(min, max);
+    this.index = this.performer.getCurrentIndex();
 
     this.emit('sequence', {
-      length: this.chordSequence.length,
-      start: this.sequenceStartIndex,
-      end: this.sequenceEndIndex,
+      length: this.performer.size(),
+      start: this.performer.getLoopStartIndex(),
+      end: this.performer.getLoopEndIndex(),
     });
 
     this.emit('index', this.index);
   }
 
-  getSequenceIndex(noteOnIndex) {
-    return this.sequenceIndices[noteOnIndex];
-  }
-
-  getNoteOnTickDate(sequenceIndex) {
-    return this.chordSequence[sequenceIndex][0].date;
-  }
-
-  getNoteOnIndex(sequenceIndex) {
-    return this.chordSequence[sequenceIndex][0].index;
+  setLooping(l) {
+    this.performer.setLooping(l);
   }
 
   setMode(mode) {
@@ -237,78 +306,116 @@ class MidifilePerformer extends EventEmitter {
     this.mode = mode;
 
     if (this.mode === 'listen') {
-      // we might still have a buffer in the player but we don't want to play it
-      if (this.chordSequence.length === 0) return;
+      this.performer.setChordVelocityMappingStrategy(
+        this.mfp.chordStrategy.none
+      );
 
-      this.noteOnIndex = this.getNoteOnIndex(this.sequenceStartIndex);
-      this.player.skipToTick(this.getNoteOnTickDate(this.sequenceStartIndex));
-      this.player.play();
-    } else {
-      this.player.stop();
+      if (!this.performer.stopped()) {
+        this.performer.stop();
+      }
+      this.setSequenceIndex(this.performer.getCurrentIndex());
+
+      // if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
+      //   this.setSequenceIndex(this.performer.getCurrentIndex());
+      // } else {
+      //   this.performer.stop();
+      // }
+
+      let pair;
+      const playNextSet = (start, first) => {
+        let dt = 0;
+        if (start) {
+          pair = this.performer.peekNextSetPair();
+          dt = pair.start.dt;
+          // const nextIndex = this.performer.getNextIndex();
+          // if (nextIndex === this.performer.getLoopStartIndex()) { /* ... */ }
+          // if (nextIndex === this.performer.getLoopEndIndex()) { /* ... */ }
+        } else  {
+          dt = pair.end.dt;
+        }
+
+        dt = first ? 0 : dt;
+        
+        if (this.performer.stopped()) return;
+
+        this.timeout = setTimeout(() => {
+          this.performer.render({
+            pressed: start,
+            id: 1,
+            velocity: (start ? 127 : 0),
+            channel: 1
+          });
+
+          if (start) this.emit('index', this.performer.getCurrentIndex());
+
+          playNextSet(!start, false);
+        }, dt);
+      }
+
+      playNextSet(true, true);
     }
 
     if (this.mode === 'perform') {
-      this.setSequenceIndex(0);
+      this.performer.setChordVelocityMappingStrategy(
+        this.mfp.chordStrategy.clippedScaledFromMax
+      );
+
+      this.performer.stop();
+      if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
+        this.setSequenceIndex(this.performer.getCurrentIndex());
+      }
+
+      // this.setSequenceIndex(0);
+      // this.emit('index', this.performer.getCurrentIndex());
+      // console.log(this.performer.getCurrentIndex());
       // todo : start recording events automatically
     }
 
     if (this.mode === 'silent') {
-      this.allNotesOff();
+      this.performer.stop();
+      if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
+        this.setSequenceIndex(this.performer.getCurrentIndex());
+      }
+
+      // if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
+      //   this.setSequenceIndex(this.performer.getCurrentIndex());
+      // } else {
+      //   this.performer.stop();
+      // }
+
+      if (this.timeout) {
+        clearTimeout(this.timeout);
+        this.timeout = null;
+      }
+      // this.setSequenceIndex(0);
+      // console.log(this.performer.getCurrentIndex());
+      this.emit('allnotesoff');
     }
   }
 
-  keyDown(e) {
-    if (this.mode !== 'perform') return;
-    if (e.repeat) return;
-    if (e.key.length !== 1 || !alphabet.includes(e.key)) return; 
-    if (this.index > this.sequenceEndIndex) return;
+  command(cmd) {
+    // command : { pressed, id, velocity, channel }
+    // note : { on, pitch, velocity, channel }
 
-    this.emit('index', this.index);
+    const res = [];
+    if (this.mode !== 'perform') return res;
 
-    const chord = this.getNextChord();
+    // this.emit('index', this.index);
+    this.performer.render(cmd);
+    if (cmd.pressed) this.emit('index', this.performer.getCurrentIndex());
 
-    // if we want to loop :
-    // this.index = Math.max((this.index + 1) % (this.sequenceEndIndex + 1), this.sequenceStartIndex)
-    // else we go further and stop :
-    this.index++;
-
-    this.activeNotesByKey.set(e.key, chord);
-
-    chord.forEach(({ noteNumber, velocity }) => {
-      this.noteKeys[noteNumber] = e.key;
-      this.emit('noteon', { noteNumber, velocity }); // define custom velocity here (from keys ?)
-    });    
+    // DON'T RETURN ANYTHING ANYMORE :
+    // const noteEvents = this.performer.render(cmd);
+    // USE NOTE EVENTS CALLBACK INSTEAD !
   }
-
-  keyUp(e) {
-    if (this.mode !== 'perform') return;
-    if (e.key.length !== 1 || !alphabet.includes(e.key)) return;
-    if (!this.activeNotesByKey.has(e.key)) return;
-
-    const chord = this.activeNotesByKey.get(e.key);
-    this.activeNotesByKey.delete(e.key);
-
-    chord.forEach(({ noteNumber, velocity }) => {
-      if (this.noteKeys[noteNumber] === e.key) { // check if voice wasn't stolen
-        this.noteKeys[noteNumber] = null;
-        this.emit('noteoff', { noteNumber, velocity });
-      }
-    });
-  }
-
-  getNextChord() {
-    if (this.chordSequence.length === 0)
-      return [];
-
-    return this.chordSequence[this.index];
-    // this.index = Math.max((this.index + 1) % (this.sequenceEndIndex + 1), this.sequenceStartIndex);
-    // return res;
-  }
-
+  //*
   allNotesOff() {
-    for (let i = 0; i < 128; i++)
-      this.emit('noteoff', { noteNumber: i, velocity: 0 });
+    const velocity = 0;
+    for (let channel = 1; channel <= 16; ++channel)
+      for (let noteNumber = 0; noteNumber < 128; noteNumber++)
+        this.emit('noteoff', { noteNumber, velocity, channel });
   }
+  //*/
 }
 
 export default new MidifilePerformer();
