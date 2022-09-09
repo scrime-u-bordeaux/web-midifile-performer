@@ -262,6 +262,9 @@ class IOController extends EventEmitter {
       for (const e of events) {
         const { on, pitch, velocity, channel } = e;
         const note = [ 
+          // we only manipulate channels between 1 and 16 in the JS code.
+          // we increment them directly when parsing the MIDI file and set them
+          // back to between 0 and 15 here.
           (on ? 0x90 : 0x80) | ((channel - 1) & 0xF),
           pitch & 0x7F, // clip between 0 and 127
           velocity & 0x7F, // clip between 0 and 127
