@@ -13,7 +13,7 @@ const chordDeltaMsDateThreshold = 20;
  * @type {object}
  * @property {number} delta - Delta time with the previous event in ticks
  * 
- * @typedef midiJson - 
+ * @typedef midiJson - An object containing all the useful information from a MIDI file
  * @type {object}
  * @property {number} division - PPQ (ticks per quarter) of the MIDI file
  * @property {number} type - MIDI file type : 0, 1 or 2
@@ -114,7 +114,6 @@ function mergeTracks({ division, format, tracks }) {
           on: false, track: i, channel, noteNumber, velocity
         });
       }
-      
       // if (
       //   !obj.hasOwnProperty('controlChange') &&
       //   !obj.hasOwnProperty('noteOn') &&
@@ -215,7 +214,7 @@ class MidifilePerformer extends EventEmitter {
       temporalResolution: chordDeltaMsDateThreshold,
     });
     this.performer.setChordVelocityMappingStrategy(
-      this.mfp.chordStrategy.none,
+      this.mfp.chordStrategy.sameForAll,
       // this.mfp.chordStrategy.clippedScaledFromMax,
     );
     this.performer.setLooping(true);
@@ -350,7 +349,7 @@ class MidifilePerformer extends EventEmitter {
 
           playNextSet(!start, false);
         }, dt);
-      }
+      };
 
       playNextSet(true, true);
     }
