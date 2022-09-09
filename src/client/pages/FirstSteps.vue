@@ -14,11 +14,14 @@
 
     <scroll-bar
       class="scroll"
-      :enabled="currentMode === 'perform'"
-      :start="sequenceStart"
-      :end="sequenceEnd"
-      :index="sequenceIndex"
-      @index="onIndexChange"/>
+      :enabled="true"
+      :start="Math.min(sequenceStart, maxLength - 1)"
+      :end="Math.min(sequenceEnd,     maxLength - 1)"
+      :index="Math.min(sequenceIndex, maxLength - 1)"
+      :size="Math.min(sequenceLength, maxLength)"
+      @index="onScrollBarIndexChange"
+      @start="onScrollBarStartChange"
+      @end="onScrollBarEndChange"/>
 
     <div>
     <button
@@ -68,7 +71,7 @@ export default {
   components: { BachPrelude, Keyboard, ScrollBar },
   computed: {
     ...mapState([
-      'midiBuffers',
+      'firstStepsMidiFile',
       'minKeyboardNote',
       'maxKeyboardNote',
       'keyboardState',
@@ -81,6 +84,7 @@ export default {
   data() {
     return {
       //sequenceLength: this.performer.chordSequence.length,
+      maxLength: 64,
       currentMode: 'silent',
       cursor: { x: -100, y: 0 },
       positions: [
@@ -158,48 +162,62 @@ export default {
       ]
     };
   },
-  created() {
-    this.performer.addListener('index', this.onIndexChange);
+  async created() {
+    if (this.firstStepsMidiFile.buffer === null) {
+      const file = this.firstStepsMidiFile;
+      fetch(file.url)
+      .then(res => res.arrayBuffer())
+      .then(async buffer => {
+        file.buffer = buffer;
+        // const { id, ...data } = { ...file, buffer };
+        this.setFirstStepsMidiFile(file);
+        await this.loadFirstStepsMidiFile();
+      });
+    } else {
+      await this.loadFirstStepsMidiFile();
+    }
   },
-  async mounted() {
-    const bufferId = 'bach-c-prelude-the-well-tempered-clavier'
-    //console.log(this.midiBuffers);
-    await this.performer.loadArrayBuffer(this.midiBuffers[bufferId].buffer);
-    this.performer.setSequenceBounds([ 0, 63 ]);
-    this.performer.setMode('silent');
-    this.cursor = { x: -100, y: 0 };
+  mounted() {
+    // ?
   },
   beforeUnmount() {
     this.performer.setMode('silent');
-    this.performer.removeListener('index', this.onIndexChange);
+    this.performer.removeListener('index', this.onPerformerIndexChange);
   },
   methods: {
-    // ...mapMutations([
-    //   'setKeyboardState',
-    //   'setSequenceIndex',
-    // ]),
-    onIndexChange(i) { // callback from scrollbar
-      //this.setSequenceIndex(i); // already done in App.vue
+    ...mapMutations([
+      'setFirstStepsMidiFile',
+    ]),
+    async loadFirstStepsMidiFile() {
+      await this.performer.loadArrayBuffer(this.firstStepsMidiFile.buffer);
+      this.performer.setMode('silent');
+      this.performer.addListener('index', this.onPerformerIndexChange);
+      this.performer.setSequenceBounds(0, 63);
+      this.performer.setSequenceIndex(0);
+      this.cursor = { x: -100, y: 0 };
+    },
+    onScrollBarStartChange(i) {
+      this.performer.setSequenceBounds(i, this.sequenceEnd);
+    },
+    onScrollBarIndexChange(i) {
+      this.performer.setSequenceIndex(i);
+      this.onPerformerIndexChange(i);
+    },
+    onPerformerIndexChange(i) {
       this.cursor = i < this.positions.length
                   ? this.positions[i]
                   : { x: -100, y: 0 };
     },
+    onScrollBarEndChange(i) {
+      this.performer.setSequenceBounds(this.sequenceStart, i);
+    },
     onClickListen() {
       this.currentMode = this.currentMode === 'silent' ? 'listen' : 'silent';
       this.performer.setMode(this.currentMode);
-      // if (this.currentMode !== 'listen') {
-        this.performer.setSequenceIndex(0);
-        this.cursor = { x: -100, y: 0 };
-      // }
     },
     onClickPerform() {
       this.currentMode = this.currentMode === 'silent' ? 'perform' : 'silent';
       this.performer.setMode(this.currentMode);
-      // if (this.currentMode !== 'perform') {
-        this.performer.setSequenceIndex(0);
-        this.cursor = { x: -100, y: 0 };
-      // }
-      // this.performer.reset();
     },
   },
 };

@@ -6,7 +6,12 @@ class Synth {
     //this.ctx = new AudioContext();
     this.ctx = null;
     this.releaseTime = 0.15; // 150 ms
-    this.notes = [];
+    //this.notes = [];
+    this.notes = new Map();
+    // A0 is midi note 21 :
+    this.minNote = 21;
+    // C8 is midi note 108 :
+    this.maxNote = 108;
   }
 
   setContext(ctx) {
@@ -46,14 +51,17 @@ class Synth {
     return Promise.resolve();
   }
 
-  noteOn({ noteNumber, velocity }) {
-    let note = this.getNoteIfInRange(noteNumber);
+  noteOn({ noteNumber, velocity, channel }) {
+    let note = this.getNoteIfInRange(noteNumber, channel);
 
     if (note !== null) {
       const { buffer, player, playing } = note;
       
       if (playing) {
-        player.volume.gain.setValueAtTime(0, this.ctx.currentTime + this.releaseTime);
+        player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
+        const val = player.volume.gain.value;
+        player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
+        player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
       }
       
       note.player = this.makePlayer(buffer);
@@ -63,7 +71,7 @@ class Synth {
 
       const normVelocity = velocity / 127;
       
-      // - velocity driven filter :
+      // - velocity driven lowpass filter :
       // todo : compute this value from a note ratio (nth harmonic) perspective
       // instead of using a fixed frequency
       note.player.biquad.frequency.value = Math.pow(normVelocity, 3) * 20000 + 1000;
@@ -79,24 +87,36 @@ class Synth {
     }
   }
 
-  noteOff({ noteNumber, velocity }) {
-    const note = this.getNoteIfInRange(noteNumber);
+  noteOff({ noteNumber, velocity, channel }) {
+    const note = this.getNoteIfInRange(noteNumber, channel);
 
     if (note !== null) {
       const { buffer, player, playing } = note;
 
       if (playing) {
-        player.volume.gain.setValueAtTime(0, this.ctx.currentTime + this.releaseTime);
+        player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
+        const val = player.volume.gain.value;
+        player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
+        player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
         note.playing = false;
       }
     }
   }
 
-  getNoteIfInRange(noteNumber) {
-    // A0 is midi note 21
-    // C8 is midi note 108
-    if (noteNumber >= 21 && noteNumber <= 108 && this.notes.length > 0)
-      return this.notes[noteNumber - 21];
+  allNotesOff() {
+    for (let i = this.minNote; i <= this.maxNote; ++i) {
+      this.noteOff({ noteNumber: i, velocity: 0 });
+    }
+  }
+
+  getNoteIfInRange(noteNumber, channel) {
+    if (
+      noteNumber >= this.minNote &&
+      noteNumber <= this.maxNote &&
+      this.notes.length > 0
+    ) {
+      return this.notes[noteNumber - this.minNote];
+    }
 
     return null;
   }
@@ -109,7 +129,6 @@ class Synth {
     source.buffer = buffer;
     source.connect(biquad);
     
-      
     biquad.type = 'lowpass';
     biquad.Q.value = 0;
     biquad.frequency.value = 20000;

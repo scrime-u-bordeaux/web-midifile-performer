@@ -5,6 +5,7 @@ const webpack = require('webpack');
 const express = require('express');
 const path = require('path');
 const env = process.env.NODE_ENV;
+// console.log(env == 'production' || env == 'none' ? env : 'development',);
 
 // for multiple html files generation, see :
 // https://stackoverflow.com/questions/39798095/multiple-html-files-using-webpack
@@ -13,7 +14,8 @@ module.exports = {
   mode: env == 'production' || env == 'none' ? env : 'development',
   entry: [ './src/client/index' ],
   output: {
-    publicPath: '/midifile-performer-web',
+    // publicPath: '/midifile-performer-web/',
+    publicPath: '/',
   },
   // entry: {
   //   'home':               './src/client/home',
@@ -71,5 +73,16 @@ module.exports = {
     }),
     new VueLoaderPlugin(),
     new webpack.HotModuleReplacementPlugin(),
-  ]
+  ],
+  resolve: {
+    fallback: {
+        crypto: false,
+        fs: false,
+        path: false
+    }
+  },
+  experiments: {
+    asyncWebAssembly: true,
+    syncWebAssembly: true,
+  },
 };

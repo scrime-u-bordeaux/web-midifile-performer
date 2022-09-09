@@ -45,60 +45,85 @@
     position: relative;
     text-align: center;
     padding: 0 15px;
-    background-color: var(--button-blue);
+    /* background-color: var(--button-blue); */
+    background-color: transparent;
     height: var(--menubar-height);
     z-index: 10000;
+    border-bottom: 1px solid var(--button-blue);
   }
   .menu-wrapper {
     position: relative;
-    /*display: inline-block;*/
     text-align: left;
-    /*width: calc(min(100%, calc(var(--content-width) + 100px)));*/
     width: 100%;
+    height: 50px;
     max-width: var(--content-width);
     margin: 0 auto;
-    /*padding: 0 15px;*/
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: left;
+    /* justify-content: center; */
   }
   .menu-icon {
-    position: relative;
-    display: inline-block;
-    padding: 15px;
+    /* background-color: var(--button-blue); */
+    /* position: relative; */
+    /* display: inline-block; */
+    /* padding: 15px; */
+    position: absolute;
+    left: 0;
+    padding: 0.4em;
     padding-left: 0;
     cursor: pointer;
-    width: 20px;
-    height: 20px;
+    /* width: 20px; */
+    /* height: 20px; */
+    width: 1.2em;
+    height: 1.2em;
+    /* flex: 0 0 auto; */
   }
   svg {
     pointer-events: none;
   }
   svg rect {
-    fill: white;
+    /* fill: white; */
+    /* fill: var(--button-blue); */
+    fill: black;
   }
   .main-title {
-    color: white;
+    /* background-color: var(--button-blue); */
+
+    /* color: white; */
+    /* color: var(--button-blue); */
+    color: black;
+
     font-size: 1.5em;
-    /*padding: 0.5em 0.5em;*/
+    /* padding: 0.5em 0.5em; */
+    padding: 0.1em 0.3em;
+    padding-right: 0.3em;
     position: relative;
     display: inline-block;
-    /*width: 560px;*/
-    height: 38px;
-    padding-top: 12px;
+    /* width: 560px; */
+
+    /* height: 38px; */
+    /* padding-top: 12px; */
+    /* height: 50px; */
     margin: 0 auto;
     text-align: left;
     cursor: pointer;
+    flex: 0 1 auto;
   }
   .logo-icon {
     position: absolute;
-    text-align: right;
-    top: 0;
+    /* text-align: right; */
     right: 0;
+    height: 2em;
   }
   .logo-icon a {
     display: inline-block;
     height: 0;
   }
   .logo-icon a img {
-    transform: scale(0.6) translateX(33%);
+    /* transform: scale(0.6) translateX(33%); */
+    height: 2em;
   }
   .menu-items-wrapper {
     color: white;
