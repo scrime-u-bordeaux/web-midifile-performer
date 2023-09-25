@@ -1,21 +1,11 @@
 import EventEmitter from 'events';
 
-const alphabet = 'abcdefghijklmnopqrstuvwxyz ';
-
-const keyboardLayouts = {
-  qwerty: {
-    forte: 'qwertyuiop',
-    mezzo: 'asdfghjkl',
-    piano: 'zxcvbnm',
-    pianissimo: ' '
-  },
-  azerty: {
-    forte: 'azertyuiop',
-    mezzo: 'qsdfghjklm',
-    piano: 'wxcvbn',
-    pianissimo: ' '
-  }
-};
+const universalLayout = {
+  forte: ["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7","Digit8","Digit9","Digit0"],
+  mezzo: ["KeyQ","KeyW","KeyE","KeyR","KeyT","KeyY","KeyU","KeyI","KeyO","KeyP"],
+  piano: ["KeyA","KeyS","KeyD","KeyF","KeyG","KeyH","KeyJ","KeyK","KeyL","Semicolon"],
+  pianissimo: ["KeyZ","KeyX","KeyC","KeyV","KeyB","KeyN","KeyM","Comma","Period","Slash"]
+}
 
 const velocities = {
   forte: 127,
@@ -23,24 +13,6 @@ const velocities = {
   piano: 64,
   pianissimo: 32,
 };
-
-const makeKeyMap = (keyboardLayout) => {
-  const m = new Map();
-  const layout = keyboardLayouts[keyboardLayout];
-  let id = 0;
-
-  Object.keys(layout).forEach(k => {
-    const s = layout[k];
-
-    for (let i = 0; i < s.length; ++i) {
-      const key = layout[k].charAt(i);
-      m.set(key, { pressed: false, id, velocity: velocities[k] });
-      ++id;
-    }
-  });
-
-  return m;
-}
 
 const defaultInputs = {
   0: { id: '0', name: 'computer keyboard' }
@@ -65,16 +37,16 @@ class IOController extends EventEmitter {
     document.addEventListener('keydown', this.onKeyDown.bind(this));
     document.addEventListener('keyup', this.onKeyUp.bind(this));
 
-    this.keyboardLayout = 'azerty';
-    this.keyCommandsState = makeKeyMap(this.keyboardLayout);
-  }
+    this.keyCommandsState = new Map();
 
-  setKeyboardLayout(layout) {
-    [ 'azerty', 'qwerty' ].forEach(l => {
-      if (layout === l) {
-        this.keyboardLayout = layout;
-        this.keyCommandsState = makeKeyMap(this.keyboardLayout);
-      }
+    Object.keys(universalLayout).forEach((k, catIndex) => {
+      const velocityCategory = universalLayout[k];
+
+      velocityCategory.forEach((key, keyIndex) =>
+        this.keyCommandsState.set(key,
+          { pressed: false, id: parseInt(""+catIndex+keyIndex), velocity: velocities[k] }
+        )
+      )
     });
   }
 
@@ -84,16 +56,15 @@ class IOController extends EventEmitter {
 
   onKeyDown(e) {
     if (this.currentInputId !== '0'
-        || e.repeat
-        || e.key.length !== 1)
+        || e.repeat)
       return;
 
-    if (this.keyCommandsState.has(e.key)) {
-      let { pressed, id, velocity } = this.keyCommandsState.get(e.key);
+    if (this.keyCommandsState.has(e.code)) {
+      let { pressed, id, velocity } = this.keyCommandsState.get(e.code);
 
       if (!pressed) { // should never be true due to e.repeat condition above
         pressed = true;
-        this.keyCommandsState.set(e.key, { pressed, id, velocity });
+        this.keyCommandsState.set(e.code, { pressed, id, velocity });
         this.emit('command', {
           pressed,
           id,
@@ -107,12 +78,12 @@ class IOController extends EventEmitter {
   onKeyUp(e) {
     if (this.currentInputId !== '0') return;
 
-    if (this.keyCommandsState.has(e.key)) {
-      let { pressed, id, velocity } = this.keyCommandsState.get(e.key);
+    if (this.keyCommandsState.has(e.code)) {
+      let { pressed, id, velocity } = this.keyCommandsState.get(e.code);
 
       if (pressed) { // this check is probably not needed
         pressed = false;
-        this.keyCommandsState.set(e.key, { pressed, id, velocity });
+        this.keyCommandsState.set(e.code, { pressed, id, velocity });
         this.emit('command', {
           pressed,
           id,
@@ -261,7 +232,7 @@ class IOController extends EventEmitter {
     if (this.currentOutputId !== '0') {
       for (const e of events) {
         const { on, pitch, velocity, channel } = e;
-        const note = [ 
+        const note = [
           // we only manipulate channels between 1 and 16 in the JS code.
           // we increment them directly when parsing the MIDI file and set them
           // back to between 0 and 15 here.
@@ -270,7 +241,7 @@ class IOController extends EventEmitter {
           velocity & 0x7F, // clip between 0 and 127
         ];
         this.outputs[this.currentOutputId].send(note);
-      }      
+      }
     } else {
       //console.log('received note events', events);
       for (const e of events) {

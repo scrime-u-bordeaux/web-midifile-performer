@@ -1,14 +1,5 @@
 <template>
   <div class="manager">
-    <form class="radio">
-      <legend> computer keyboard layout </legend>
-      <input type="radio" name="keyboard-layout" value="azerty" id="a" checked>
-      <label for="a">azerty</label>
-      <br>
-      <input type="radio" name="keyboard-layout" value="qwerty" id="q">
-      <label for="q">qwerty</label>
-    </form>
-
     <select @change="selectedInputChanged">
       <option
         v-for="input in inputs"
