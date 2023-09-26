@@ -15,11 +15,11 @@ const velocities = {
 };
 
 const defaultInputs = {
-  0: { id: '0', name: 'computer keyboard' }
+  0: { id: '0', name: 'Computer keyboard' }
 };
 
 const defaultOutputs = {
-  0: { id: '0', name: 'internal sampler' }
+  0: { id: '0', name: 'Internal sampler' }
 };
 
 ////////////////////////////////////////////////////////////////////////////////

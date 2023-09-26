@@ -1,25 +1,26 @@
 <template>
-  <div style="text-align: center;">
+  <div class="mfp-container">
 
     <IOManager
-      class="manager"/>
+      class="manager"
+      v-if="mfpMidiFile.buffer"/>
 
     <div class="file-input-wrapper">
-    <div class="file-input">
-      <input type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
-      <label for="file">
-        Charger un fichier MIDI
-      </label>
-      <div class="file-name">{{ mfpMidiFile.title }}</div>
-      <div class="search-score-hint">
-        Vous n'avez pas de partitions ? Trouvez-en de nouvelles
-        <span class="link" @click="$router.push('/look-for-scores')">
-          ici
-        </span>
+      <div class="file-input" :class="{'align-column': !mfpMidiFile.buffer}">
+        <input type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+        <label for="file" class="file-label">
+          {{!mfpMidiFile.buffer ? "Charger un fichier MIDI" : "Changer de fichier"}}
+        </label>
+        <div class="file-name" v-if="mfpMidiFile.buffer">{{ trimmedTitle }}</div>
+        <div class="search-score-hint" v-else>
+          Vous n'avez pas de partitions ? Trouvez-en de nouvelles
+          <span class="link" @click="$router.push('/look-for-scores')">
+            ici !
+          </span>
+        </div>
       </div>
     </div>
-    </div>
-    
+
     <Keyboard
       class="keyboard"
       :minNote="minKeyboardNote"
@@ -28,6 +29,7 @@
       :whiteNoteWidth="15"/>
 
     <scroll-bar
+      v-if="mfpMidiFile.buffer"
       class="scroll"
       :start="sequenceStart"
       :end="sequenceEnd"
@@ -37,7 +39,7 @@
       @start="onStartChange"
       @end="onEndChange"/>
 
-    <div>
+    <div v-if="mfpMidiFile.buffer">
       <button
         @click="onClickListen"
         :disabled="currentMode !== 'silent' && currentMode !== 'listen'">
@@ -67,27 +69,52 @@
 </template>
 
 <style scoped>
+.mfp-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  justify-items: center;
+  align-items: center;
+  min-height: 500px;
+}
 .manager {
-  display: inline-block;
-  width: 100%;
+  width: fit-content;
   max-width: var(--score-width);
-  text-align: left;
+  padding-bottom: 12px;
 }
 .file-input-wrapper {
-  max-width: var(--score-width);
+  width: fit-content;
   margin: 0 auto;
   text-align: left;
 }
-.file-name, .search-score-hint {
+.file-input {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+}
+.file-input.align-column {
+  flex-direction: column;
+}
+.file-name {
   margin: 0.25em;
   padding: 0.5em 1em;
+  height: fit-content;
 }
 .file-name {
   display: inline-block;
   color: #999;
 }
+.file-label {
+  margin-bottom: 12px;
+  margin-left: 0;
+  width: fit-content;
+}
 .search-score-hint {
   color: var(--hint-blue);
+  font-style: italic;
+  width: fit-content;
+  height: fit-content;
+  margin-bottom: 12px;
 }
 span.link {
   text-decoration: underline;
@@ -129,8 +156,12 @@ export default {
       'sequenceIndex',
       'sequenceLength',
     ]),
+    trimmedTitle() {
+      return this.mfpMidiFile.title.length < 45 ? this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"....mid"
+    }
   },
   async mounted() {
+    console.log(this)
     this.performer.clear();
 
     if (this.mfpMidiFile.buffer !== null) {
@@ -144,7 +175,7 @@ export default {
   methods: {
     ...mapMutations([
       'setMfpMidiFile',
-    ]), 
+    ]),
     async onFileInput(e) {
       return new Promise((resolve, reject) => {
         const file = e.target.files[0];

@@ -1,34 +1,41 @@
 <template>
   <div class="manager">
-    <select @change="selectedInputChanged">
-      <option
-        v-for="input in inputs"
-        :value="input.id"
-        :selected="input.id === currentInputId">
-        {{ input.name }}
-      </option>
-    </select>
+    <div class="select-container">
+      <span class="select-label">Input</span>
+      <select @change="selectedInputChanged">
+        <option
+          v-for="input in inputs"
+          :value="input.id"
+          :selected="input.id === currentInputId">
+          {{ input.name }}
+        </option>
+      </select>
+    </div>
 
-    <select @change="selectedOutputChanged">
-      <option
-        v-for="output in outputs"
-        :value="output.id"
-        :selected="output.id === currentOutputId">
-        {{ output.name }}
-      </option>
-    </select>
+    <div class="select-container">
+      <span class="select-label">Output</span>
+      <select @change="selectedOutputChanged">
+        <option
+          v-for="output in outputs"
+          :value="output.id"
+          :selected="output.id === currentOutputId">
+          {{ output.name }}
+        </option>
+      </select>
+    </div>
 
     <button @click="refreshInputsAndOutputs">
-      refresh device list
+      Refresh device list
     </button>
   </div>
 </template>
 
 <style scoped>
-.manager { display: block; }
-.radio {text-align: left; }
+.manager { display: flex; flex-direction: row; align-items: center;}
+.select-container { display: flex; flex-direction: column; align-content: center;}
+.select-label { color: #999; font-style: italic;}
 select { display: block; margin: 1em; }
-button { display: block; font-size: 1em; }
+button { display: block; font-size: 1em; height: fit-content;}
 </style>
 
 <script>
