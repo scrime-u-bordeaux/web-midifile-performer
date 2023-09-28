@@ -133,7 +133,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* Actually, this is useless on Firefox (because the elements on the same size) and doesn't work on Chrome (because native Chrome inputs are different sizes and thus misaligned anyway)*/
 }
 .scroll-bar-container.horizontal-layout .with-reset {
   display: flex;
@@ -291,7 +291,7 @@ export default {
     },
     onIndexInput(e) {
       const input = this.$refs['index-input'];
-      let v = input.value - 1;
+      let v = this.hasBounds ? input.value - 1 : input.value;
       v = Math.min(this.end, Math.max(this.start, v));
       // input.value = v;
       this.$emit('index', v);
