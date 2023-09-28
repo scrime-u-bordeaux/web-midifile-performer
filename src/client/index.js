@@ -1,7 +1,7 @@
 import { createApp }      from 'vue';
 // import MidifilePerformer  from 'midifile-performer';
 // import performer          from './utilities/NaiveMidifilePerformer';
-import ioctl              from './utilities/IOController';
+import ioctl, { defaultInputs, defaultVelocities } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth              from './utilities/Synth';
 import store              from './store';
@@ -17,10 +17,12 @@ Promise.all([
 
   app.use(router);
   app.use(store);
-  
+
   app.provide('ioctl', ioctl);
+  app.provide('defaultMidiInput', defaultInputs);
+  app.provide('defaultKeyboardVelocities', defaultVelocities);
   app.provide('performer', performer);
   app.provide('synth', synth);
-  
+
   app.mount('#app');
 });

@@ -14,7 +14,7 @@
 
     <scroll-bar
       class="scroll"
-      :enabled="true"
+      :hasBounds="true"
       :start="Math.min(sequenceStart, maxLength - 1)"
       :end="Math.min(sequenceEnd,     maxLength - 1)"
       :index="Math.min(sequenceIndex, maxLength - 1)"
@@ -46,7 +46,7 @@
     <button
       @click="$router.push('/midifile-performer')"
       :disabled="currentMode !== 'silent'">
-      Aller plus loin 
+      Aller plus loin
     </button>
     </div>
   </div>

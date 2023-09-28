@@ -7,7 +7,7 @@ const universalLayout = {
   pianissimo: ["KeyZ","KeyX","KeyC","KeyV","KeyB","KeyN","KeyM","Comma","Period","Slash"]
 }
 
-const velocities = {
+const defaultVelocities = {
   forte: 127,
   mezzo: 100,
   piano: 64,
@@ -39,15 +39,7 @@ class IOController extends EventEmitter {
 
     this.keyCommandsState = new Map();
 
-    Object.keys(universalLayout).forEach((k, catIndex) => {
-      const velocityCategory = universalLayout[k];
-
-      velocityCategory.forEach((key, keyIndex) =>
-        this.keyCommandsState.set(key,
-          { pressed: false, id: parseInt(""+catIndex+keyIndex), velocity: velocities[k] }
-        )
-      )
-    });
+    this.refreshVelocities(defaultVelocities)
   }
 
   setInternalSampler(sampler) {
@@ -254,6 +246,20 @@ class IOController extends EventEmitter {
       }
     }
   }
+
+  refreshVelocities(velocities) {
+    Object.keys(universalLayout).forEach((k, catIndex) => {
+      const velocityCategory = universalLayout[k];
+
+      velocityCategory.forEach((key, keyIndex) =>
+        this.keyCommandsState.set(key,
+          { pressed: false, id: parseInt(""+catIndex+keyIndex), velocity: velocities[k] }
+        )
+      )
+    });
+  }
 };
 
-export default new IOController();
+const ioctl = new IOController()
+
+export { ioctl as default, defaultInputs, defaultVelocities }

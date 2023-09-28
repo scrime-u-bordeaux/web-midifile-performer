@@ -61,6 +61,7 @@ export default {
     selectedInputChanged(e) {
       const id = e.target.value;
       this.ioctl.setInput(id);
+      this.$emit("inputChange", id)
     },
     selectedOutputChanged(e) {
       const id = e.target.value;

@@ -1,12 +1,19 @@
 <template>
   <div class="mfp-container">
 
+    <span class="contextualization" v-if="!mfpMidiFile.buffer">
+      <p>Chargez un fichier MIDI de votre choix pour l'interpréter librement !</p>
+      <p>Vous pouvez utiliser un contrôleur MIDI de votre choix, ou bien votre clavier d'ordinateur.</p>
+      <p>Essayez de jouer sur le legato, le tempo, ou encore la vélocité.</p>
+    </span>
+
     <IOManager
       class="manager"
-      v-if="mfpMidiFile.buffer"/>
+      v-if="mfpMidiFile.buffer"
+      @inputChange="onInputChange"/>
 
     <div class="file-input-wrapper">
-      <div class="file-input" :class="{'align-column': !mfpMidiFile.buffer}">
+      <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
         <input type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
         <label for="file" class="file-label">
           {{!mfpMidiFile.buffer ? "Charger un fichier MIDI" : "Changer de fichier"}}
@@ -30,7 +37,8 @@
 
     <scroll-bar
       v-if="mfpMidiFile.buffer"
-      class="scroll"
+      class="index-scroll"
+      :has-bounds="true"
       :start="sequenceStart"
       :end="sequenceEnd"
       :index="sequenceIndex"
@@ -40,30 +48,52 @@
       @end="onEndChange"/>
 
     <div v-if="mfpMidiFile.buffer">
-      <button
-        @click="onClickListen"
-        :disabled="currentMode !== 'silent' && currentMode !== 'listen'">
-        Écouter
-      </button>
+      <div class="control-button-container">
+        <button
+          @click="onClickListen"
+          :disabled="currentMode !== 'silent' && currentMode !== 'listen'">
+          Écouter
+        </button>
 
-      <button
-        @click="onClickPerform"
-        :disabled="currentMode !== 'silent' && currentMode !== 'perform'">
-        Interpréter
-      </button>
+        <button
+          @click="onClickPerform"
+          :disabled="currentMode !== 'silent' && currentMode !== 'perform'">
+          Interpréter
+        </button>
 
-      <button
-        @click="$router.push('/guide')"
-        :disabled="currentMode !== 'silent'">
-        ? Aide
-      </button>
+        <button
+          @click="$router.push('/guide')"
+          :disabled="currentMode !== 'silent'">
+          ? Aide
+        </button>
 
-      <button
-        style="display: none;"
-        @click="onClickExport"
-        :disabled="currentMode !== 'silent'">
-        Exporter
-      </button>
+        <button
+          style="display: none;"
+          @click="onClickExport"
+          :disabled="currentMode !== 'silent'">
+          Exporter
+        </button>
+      </div>
+
+      <div v-if="isInputKeyboard">
+        <span class="settings-toggle pseudo-link" @click="displayKeyboardSettings = !displayKeyboardSettings">
+          {{ !displayKeyboardSettings ? "Régler les vélocités du clavier" : "Minimiser" }}
+        </span>
+        <div v-if="displayKeyboardSettings">
+          <div v-for="(velocity, category) in keyboardVelocities" class="velocity-slider">
+            <scroll-bar class="velocity-scroll"
+              :hasBounds="false"
+              :start="MIN_VELOCITY"
+              :end="MAX_VELOCITY"
+              :index="velocity"
+              :size="MAX_VELOCITY+1"
+              :indexLabel="`${category} row`"
+              @index="setRowVelocity($event, category)"
+              @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
+              />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -73,9 +103,16 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  justify-items: center;
   align-items: center;
   min-height: 500px;
+}
+.contextualization {
+  color: #777;
+  margin-bottom: 12px;
+}
+.contextualization p {
+  margin-top: 4px;
+  margin-bottom: 4px;
 }
 .manager {
   width: fit-content;
@@ -96,7 +133,7 @@
   flex-direction: column;
 }
 .file-name {
-  margin: 0.25em;
+  margin: 0 0.25em 0.25em;
   padding: 0.5em 1em;
   height: fit-content;
 }
@@ -120,10 +157,28 @@ span.link {
   text-decoration: underline;
   cursor: pointer;
 }
-.scroll, .keyboard {
+.index-scroll, .keyboard {
   display: inline-block;
   max-width: var(--score-width);
   width: 100%;
+}
+.velocity-slider {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 12px;
+}
+.velocity-scroll {
+  display: inline-block;
+  width: var(--score-width);
+}
+.pseudo-link {
+  font-style: italic;
+  color: var(--hint-blue);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.control-button-container {
+  padding-bottom: 12px;
 }
 </style>
 
@@ -134,15 +189,21 @@ import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
+const KEYBOARD_INPUT_ID = "0"
 
 export default {
-  inject: [ 'performer' ],
+  inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities' ],
   components: { IOManager, Keyboard, ScrollBar },
   data() {
     return {
       currentMode: 'silent',
       fileName: noInputFileMsg,
       fileArrayBuffer: null,
+      isInputKeyboard: true,
+      displayKeyboardSettings: false,
+      keyboardVelocities: { ...this.defaultKeyboardVelocities },
+      MIN_VELOCITY: 0,
+      MAX_VELOCITY: 255
     };
   },
   computed: {
@@ -157,7 +218,7 @@ export default {
       'sequenceLength',
     ]),
     trimmedTitle() {
-      return this.mfpMidiFile.title.length < 45 ? this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"....mid"
+      return this.mfpMidiFile.title.length < 45 ? this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
     }
   },
   async mounted() {
@@ -207,6 +268,10 @@ export default {
       this.performer.setMode(this.currentMode);
       this.performer.setSequenceIndex(0);
     },
+    onInputChange(input) {
+      console.log(input, KEYBOARD_INPUT_ID)
+      this.isInputKeyboard = (input === KEYBOARD_INPUT_ID)
+    },
     onStartChange(i) {
       this.performer.setSequenceBounds(i, this.sequenceEnd);
     },
@@ -229,6 +294,10 @@ export default {
       this.performer.setMode(this.currentMode);
       // this.performer.setSequenceIndex(0);
     },
+    setRowVelocity(i, category) {
+      this.keyboardVelocities[category] = i
+      this.ioctl.refreshVelocities(this.keyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
+    }
   }
 };
 </script>

@@ -1,7 +1,8 @@
 <template>
-<div>
-  <div>
+<div class="scroll-bar-container" :class="!hasBounds ? 'horizontal-layout' : 'vertical-layout'" >
+  <div :class="!hasBounds ? 'with-reset' : 'full-width'">
     <!-- @mousedown="startDrag"> -->
+    <span v-if="!hasBounds" class="pseudo-link" @click="$emit('reset')">Réinitialiser</span>
     <svg
       style="/*display: none;*/"
       ref="scroll-bar"
@@ -37,6 +38,7 @@
         :cy="layout.height / 2"
         :r="layout.cursorSize / 2" />
       <rect
+        v-if="hasBounds"
         ref="loop-start"
         class="loop-bar"
         :x="layout.loopStartFlagLeft"
@@ -44,6 +46,7 @@
         :width="layout.loopBarWidth"
         :height="layout.height" />
       <polygon
+        v-if="hasBounds"
         id="left"
         class="loop-flag"
         :points="`
@@ -52,6 +55,7 @@
           ${layout.loopStartFlagLeft},${layout.loopFlagHeight}
         `" />
       <rect
+        v-if="hasBounds"
         ref="loop-end"
         class="loop-bar"
         :x="layout.loopEndFlagRight - layout.loopBarWidth"
@@ -59,6 +63,7 @@
         :width="layout.loopBarWidth"
         :height="layout.height" />
       <polygon
+        v-if="hasBounds"
         id="right"
         class="loop-flag"
         :points="`
@@ -70,8 +75,8 @@
   </div>
 
   <div class="indices">
-    <div>
-      <div> début </div>
+    <div v-if="hasBounds">
+      <div class="input-label"> Début </div>
       <!-- <div class="event-number"> {{ start + 1 }} </div> -->
       <input
         ref="start-input"
@@ -81,15 +86,15 @@
         :value="start + 1"
         @input="onStartInput" />
     </div>
-    <div>
-      <div> courant </div>
+    <div :class="!hasBounds ? 'no-padding-indice' : ''">
+      <div class="input-label"> {{ capitalizedIndexLabel || "Courant" }} </div>
       <!-- <div class="event-number"> {{ index + 1 }} </div> -->
       <input
         ref="index-input"
         type="number"
-        :min="start + 1"
-        :max="end + 1"
-        :value="Math.max(index + 1, start + 1)"
+        :min="hasBounds ? start + 1 : start"
+        :max="hasBounds ? end + 1 : end"
+        :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
         @keydown="e => { e.preventDefault(); }"
         @input="onIndexInput" />
       <!-- <number-input
@@ -99,8 +104,8 @@
         :value="(Math.max(index + 1, start + 1))"
         @change="onIndexChange"/> -->
     </div>
-    <div>
-      <div> fin </div>
+    <div v-if="hasBounds">
+      <div class="input-label"> Fin </div>
       <!-- <div class="event-number"> {{ end + 1 }} </div> -->
       <input
         ref="end-input"
@@ -116,6 +121,33 @@
 </template>
 
 <style scoped>
+.scroll-bar-container.vertical-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.scroll-bar-container.vertical-layout .full-width{
+  width: 100%;
+}
+.scroll-bar-container.horizontal-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+.scroll-bar-container.horizontal-layout .with-reset {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  margin-top: 12px;
+  width: 85%;
+}
+.pseudo-link {
+  font-style: italic;
+  color: var(--hint-blue);
+  text-decoration: underline;
+  cursor: pointer;
+}
 /* diable pointer events on all children : */
 rect, circle {
   pointer-events: none;
@@ -147,9 +179,17 @@ rect, circle {
   stroke: black;
   stroke-width: 1;
 }
+.indices {
+  width: fit-content;
+}
 .indices > div {
   display: inline-block;
   padding: 10px;
+}
+.indices .no-padding-indice {
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 .indices input[type="number"] {
   /* pointer-events: none; */
@@ -160,6 +200,9 @@ rect, circle {
   color: black;
   background: transparent;
 }
+.indices .input-label {
+  margin-bottom: 8px;
+}
 .event-number {
   font-size: 2em;
 }
@@ -168,7 +211,7 @@ rect, circle {
 <script>
 import NumberInput from './NumberInput.vue';
 export default {
-  props: [ 'enabled', 'start', 'end', 'index', 'size' ],
+  props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'indexLabel' ],
   components: { NumberInput },
   data() {
     return {
@@ -207,8 +250,8 @@ export default {
       const layout = {
         width: 1000,
         height: 60,
-        barHeight: 2,
-        cursorSize: 20,
+        barHeight: this.hasBounds ? 2 : 10,
+        cursorSize: this.hasBounds ? 20 : 30,
         loopBarWidth: 2,
         loopFlagHeight: 15,
         loopFlagWidth: 18,
@@ -219,6 +262,9 @@ export default {
         loopEndFlagRight: (this.end / (this.size - 1)) * (layout.width - layout.cursorSize) + layout.cursorSize,
       };
     },
+    capitalizedIndexLabel() {
+      return !!this.indexLabel ? this.indexLabel[0].toUpperCase() + this.indexLabel.slice(1) : ""
+    }
     //*/
   },
   created() {
@@ -238,7 +284,8 @@ export default {
       let v = input.value - 1;
       v = Math.min(this.end, Math.max(0, v));
       // input.value = v;
-      this.$emit('start', v);
+      if(this.hasBounds) // this method shouldn't be called if this is false anyway, but just to be sure
+        this.$emit('start', v);
       if (this.index < v)
         this.$emit('index', v);
     },
@@ -257,7 +304,8 @@ export default {
       let v = input.value - 1;
       v = Math.min(this.size - 1, Math.max(this.start, v));
       // input.value = v;
-      this.$emit('end', v);
+      if(this.hasBounds) // this method shouldn't be called if this is false anyway, but just to be sure
+        this.$emit('end', v);
       if (this.index > v)
         this.$emit('index', v);
     },
@@ -282,7 +330,7 @@ export default {
         // console.log(e.target.classList);
         this.dragging = 'cursor';
         this.drag(e);
-      }  
+      }
     },
     drag(e) {
       if (this.dragging === null) return;
@@ -312,7 +360,7 @@ export default {
     endDrag(e) {
       if (this.dragging === null) return;
       this.dragging = null;
-    },
+    }
   },
 };
 </script>
