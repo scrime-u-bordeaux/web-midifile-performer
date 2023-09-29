@@ -28,7 +28,6 @@
     "midi-json-parser": "^8.0.51",
     "midi-player-js": "^2.0.16",
     "midifile-performer": "^0.3.2",
-    "piano-mp3": "^1.0.2",
     "vue": "^3.2.23",
     "vue-router": "^4.0.12",
     "vuex": "^4.0.2"

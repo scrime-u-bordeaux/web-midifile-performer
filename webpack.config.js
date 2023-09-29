@@ -62,8 +62,7 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'src/client/assets', to: '' },
-        { from: 'node_modules/piano-mp3/piano-mp3', to: 'piano-mp3'}
+        { from: 'src/client/assets', to: '' }
       ]
     }),
     new HtmlWebpackPlugin({
