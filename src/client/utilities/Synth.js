@@ -27,7 +27,7 @@ class Synth {
     // notes.length == 88 (A0 to C8)
     notes.forEach((note, i) => {
       promises.push(new Promise((resolve, reject) => {
-        fetch(`piano-mp3/${note}.mp3`)
+        fetch(`samples/${note}.mp3`)
         .then(async res => {
           const arrayBuffer = await res.arrayBuffer();
 
@@ -56,31 +56,31 @@ class Synth {
 
     if (note !== null) {
       const { buffer, player, playing } = note;
-      
+
       if (playing) {
         player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
         const val = player.volume.gain.value;
         player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
         player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
       }
-      
+
       note.player = this.makePlayer(buffer);
       note.playing = true;
 
       //////////////////////////////////// velocity specific settings :
 
       const normVelocity = velocity / 127;
-      
+
       // - velocity driven lowpass filter :
       // todo : compute this value from a note ratio (nth harmonic) perspective
       // instead of using a fixed frequency
       note.player.biquad.frequency.value = Math.pow(normVelocity, 3) * 20000 + 1000;
-      
+
       // - velocity driven gain :
       note.player.volume.gain.value = normVelocity;
       //const ramp = (1 - normVelocity) * 0.01; // 10ms max
       //note.player.volume.gain.setValueAtTime(normVelocity, this.ctx.currentTime + ramp);
-      
+
       // - velocity driven start time :
       const offset = (1 - normVelocity) * 0.005; // 5ms max
       note.player.source.start(this.ctx.currentTime, offset);
@@ -125,15 +125,15 @@ class Synth {
     const source = this.ctx.createBufferSource();
     const biquad = this.ctx.createBiquadFilter();
     const volume = this.ctx.createGain();
-    
+
     source.buffer = buffer;
     source.connect(biquad);
-    
+
     biquad.type = 'lowpass';
     biquad.Q.value = 0;
     biquad.frequency.value = 20000;
     biquad.connect(volume);
-    
+
     volume.gain.value = 1;
     volume.connect(this.ctx.destination);
 
