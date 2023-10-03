@@ -27,12 +27,11 @@
 
 <style scoped>
 .container {
-  text-align: center;
+  max-width: var(--content-width);
 }
 .video-container {
   position: relative;
   width: 100%;
-  height: 0;
   padding-bottom: var(--youtube-video-h-w-ratio);
 }
 .video {

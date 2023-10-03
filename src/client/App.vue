@@ -6,6 +6,7 @@
       { text: 'Accueil',            page: 'Home' },
       { text: 'Premiers Pas',       page: 'FirstSteps' },
       { text: 'Midifile Performer', page: 'MidifilePerformer' },
+      { text: 'Crédits',            page: 'Credits'}
     ]"
   />
 

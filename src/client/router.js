@@ -28,6 +28,11 @@ const router = createRouter({
       component: pages.MidifilePerformer,
     },
     {
+      path: '/credits',
+      name: 'Credits',
+      component: pages.Credits
+    },
+    {
       path: '/guide',
       name: 'Guide',
       component: pages.Guide,

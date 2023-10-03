@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="container">
     <bach-prelude
       class="score"
       :cursor="cursor"/>
@@ -53,6 +53,12 @@
 </template>
 
 <style scoped>
+.container {
+  max-width: var(--content-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .score, .scroll, .keyboard {
   display: inline-block;
   max-width: var(--score-width);

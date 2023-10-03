@@ -13,7 +13,7 @@
   --content-width: 800px;
   /*--menu-width: 700px;*/
   --score-width: 650px;
-  
+
   --global-font: Times New Roman, serif;
   /*--global-font: sans-serif;*/
 
@@ -63,7 +63,6 @@ html, body {
 
 #app-content {
   margin: 0 auto;
-  max-width: var(--content-width);
   padding: 0 15px;
   text-align: center;
 }
@@ -72,7 +71,7 @@ html, body {
 .file-input input[type=file] {
   width: 0;
   height: 0;
-  position: absolute;  
+  position: absolute;
 }
 
 button, .file-input label {
