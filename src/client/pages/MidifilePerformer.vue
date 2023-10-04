@@ -1,5 +1,7 @@
 <template>
-  <div class="mfp-container">
+  <div class="mfp-container"
+    @drop="onDrop"
+    @dragover="onDragOver">
 
     <span class="contextualization" v-if="!mfpMidiFile.buffer">
       <p>Chargez un fichier MIDI de votre choix pour l'interpréter librement !</p>
@@ -239,7 +241,10 @@ export default {
     ]),
     async onFileInput(e) {
       return new Promise((resolve, reject) => {
-        const file = e.target.files[0];
+        
+        // if e.target.files is defined, the user uploaded through the button
+        // otherwise it's a drop event and we use the dataTransfer property
+        const file = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
         this.fileName = file.name;
 
         const reader = new FileReader();
@@ -297,6 +302,13 @@ export default {
     setRowVelocity(i, category) {
       this.keyboardVelocities[category] = i
       this.ioctl.refreshVelocities(this.keyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
+    },
+    onDrop(e) {
+      e.preventDefault()
+      this.onFileInput(e)
+    },
+    onDragOver(e) {
+      e.preventDefault()
     }
   }
 };
