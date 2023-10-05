@@ -205,7 +205,8 @@ export default {
       displayKeyboardSettings: false,
       keyboardVelocities: { ...this.defaultKeyboardVelocities },
       MIN_VELOCITY: 0,
-      MAX_VELOCITY: 255
+      MAX_VELOCITY: 255,
+      MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt())
     };
   },
   computed: {
@@ -220,7 +221,8 @@ export default {
       'sequenceLength',
     ]),
     trimmedTitle() {
-      return this.mfpMidiFile.title.length < 45 ? this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
+      return this.mfpMidiFile.title.length < 45 ?
+        this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
     }
   },
   async mounted() {
@@ -240,32 +242,43 @@ export default {
       'setMfpMidiFile',
     ]),
     async onFileInput(e) {
-      return new Promise((resolve, reject) => {
-        
-        // if e.target.files is defined, the user uploaded through the button
-        // otherwise it's a drop event and we use the dataTransfer property
-        const file = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
-        this.fileName = file.name;
 
-        const reader = new FileReader();
-        const fileByteArray = [];
+      // if e.target.files is defined, the user uploaded through the button
+      // otherwise it's a drop event and we use the dataTransfer property
+      const file = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
 
-        reader.addEventListener('loadend', async e => {
-          if (e.target.readyState === FileReader.DONE) {
-            const mfpFile = {
-              id: 'mfp',
-              title: file.name,
-              url: '',
-              buffer: e.target.result,
-            };
-            console.log(mfpFile);
-            this.setMfpMidiFile(mfpFile);
-            await this.loadMfpMidiBuffer(mfpFile.buffer);
-            resolve();
-          }
-        });
-        reader.readAsArrayBuffer(file);
+      // test based on initial characters "MThd" rather than file extension or MIME
+      const testForMidiSignature = async (file) => {
+        const matchesMidiSignature = (buffer) => {
+          return buffer.every((byte, index) => byte === this.MIDI_FILE_SIGNATURE[index])
+        }
+
+        const signatureSlice = new Uint8Array(await file.slice(0,4).arrayBuffer())
+        return matchesMidiSignature(signatureSlice)
+      }
+
+      const isFileSignatureMidi = await testForMidiSignature(file);
+      if(!isFileSignatureMidi) return;
+
+      this.fileName = file.name;
+
+      const reader = new FileReader();
+      reader.addEventListener('loadend', async readerEvent => {
+        if (readerEvent.target.readyState === FileReader.DONE) {
+
+          const mfpFile = {
+            id: 'mfp',
+            title: file.name,
+            url: '',
+            buffer: readerEvent.target.result,
+          };
+
+          this.setMfpMidiFile(mfpFile);
+          await this.loadMfpMidiBuffer(mfpFile.buffer);
+        }
       });
+
+      reader.readAsArrayBuffer(file);
     },
     async loadMfpMidiBuffer(buffer) {
       await this.performer.loadArrayBuffer(buffer);
@@ -303,9 +316,9 @@ export default {
       this.keyboardVelocities[category] = i
       this.ioctl.refreshVelocities(this.keyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
     },
-    onDrop(e) {
+    async onDrop(e) {
       e.preventDefault()
-      this.onFileInput(e)
+      await this.onFileInput(e)
     },
     onDragOver(e) {
       e.preventDefault()
