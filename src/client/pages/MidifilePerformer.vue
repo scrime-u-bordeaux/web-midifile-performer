@@ -16,7 +16,7 @@
 
     <div class="file-input-wrapper">
       <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-        <input type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+        <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
         <label for="file" class="file-label">
           {{!mfpMidiFile.buffer ? "Charger un fichier MIDI" : "Changer de fichier"}}
         </label>
