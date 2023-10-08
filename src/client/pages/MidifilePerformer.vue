@@ -45,23 +45,13 @@
       :end="sequenceEnd"
       :index="sequenceIndex"
       :size="sequenceLength"
+      @modeChange="onModeChange"
       @index="onIndexChange"
       @start="onStartChange"
       @end="onEndChange"/>
 
     <div v-if="mfpMidiFile.buffer">
       <div class="control-button-container">
-        <button
-          @click="onClickListen"
-          :disabled="currentMode !== 'silent' && currentMode !== 'listen'">
-          Écouter
-        </button>
-
-        <button
-          @click="onClickPerform"
-          :disabled="currentMode !== 'silent' && currentMode !== 'perform'">
-          Interpréter
-        </button>
 
         <button
           @click="$router.push('/guide')"
@@ -198,7 +188,6 @@ export default {
   components: { IOManager, Keyboard, ScrollBar },
   data() {
     return {
-      currentMode: 'silent',
       fileName: noInputFileMsg,
       fileArrayBuffer: null,
       isInputKeyboard: true,
@@ -273,6 +262,7 @@ export default {
             buffer: readerEvent.target.result,
           };
 
+          this.performer.setMode('silent');
           this.setMfpMidiFile(mfpFile);
           await this.loadMfpMidiBuffer(mfpFile.buffer);
         }
@@ -285,6 +275,9 @@ export default {
       this.currentMode = 'silent';
       this.performer.setMode(this.currentMode);
       this.performer.setSequenceIndex(0);
+    },
+    onModeChange(mode) {
+      this.performer.setMode(mode);
     },
     onInputChange(input) {
       console.log(input, KEYBOARD_INPUT_ID)
@@ -301,16 +294,6 @@ export default {
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
-    },
-    onClickListen() {
-      this.currentMode = this.currentMode === 'silent' ? 'listen' : 'silent';
-      this.performer.setMode(this.currentMode);
-      //this.performer.setSequenceIndex(0);
-    },
-    onClickPerform() {
-      this.currentMode = this.currentMode === 'silent' ? 'perform' : 'silent';
-      this.performer.setMode(this.currentMode);
-      // this.performer.setSequenceIndex(0);
     },
     setRowVelocity(i, category) {
       this.keyboardVelocities[category] = i

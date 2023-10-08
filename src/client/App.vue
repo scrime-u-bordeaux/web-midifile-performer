@@ -40,6 +40,7 @@ export default {
       'sequenceStart',
       'sequenceEnd',
       'midiBuffers',
+      'performModeStartedAt'
     ]),
   },
   methods: {
@@ -56,6 +57,7 @@ export default {
       'setSequenceStart',
       'setSequenceEnd',
       'setSequenceIndex',
+      'setPerformModeStartedAt'
     ]),
     onInputsChanged(inputs) {
       this.setInputs(inputs);
@@ -73,9 +75,13 @@ export default {
     },
     // THIS IS WHERE WE ACTUALLY USE THE MIDIFILE PERFORMER STUFF :
     onCommand(cmd) {
-      // const noteEvents = this.performer.command(cmd);
+      if(this.performer.mode !== 'perform') {
+        this.performer.setMode('silent') // make sure the playing loop stops
+        this.performer.setMode('perform')
+        this.setPerformModeStartedAt(Date.now()) // inform watchers, e.g. the scroll bar to set the button to pause
+        // this.performer.setSequenceIndex(this.performer.index+1) // avoid repeating the current set ; but this can seem offputting too...is there a good solution to this ?
+      }
       this.performer.command(cmd);
-      // this.ioctl.noteEvents(noteEvents);
     },
     onNoteOn(note) {
       //this.synth.noteOn(note);
