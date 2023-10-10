@@ -39,7 +39,7 @@
 
     <scroll-bar
       ref="mainScrollBar"
-      v-show="mfpMidiFile.buffer"
+      v-if="mfpMidiFile.buffer"
       class="index-scroll"
       :has-bounds="true"
       :start="sequenceStart"
@@ -214,8 +214,17 @@ export default {
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
     },
     currentMode: {
-      get() {return this.$refs.mainScrollBar.currentMode},
-      set(mode) {this.$refs.mainScrollBar.currentMode = mode}
+      // Instead of putting guards here, we could use v-show to hide the scroll bar and not v-if,
+      // But if we do that, we need the scroll-bar to get its bound rectangle after mounting
+      // (Because an element hidden with v-show is mounted right away, even if hidden, so it would get 0 and never work)
+      // This seems more legible to me.
+
+      get() {
+        return this.$refs.mainScrollBar ? this.$refs.mainScrollBar.currentMode : 'silent'
+      },
+      set(mode) {
+        if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
+      }
     }
   },
   async mounted() {
