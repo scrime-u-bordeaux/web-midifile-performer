@@ -38,7 +38,8 @@
       :whiteNoteWidth="15"/>
 
     <scroll-bar
-      v-if="mfpMidiFile.buffer"
+      ref="mainScrollBar"
+      v-show="mfpMidiFile.buffer"
       class="index-scroll"
       :has-bounds="true"
       :start="sequenceStart"
@@ -54,8 +55,7 @@
       <div class="control-button-container">
 
         <button
-          @click="$router.push('/guide')"
-          :disabled="currentMode !== 'silent'">
+          @click="$router.push('/guide')">
           ? Aide
         </button>
 
@@ -212,6 +212,10 @@ export default {
     trimmedTitle() {
       return this.mfpMidiFile.title.length < 45 ?
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
+    },
+    currentMode: {
+      get() {return this.$refs.mainScrollBar.currentMode},
+      set(mode) {this.$refs.mainScrollBar.currentMode = mode}
     }
   },
   async mounted() {
@@ -262,7 +266,6 @@ export default {
             buffer: readerEvent.target.result,
           };
 
-          this.performer.setMode('silent');
           this.setMfpMidiFile(mfpFile);
           await this.loadMfpMidiBuffer(mfpFile.buffer);
         }
@@ -271,9 +274,9 @@ export default {
       reader.readAsArrayBuffer(file);
     },
     async loadMfpMidiBuffer(buffer) {
-      await this.performer.loadArrayBuffer(buffer);
       this.currentMode = 'silent';
       this.performer.setMode(this.currentMode);
+      await this.performer.loadArrayBuffer(buffer);
       this.performer.setSequenceIndex(0);
     },
     onModeChange(mode) {
