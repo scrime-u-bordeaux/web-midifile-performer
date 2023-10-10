@@ -38,6 +38,7 @@
       :whiteNoteWidth="15"/>
 
     <scroll-bar
+      ref="mainScrollBar"
       v-if="mfpMidiFile.buffer"
       class="index-scroll"
       :has-bounds="true"
@@ -45,27 +46,16 @@
       :end="sequenceEnd"
       :index="sequenceIndex"
       :size="sequenceLength"
+      @modeChange="onModeChange"
       @index="onIndexChange"
       @start="onStartChange"
       @end="onEndChange"/>
 
     <div v-if="mfpMidiFile.buffer">
       <div class="control-button-container">
-        <button
-          @click="onClickListen"
-          :disabled="currentMode !== 'silent' && currentMode !== 'listen'">
-          Écouter
-        </button>
 
         <button
-          @click="onClickPerform"
-          :disabled="currentMode !== 'silent' && currentMode !== 'perform'">
-          Interpréter
-        </button>
-
-        <button
-          @click="$router.push('/guide')"
-          :disabled="currentMode !== 'silent'">
+          @click="$router.push('/guide')">
           ? Aide
         </button>
 
@@ -198,7 +188,6 @@ export default {
   components: { IOManager, Keyboard, ScrollBar },
   data() {
     return {
-      currentMode: 'silent',
       fileName: noInputFileMsg,
       fileArrayBuffer: null,
       isInputKeyboard: true,
@@ -223,7 +212,23 @@ export default {
     trimmedTitle() {
       return this.mfpMidiFile.title.length < 45 ?
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
+    },
+    currentMode: {
+      // Instead of putting guards here, we could use v-show to hide the scroll bar and not v-if,
+      // But if we do that, we need the scroll-bar to get its bound rectangle after mounting
+      // (Because an element hidden with v-show is mounted right away, even if hidden, so it would get 0 and never work)
+      // This seems more legible to me.
+
+      get() {
+        return this.$refs.mainScrollBar ? this.$refs.mainScrollBar.currentMode : 'silent'
+      },
+      set(mode) {
+        if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
+      }
     }
+  },
+  created() {
+    document.addEventListener('keydown',this.onKeyDown)
   },
   async mounted() {
     console.log(this)
@@ -236,6 +241,9 @@ export default {
       console.log('wtf ? no buffer ?');
     }
 
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown',this.onKeyDown)
   },
   methods: {
     ...mapMutations([
@@ -281,10 +289,13 @@ export default {
       reader.readAsArrayBuffer(file);
     },
     async loadMfpMidiBuffer(buffer) {
-      await this.performer.loadArrayBuffer(buffer);
       this.currentMode = 'silent';
       this.performer.setMode(this.currentMode);
+      await this.performer.loadArrayBuffer(buffer);
       this.performer.setSequenceIndex(0);
+    },
+    onModeChange(mode) {
+      this.performer.setMode(mode);
     },
     onInputChange(input) {
       console.log(input, KEYBOARD_INPUT_ID)
@@ -302,16 +313,6 @@ export default {
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
     },
-    onClickListen() {
-      this.currentMode = this.currentMode === 'silent' ? 'listen' : 'silent';
-      this.performer.setMode(this.currentMode);
-      //this.performer.setSequenceIndex(0);
-    },
-    onClickPerform() {
-      this.currentMode = this.currentMode === 'silent' ? 'perform' : 'silent';
-      this.performer.setMode(this.currentMode);
-      // this.performer.setSequenceIndex(0);
-    },
     setRowVelocity(i, category) {
       this.keyboardVelocities[category] = i
       this.ioctl.refreshVelocities(this.keyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
@@ -322,6 +323,12 @@ export default {
     },
     onDragOver(e) {
       e.preventDefault()
+    },
+    onKeyDown(e) {
+      if(e.code === 'Space') {
+        e.preventDefault()
+        this.$refs.mainScrollBar.onClickListen()
+      }
     }
   }
 };

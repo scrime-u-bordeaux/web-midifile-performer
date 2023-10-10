@@ -75,6 +75,13 @@
   </div>
 
   <div class="indices">
+    <div v-if="hasBounds" class="play-button-container">
+      <div class="play-button"
+       :class="currentMode === 'listen' ? 'pause-icon' : 'play-icon'"
+       @click="onClickListen">
+      </div>
+    </div>
+
     <div v-if="hasBounds">
       <div class="input-label"> Début </div>
       <!-- <div class="event-number"> {{ start + 1 }} </div> -->
@@ -186,6 +193,28 @@ rect, circle {
   display: inline-block;
   padding: 10px;
 }
+.play-button-container {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+.play-button {
+  cursor: pointer;
+  width: 0;
+  box-sizing: border-box;
+  border-color: transparent transparent transparent var(--button-blue);
+  transition: 100ms all ease;
+  will-change: border-width;
+}
+.play-button.play-icon {
+  height: 0;
+  border-style: solid;
+  border-width: 1rem 0px 1rem 1.875rem;
+}
+.play-button.pause-icon {
+  height: 1.875rem;
+  border-style: double;
+  border-width: 0 0 0 1.875rem;
+}
 .indices .no-padding-indice {
   padding-right: 0;
   padding-top: 0;
@@ -210,11 +239,14 @@ rect, circle {
 
 <script>
 import NumberInput from './NumberInput.vue';
+import { mapState } from 'vuex';
+
 export default {
   props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'indexLabel' ],
   components: { NumberInput },
   data() {
     return {
+      currentMode: 'silent',
       dragging: null,
       boundingRect: null,
       position: 0,
@@ -234,6 +266,9 @@ export default {
     };
   },
   computed: {
+    ...mapState(
+      ['performModeStartedAt']
+    ),
     positions() {
       // return this.end - this.start + 1;
       console.log(this.size);
@@ -266,6 +301,11 @@ export default {
       return !!this.indexLabel ? this.indexLabel[0].toUpperCase() + this.indexLabel.slice(1) : ""
     }
     //*/
+  },
+  watch: {
+    performModeStartedAt(newestTime, previousTime) {
+      this.currentMode = 'perform'
+    }
   },
   created() {
     document.addEventListener('mousemove', this.drag);
@@ -360,6 +400,13 @@ export default {
     endDrag(e) {
       if (this.dragging === null) return;
       this.dragging = null;
+    },
+    onClickListen(e) {
+      const newMode = this.currentMode === 'listen' ? 'silent' : 'listen';
+      this.currentMode = newMode // to avoid such duplication, it's possible to use the store.
+      // however, this induces a lateral workflow between components that will be harder to maintain in the long run.
+      // a little duplication seems preferrable (unless we can find a third, better solution)
+      this.$emit('modeChange', newMode);
     }
   },
 };

@@ -43,6 +43,7 @@ const store = createStore({
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
+      performModeStartedAt: 0
     };
   },
   getters: {
@@ -116,6 +117,9 @@ const store = createStore({
         state.sequenceEnd
       );
     },
+    setPerformModeStartedAt(state, time) {
+      state.performModeStartedAt = time;
+    }
     ////////////////////////////////////////////////////////////////////////////
   },
   /*
@@ -139,7 +143,7 @@ const store = createStore({
           url: 'mid/debussy_arabesque_2_e_major_schmitz.mid',
         },
       ];
-  
+
       midifiles.forEach(file => {
         // const { id, title, url } = file;
         promises.push(new Promise((resolve, reject) => {
@@ -153,7 +157,7 @@ const store = createStore({
           });
         }));
       });
-  
+
       const midiData = await Promise.all(promises);
       const midiBuffers = Object.fromEntries(new Map(midiData));
       // console.log(midiBuffers);
