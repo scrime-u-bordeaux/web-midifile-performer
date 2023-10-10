@@ -227,6 +227,9 @@ export default {
       }
     }
   },
+  created() {
+    document.addEventListener('keydown',this.onKeyDown)
+  },
   async mounted() {
     console.log(this)
     this.performer.clear();
@@ -238,6 +241,9 @@ export default {
       console.log('wtf ? no buffer ?');
     }
 
+  },
+  beforeUnmount() {
+    document.removeEventListener('keydown',this.onKeyDown)
   },
   methods: {
     ...mapMutations([
@@ -317,6 +323,12 @@ export default {
     },
     onDragOver(e) {
       e.preventDefault()
+    },
+    onKeyDown(e) {
+      if(e.code === 'Space') {
+        e.preventDefault()
+        this.$refs.mainScrollBar.onClickListen()
+      }
     }
   }
 };
