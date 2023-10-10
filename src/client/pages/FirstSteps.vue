@@ -13,6 +13,7 @@
       :whiteNoteWidth="15"/>
 
     <scroll-bar
+      ref="scrollBar"
       class="scroll"
       :hasBounds="true"
       :start="Math.min(sequenceStart, maxLength - 1)"
@@ -21,20 +22,10 @@
       :size="Math.min(sequenceLength, maxLength)"
       @index="onScrollBarIndexChange"
       @start="onScrollBarStartChange"
-      @end="onScrollBarEndChange"/>
+      @end="onScrollBarEndChange"
+      @modeChange="onModeChange"/>
 
     <div>
-    <button
-      @click="onClickListen"
-      :disabled="currentMode !== 'silent' && currentMode !== 'listen'">
-      Écouter
-    </button>
-
-    <button
-      @click="onClickPerform"
-      :disabled="currentMode !== 'silent' && currentMode !== 'perform'">
-      Interpréter
-    </button>
 
     <button
       style="display: none;"
@@ -169,6 +160,9 @@ export default {
     };
   },
   async created() {
+
+    // Load the "first steps" midi file
+
     if (this.firstStepsMidiFile.buffer === null) {
       const file = this.firstStepsMidiFile;
       fetch(file.url)
@@ -182,6 +176,10 @@ export default {
     } else {
       await this.loadFirstStepsMidiFile();
     }
+
+    // Activate pause function (duplication with MFP view, but this is the case for everything else on this page)
+
+    document.addEventListener('keydown',this.onKeyDown)
   },
   mounted() {
     // ?
@@ -189,6 +187,7 @@ export default {
   beforeUnmount() {
     this.performer.setMode('silent');
     this.performer.removeListener('index', this.onPerformerIndexChange);
+    document.removeEventListener('keydown',this.onKeyDown)
   },
   methods: {
     ...mapMutations([
@@ -217,14 +216,15 @@ export default {
     onScrollBarEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
     },
-    onClickListen() {
-      this.currentMode = this.currentMode === 'silent' ? 'listen' : 'silent';
-      this.performer.setMode(this.currentMode);
+    onModeChange(mode) {
+      this.performer.setMode(mode);
     },
-    onClickPerform() {
-      this.currentMode = this.currentMode === 'silent' ? 'perform' : 'silent';
-      this.performer.setMode(this.currentMode);
-    },
+    onKeyDown(e) {
+      if(e.code === 'Space') {
+        e.preventDefault()
+        this.$refs.scrollBar.onClickListen()
+      }
+    }
   },
 };
 </script>
