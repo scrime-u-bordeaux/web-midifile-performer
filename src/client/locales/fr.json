@@ -1,4 +1,8 @@
 {
+  "locales": {
+    "fr": "Français",
+    "en": "Anglais"
+  },
   "menu": {
     "home": "Accueil",
     "firstSteps": "Premiers Pas",

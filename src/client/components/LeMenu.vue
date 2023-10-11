@@ -8,7 +8,6 @@
   </div>
 
   <div class="menubar-centerer">
-    <div class="filler"></div>
     <div class="menubar-container">
       <div class="title-wrapper">
 
@@ -26,7 +25,14 @@
         </template>
       </div>
     </div>
-    <div class="filler"></div>
+  </div>
+
+  <div class="locale-picker">
+    <select v-model="$i18n.locale">
+      <option v-for="lang in langs" :value="lang">
+        {{ $t('locales.'+lang) }}
+      </option>
+    </select>
   </div>
 </div>
 </template>
@@ -35,7 +41,7 @@
   .whole-header {
     display: grid;
     position: relative;
-    grid-template-columns: 15% 85%;
+    grid-template-columns: 15% 72% 13%;
     text-align: center;
     padding: 0 15px;
     background-color: transparent;
@@ -51,8 +57,8 @@
   }
   .menubar-centerer {
     height: fit-content;
-    display: grid;
-    grid-template-columns: 20% 45% 30%;
+    display: flex;
+    justify-content: center;
   }
   .title-wrapper {
     position: relative;
@@ -97,6 +103,25 @@
     background-color: var(--button-blue);
     color: white;
   }
+  .locale-picker {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  select {
+    text-align: center;
+    font-size: 0.9rem;
+    min-height: 2.2rem;
+    background-color: #fff;
+    border: 1px solid #caced1;
+    border-radius: 0.25rem;
+    color: #000;
+    cursor: pointer;
+  }
+  option {
+    text-align: center;
+  }
 </style>
 
 <script>
@@ -104,6 +129,7 @@ export default {
   props: [ 'items' ],
   data() {
     return {
+      langs: ["fr", "en"] // Sadly it doesn't seem possible to directly iterate using the i18n object
     };
   },
   created() {

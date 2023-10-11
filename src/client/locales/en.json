@@ -1,4 +1,8 @@
 {
+  "locales": {
+    "fr": "French",
+    "en": "English"
+  },
   "menu": {
     "home": "Home",
     "firstSteps": "First Steps",
