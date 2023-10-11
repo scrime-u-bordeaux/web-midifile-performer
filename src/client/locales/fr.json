@@ -12,5 +12,30 @@
   "home": {
     "firstSteps": "À vous d'interpréter !",
     "goFurther": "Aller plus loin"
-  }
+  },
+  "firstSteps": {
+    "goFurther": "Aller plus loin",
+    "export": "Exporter"
+  },
+  "scrollBar": {
+    "start": "Début",
+    "current": "Courant",
+    "end": "Fin",
+    "reset": "Réinitialiser"
+  },
+  "lookForScores": {
+    "findNew": "Trouvez de nouvelles partitions...",
+    "pdf": "Au format PDF",
+    "midi": "Au format MIDI",
+    "imslp": {
+      "site": "Site de l'IMSLP",
+      "application": "Application IMSLP"
+    },
+    "archives": "Archive de MIDI classiques",
+    "google": {
+      "first": "Ou faire une ",
+      "second": "recherche Google"
+    }
+  },
+  "notFound": "Cette page n'existe pas :("
 }
