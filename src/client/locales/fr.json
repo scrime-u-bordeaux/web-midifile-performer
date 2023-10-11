@@ -1,0 +1,12 @@
+{
+  "menu": {
+    "home": "Accueil",
+    "firstSteps": "Premiers Pas",
+    "mfp": "Midifile Performer",
+    "credits": "Crédits"
+  },
+  "home": {
+    "firstSteps": "À vous d'interpréter !",
+    "goFurther": "Aller plus loin"
+  }
+}

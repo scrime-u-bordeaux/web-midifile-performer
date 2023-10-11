@@ -3,10 +3,10 @@
   <le-menu
     id="app-menu"
     :items="[
-      { text: 'Accueil',            page: 'Home' },
-      { text: 'Premiers Pas',       page: 'FirstSteps' },
-      { text: 'Midifile Performer', page: 'MidifilePerformer' },
-      { text: 'Crédits',            page: 'Credits'}
+      { text: $t('menu.home'),            page: 'Home' },
+      { text: $t('menu.firstSteps'),       page: 'FirstSteps' },
+      { text: $t('menu.mfp'), page: 'MidifilePerformer' },
+      { text: $t('menu.credits'),            page: 'Credits'}
     ]"
   />
 

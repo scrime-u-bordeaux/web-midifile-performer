@@ -1,12 +1,20 @@
 import { createApp }      from 'vue';
-// import MidifilePerformer  from 'midifile-performer';
-// import performer          from './utilities/NaiveMidifilePerformer';
+import { createI18n } from "vue-i18n";
+import fr from './locales/fr.json'
+import en from './locales/en.json'
+
 import ioctl, { defaultInputs, defaultVelocities } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth              from './utilities/Synth';
 import store              from './store';
 import router             from './router';
 import App                from './App.vue';
+
+const i18n = createI18n({
+  locale: "fr",
+  fallbackLocale: "en",
+  messages: { fr, en },
+});
 
 Promise.all([
   performer.initialize(),
@@ -15,6 +23,7 @@ Promise.all([
 .then(() => {
   const app = createApp(App);
 
+  app.use(i18n);
   app.use(router);
   app.use(store);
 
