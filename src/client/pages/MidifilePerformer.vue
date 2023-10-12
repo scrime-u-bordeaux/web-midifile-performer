@@ -4,9 +4,9 @@
     @dragover="onDragOver">
 
     <span class="contextualization" v-if="!mfpMidiFile.buffer">
-      <p>Chargez un fichier MIDI de votre choix pour l'interpréter librement !</p>
-      <p>Vous pouvez utiliser un contrôleur MIDI de votre choix, ou bien votre clavier d'ordinateur.</p>
-      <p>Essayez de jouer sur le legato, le tempo, ou encore la vélocité.</p>
+      <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
+      <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
+      <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
     </span>
 
     <IOManager
@@ -18,13 +18,13 @@
       <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
         <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
         <label for="file" class="file-label">
-          {{!mfpMidiFile.buffer ? "Charger un fichier MIDI" : "Changer de fichier"}}
+          {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
         </label>
         <div class="file-name" v-if="mfpMidiFile.buffer">{{ trimmedTitle }}</div>
         <div class="search-score-hint" v-else>
-          Vous n'avez pas de partitions ? Trouvez-en de nouvelles
+          {{ $t('midiFilePerformer.noScores.message') }}
           <span class="link" @click="$router.push('/look-for-scores')">
-            ici !
+            {{ $t('midiFilePerformer.noScores.link') }}
           </span>
         </div>
       </div>
@@ -56,20 +56,20 @@
 
         <button
           @click="$router.push('/guide')">
-          ? Aide
+          {{ $t("midiFilePerformer.help") }}
         </button>
 
         <button
           style="display: none;"
           @click="onClickExport"
           :disabled="currentMode !== 'silent'">
-          Exporter
+          {{ $t('midiFilePerformer.export') }}
         </button>
       </div>
 
       <div v-if="isInputKeyboard">
         <span class="settings-toggle pseudo-link" @click="displayKeyboardSettings = !displayKeyboardSettings">
-          {{ !displayKeyboardSettings ? "Régler les vélocités du clavier" : "Minimiser" }}
+          {{ $t('midiFilePerformer.keyboardVelocity.' + (!displayKeyboardSettings ? 'display' : 'hide')) }}
         </span>
         <div v-if="displayKeyboardSettings">
           <div v-for="(velocity, category) in keyboardVelocities" class="velocity-slider">
@@ -79,7 +79,7 @@
               :end="MAX_VELOCITY"
               :index="velocity"
               :size="MAX_VELOCITY+1"
-              :indexLabel="`${category} row`"
+              :indexLabel="$t('midiFilePerformer.velocitySliders.'+category)"
               @index="setRowVelocity($event, category)"
               @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
               />
@@ -208,6 +208,7 @@ export default {
       'sequenceEnd',
       'sequenceIndex',
       'sequenceLength',
+      'localeChanged'
     ]),
     trimmedTitle() {
       return this.mfpMidiFile.title.length < 45 ?
@@ -225,6 +226,15 @@ export default {
       set(mode) {
         if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
       }
+    }
+  },
+  watch: {
+    localeChanged(newestTime, previousTime) {
+      // The IOController, as a pure JS helper, is out of vue-i18n's reach.
+      // Even if it uses i18n.global.t for its labels, it will not be updated as the locale changes.
+      // This is a workaround to that problem.
+      
+      this.ioctl.changeLocale(this.$t('ioController.defaultInput'), this.$t('ioController.defaultOutput'))
     }
   },
   created() {

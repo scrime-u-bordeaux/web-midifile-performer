@@ -43,7 +43,8 @@ const store = createStore({
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
-      performModeStartedAt: 0
+      performModeStartedAt: 0,
+      localeChanged: 0
     };
   },
   getters: {
@@ -119,6 +120,9 @@ const store = createStore({
     },
     setPerformModeStartedAt(state, time) {
       state.performModeStartedAt = time;
+    },
+    setLocaleChanged(state, time) { // For times where the reactivity of vue-i18n is not enough (i.e. updating labels in JS utils)
+      state.localeChanged = time;
     }
     ////////////////////////////////////////////////////////////////////////////
   },

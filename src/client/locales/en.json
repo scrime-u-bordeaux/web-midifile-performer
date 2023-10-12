@@ -23,8 +23,17 @@
     "end": "End",
     "reset": "Reset"
   },
+  "ioController": {
+    "defaultInput": "Computer keyboard",
+    "defaultOutput": "Built-in synthesizer"
+  },
+  "ioManager": {
+    "input": "Input",
+    "output": "Output",
+    "refresh": "Refresh device list"
+  },
   "lookForScores": {
-    "findNew": "Find new partitions...",
+    "findNew": "Find new scores...",
     "pdf": "As PDF files",
     "midi": "As MIDI files",
     "imslp": {
@@ -36,6 +45,33 @@
       "first": "Or through a ",
       "second": "Google search"
     }
+  },
+  "midiFilePerformer": {
+    "contextualization": {
+      "firstLine": "Upload any MIDI file of your choice to interpret it as you please!",
+      "secondLine": "You can use an external MIDI controller, or your computer keyboard.",
+      "thirdLine": "Try altering legato, tempo or velocity."
+    },
+    "upload": {
+      "first": "Upload a MIDI file",
+      "change": "Upload a different file"
+    },
+    "keyboardVelocity": {
+      "display": "Adjust keyboard velocities",
+      "hide": "Hide"
+    },
+    "velocitySliders": {
+      "pianissimo": "Pianissimo row",
+      "piano": "Piano row",
+      "mezzo": "Mezzo row",
+      "forte": "Forte row"
+    },
+    "export": "Export",
+    "noScores": {
+      "message": "Looking for scores? You can find some",
+      "link": "here!"
+    },
+    "help": "Help"
   },
   "notFound": "This page doesn't exist :("
 }

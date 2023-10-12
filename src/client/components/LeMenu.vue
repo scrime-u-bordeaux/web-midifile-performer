@@ -28,7 +28,7 @@
   </div>
 
   <div class="locale-picker">
-    <select v-model="$i18n.locale">
+    <select @change="onLocaleChange" v-model="$i18n.locale">
       <option v-for="lang in langs" :value="lang">
         {{ $t('locales.'+lang) }}
       </option>
@@ -125,6 +125,8 @@
 </style>
 
 <script>
+import { mapState, mapMutations } from 'vuex';
+
 export default {
   props: [ 'items' ],
   data() {
@@ -132,11 +134,18 @@ export default {
       langs: ["fr", "en"] // Sadly it doesn't seem possible to directly iterate using the i18n object
     };
   },
+  computed: {
+    ...mapState(['localeChanged'])
+  },
   created() {
   },
   beforeUnmount() {
   },
   methods: {
+    ...mapMutations(['setLocaleChanged']),
+    onLocaleChange(e) {
+      this.setLocaleChanged(Date.now()) // Through watching this, the app can update anything that vue-i18n doesn't automatically update itself
+    }
   }
 };
 </script>

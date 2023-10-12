@@ -1,7 +1,5 @@
 import { createApp }      from 'vue';
-import { createI18n } from "vue-i18n";
-import fr from './locales/fr.json'
-import en from './locales/en.json'
+import { i18n } from './utilities/I18n'
 
 import ioctl, { defaultInputs, defaultVelocities } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
@@ -9,12 +7,6 @@ import synth              from './utilities/Synth';
 import store              from './store';
 import router             from './router';
 import App                from './App.vue';
-
-const i18n = createI18n({
-  locale: "fr",
-  fallbackLocale: "en",
-  messages: { fr, en },
-});
 
 Promise.all([
   performer.initialize(),

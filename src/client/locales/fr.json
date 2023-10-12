@@ -23,6 +23,15 @@
     "end": "Fin",
     "reset": "Réinitialiser"
   },
+  "ioController": {
+    "defaultInput": "Clavier d'ordinateur",
+    "defaultOutput": "Synthétiseur intégré"
+  },
+  "ioManager": {
+    "input": "Entrée",
+    "output": "Sortie",
+    "refresh": "Rafraîchir les périphériques"
+  },
   "lookForScores": {
     "findNew": "Trouvez de nouvelles partitions...",
     "pdf": "Au format PDF",
@@ -36,6 +45,33 @@
       "first": "Ou faire une ",
       "second": "recherche Google"
     }
+  },
+  "midiFilePerformer": {
+    "contextualization": {
+      "firstLine": "Chargez un fichier MIDI de votre choix pour l'interpréter librement !",
+      "secondLine": "Vous pouvez utiliser un contrôleur MIDI externe, ou bien votre clavier d'ordinateur.",
+      "thirdLine": "Essayez de jouer sur le legato, le tempo, ou encore la vélocité."
+    },
+    "upload": {
+      "first": "Charger un fichier MIDI",
+      "change": "Changer de fichier"
+    },
+    "keyboardVelocity": {
+      "display": "Régler les vélocités du clavier",
+      "hide": "Minimiser"
+    },
+    "velocitySliders": {
+      "pianissimo": "Ligne pianissimo",
+      "piano": "Ligne piano",
+      "mezzo": "Ligne mezzo",
+      "forte": "Ligne forte"
+    },
+    "export": "Exporter",
+    "noScores": {
+      "message": "Vous n'avez pas de partitions ? Trouvez-en de nouvelles",
+      "link": "ici !"
+    },
+    "help": "Aide"
   },
   "notFound": "Cette page n'existe pas :("
 }
