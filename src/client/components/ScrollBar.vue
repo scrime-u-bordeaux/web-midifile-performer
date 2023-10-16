@@ -2,7 +2,7 @@
 <div class="scroll-bar-container" :class="!hasBounds ? 'horizontal-layout' : 'vertical-layout'" >
   <div :class="!hasBounds ? 'with-reset' : 'full-width'">
     <!-- @mousedown="startDrag"> -->
-    <span v-if="!hasBounds" class="pseudo-link" @click="$emit('reset')">Réinitialiser</span>
+    <span v-if="!hasBounds" class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
     <svg
       style="/*display: none;*/"
       ref="scroll-bar"
@@ -83,7 +83,7 @@
     </div>
 
     <div v-if="hasBounds">
-      <div class="input-label"> Début </div>
+      <div class="input-label"> {{$t('scrollBar.start')}} </div>
       <!-- <div class="event-number"> {{ start + 1 }} </div> -->
       <input
         ref="start-input"
@@ -94,7 +94,7 @@
         @input="onStartInput" />
     </div>
     <div :class="!hasBounds ? 'no-padding-indice' : ''">
-      <div class="input-label"> {{ capitalizedIndexLabel || "Courant" }} </div>
+      <div class="input-label"> {{ capitalizedIndexLabel || $t('scrollBar.current') }} </div>
       <!-- <div class="event-number"> {{ index + 1 }} </div> -->
       <input
         ref="index-input"
@@ -112,7 +112,7 @@
         @change="onIndexChange"/> -->
     </div>
     <div v-if="hasBounds">
-      <div class="input-label"> Fin </div>
+      <div class="input-label"> {{$t('scrollBar.end')}} </div>
       <!-- <div class="event-number"> {{ end + 1 }} </div> -->
       <input
         ref="end-input"

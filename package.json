@@ -29,6 +29,7 @@
     "midi-player-js": "^2.0.16",
     "midifile-performer": "^0.3.2",
     "vue": "^3.2.23",
+    "vue-i18n": "^9.5.0",
     "vue-router": "^4.0.12",
     "vuex": "^4.0.2"
   },

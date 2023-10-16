@@ -1,0 +1,115 @@
+{
+  "locales": {
+    "fr": "French",
+    "en": "English"
+  },
+  "menu": {
+    "home": "Home",
+    "firstSteps": "First Steps",
+    "mfp": "Midifile Performer",
+    "credits": "Credits"
+  },
+  "home": {
+    "firstSteps": "Try playing too!",
+    "goFurther": "Go further"
+  },
+  "firstSteps": {
+    "goFurther": "Go further",
+    "export": "Export"
+  },
+  "scrollBar": {
+    "start": "Start",
+    "current": "Current",
+    "end": "End",
+    "reset": "Reset"
+  },
+  "ioController": {
+    "defaultInput": "Computer keyboard",
+    "defaultOutput": "Built-in synthesizer"
+  },
+  "ioManager": {
+    "input": "Input",
+    "output": "Output",
+    "refresh": "Refresh device list"
+  },
+  "lookForScores": {
+    "findNew": "Find new scores...",
+    "pdf": "As PDF files",
+    "midi": "As MIDI files",
+    "imslp": {
+      "site": "IMSLP website",
+      "application": "IMSLP application"
+    },
+    "archives": "Classical MIDI archive",
+    "google": {
+      "first": "Or through a ",
+      "second": "Google search"
+    }
+  },
+  "midiFilePerformer": {
+    "contextualization": {
+      "firstLine": "Upload any MIDI file to interpret it as you please!",
+      "secondLine": "You can use an external MIDI controller, or your computer keyboard.",
+      "thirdLine": "Try altering legato, tempo or velocity."
+    },
+    "upload": {
+      "first": "Upload a MIDI file",
+      "change": "Upload a different file"
+    },
+    "keyboardVelocity": {
+      "display": "Adjust keyboard velocities",
+      "hide": "Hide"
+    },
+    "velocitySliders": {
+      "pianissimo": "Pianissimo row",
+      "piano": "Piano row",
+      "mezzo": "Mezzo row",
+      "forte": "Forte row"
+    },
+    "export": "Export",
+    "noScores": {
+      "message": "Looking for scores? You can find some",
+      "link": "here!"
+    },
+    "help": "Help"
+  },
+  "credits": {
+    "metapiano": "Metapiano demonstration video",
+    "article": "Midifile Performer paper",
+    "firstImplem": "First implementation",
+    "cppLib": "C++ library",
+    "website": "and website",
+    "samples": "Piano samples"
+  },
+  "guide": {
+    "how": "How to use the Midifile Performer ?",
+    "io": {
+      "heading": "Manage MIDI inputs and audio outputs",
+      "default": "By default, your computer keyboard can be used; the four alphanumerical rows each have ten active keys sharing the same velocity: from pianissimo for the lowermost row (beginning with Z on a QWERTY keyboard) to fortissimo for the uppermost row (the number row). If your device has a trackpad, it will be active as well. These velocities may be adjusted to your convenience.",
+      "custom": "You may also plug in any USB MIDI controller to pilot the application. A built-in piano synth is the default audio output, but any VSTs of your own (e.g. : Pianoteq) may also be selected."
+    },
+    "score": {
+      "heading": "Uploading and managing files",
+      "instructions": "You can import any MIDI file to interpret it in your own way. To do so, click on the \"Upload a MIDI file\" button, or drag and drop the file directly on the page.",
+      "advice": {
+        "heading": "Advice on file sorting",
+        "content": "You may create a folder for each piece or each composer, which can hold the PDF score, the MIDI file, and your recorded interpretations."
+      }
+    },
+    "perform": {
+      "heading": "Perform a piece",
+      "sequence": {
+        "heading": "Managing the selected sequence:",
+        "default": "By default, the sequence in play begins with the piece's first note, and ends with the last note",
+        "select": "You may select a specific section to play by using the index of the desired notes, or the flags on the scroll bar",
+        "cursor": "Moving the progress bar's cursor will move to this point in the piece",
+        "rewind": "Press the \"Rewind\" button to jump to the start of the selected sequence; you will also loop to the start when reaching its end"
+      }
+    },
+    "export": {
+      "heading": "Export an interpretation",
+      "content": "The \"Export\" button will download a MIDI file containing your last interpretation of the piece or sequence. You can then make use of it through the software of your choice."
+    }
+  },
+  "notFound": "This page doesn't exist :("
+}

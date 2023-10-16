@@ -15,11 +15,11 @@
 
     <div class="buttons-container">
       <button @click="$router.push('/first-steps')">
-        À vous d'interpréter !
+        {{$t('home.firstSteps')}}
       </button>
 
       <button @click="$router.push('/midifile-performer')">
-        Aller plus loin
+        {{$t('home.goFurther')}}
       </button>
     </div>
   </div>

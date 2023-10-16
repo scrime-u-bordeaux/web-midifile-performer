@@ -31,13 +31,13 @@
       style="display: none;"
       @click="onClickExport"
       :disabled="currentMode !== 'silent'">
-      Exporter
+      {{$t('firstSteps.export')}}
     </button>
 
     <button
       @click="$router.push('/midifile-performer')"
       :disabled="currentMode !== 'silent'">
-      Aller plus loin
+      {{$t('firstSteps.goFurther')}}
     </button>
     </div>
   </div>

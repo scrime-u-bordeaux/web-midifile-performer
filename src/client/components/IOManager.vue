@@ -1,7 +1,7 @@
 <template>
   <div class="manager">
     <div class="select-container">
-      <span class="select-label">Input</span>
+      <span class="select-label">{{ $t('ioManager.input') }}</span>
       <select @change="selectedInputChanged">
         <option
           v-for="input in inputs"
@@ -13,7 +13,7 @@
     </div>
 
     <div class="select-container">
-      <span class="select-label">Output</span>
+      <span class="select-label">{{ $t('ioManager.output') }}</span>
       <select @change="selectedOutputChanged">
         <option
           v-for="output in outputs"
@@ -25,7 +25,7 @@
     </div>
 
     <button @click="refreshInputsAndOutputs">
-      Refresh device list
+      {{ $t('ioManager.refresh') }}
     </button>
   </div>
 </template>

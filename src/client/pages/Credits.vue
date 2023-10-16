@@ -2,27 +2,27 @@
   <div class="container">
     <div class="credits-container">
       <p>
-        Métapiano et vidéo de performance : <br/>
+        {{ $t('credits.metapiano') }}<br/>
         <strong>Jean Haury</strong>
       </p>
       <p>
         <a href="https://dl.acm.org/doi/10.1145/3471872.3472968">
-          Article Midifile Performer
-        </a> :
+          {{ $t('credits.article') }}
+        </a>
         <br><strong>Juliette Chabassier, Myriam Desainte-Catherine, Jean Haury, Marin Pobel, Bernard Serpette</strong>
       </p>
       <p>
-        Première implémentation : <br/>
+        {{ $t('credits.firstImplem') }} <br/>
         <strong>Bernard Serpette</strong>
       </p>
       <p>
         <a href="https://github.com/scrime-u-bordeaux/libMidifilePerformer">
-          Bibliothèque C++
-        </a> et site Internet : <br/>
+          {{ $t('credits.cppLib') }}
+        </a> {{ $t('credits.website') }} <br/>
         <strong>Joseph Larralde, Raphaël Blard</strong>
       </p>
       <p>
-        Samples de piano : <br/>
+        {{ $t('credits.samples') }} <br/>
         <strong>Pianoteq, <a href="https://musical-artifacts.com/artifacts?apps=ableton&formats=sf2&tags=piano">GD Craft</a></strong>
       </p>
     </div>

@@ -1,50 +1,47 @@
 <template>
 <div>
   <div class="wrapper">
-    <h1> Comment utiliser Midifile Performer ? </h1>
+    <h1> {{ $t('guide.how') }} </h1>
 
-    <h2> Gérer les entrées MIDI et les sorties audio </h2>
+    <h2> {{ $t('guide.io.heading') }} </h2>
     <p>
-      Par défaut le clavier d’ordinateur est fonctionnel et permet les nuances dynamiques selon les quatre rangées de touches : Pianissimo rangée du bas, Fortissimo rangée du haut. Le trackpad est aussi actif.
+      {{ $t('guide.io.default') }}
       <br><br>
-      Vous pouvez aussi insérer un clavier Midi en Usb.
-
-      Pour les sorties audio, le générateur interne est sélectionné par défaut.
-      Si d’autres générateurs Vst (Pianoteq) sont installés, ils apparaissent dans la liste des sorties audio.
+      {{ $t('guide.io.custom') }}
     </p>
 
-    <h2> Choix / gestion des partitions à jouer </h2>
+    <h2> {{ $t('guide.score.heading' )}} </h2>
     <p>
-      Importez une partition .mid pour pouvoir la jouer ensuite. Pour cela cliquez sur le bouton « Importer fichier », ou glissez directement votre fichier depuis votre ordinateur sur la case dédiée. Faites de même pour la partition PDF.
+      {{ $t('guide.score.instructions') }}
     </p>
     <p>
-      <div class="green-italic"> Conseils pour gérer vos fichiers dans votre ordinateur </div>
-      Créez un dossier par oeuvre/compositeur dans lequel vous placez la partition .pdf, la partition .mid et vos interprétations.
+      <div class="green-italic"> {{ $t('guide.score.advice.heading') }} </div> <br/>
+      {{ $t('guide.score.advice.content') }}
     </p>
 
-    <h2> Jouer un morceau </h2>
+    <h2> {{ $t('guide.perform.heading') }} </h2>
     <p>
-      <i> Gestion de la séquence du morceau à jouer : </i>
+      <i> {{ $t('guide.perform.sequence.heading') }} </i>
 
       <ul>
         <li>
-          Par défaut, la séquence du morceau à jouer démarre à la première note, et se finit à la dernière note
+          {{ $t('guide.perform.sequence.default') }}
         </li>
         <li>
-          Vous pouvez cependant décider de sélectionner une plus petite séquence en entrant les numéros des notes de début et de fin de votre séquence dans les cases
+          {{ $t('guide.perform.sequence.select') }}
         </li>
         <li>
-          Vous pouvez aussi déplacer le curseur de la barre de progression pour reprendre à ce niveau du morceau
+          {{ $t('guide.perform.sequence.cursor') }}
         </li>
-        <li>
-          Appuyez sur le bouton « Rejouer » pour redémarrer au début de la séquence sélectionnée (par défaut, le morceau reprend automatiquement au début de la séquence)
+        <li style="display: none"> <!--This feature is not implemented yet !-->
+          {{ $t('guide.perform.sequence.rewind') }}
         </li>
       </ul>
     </p>
 
-    <h2> Enregistrer / modifier / exporter votre interprétation </h2>
+    <h2> {{ $t('guide.export.heading') }} </h2>
     <p>
-      Vous pouvez enregistrer vos interprétations depuis MidiFile Performer pour obtenir un fichier .mid que vous pourrez ensuite exploiter à l’aide de différents outils.
+      {{ $t('guide.export.content') }}
     </p>
   </div>
 </div>
@@ -55,7 +52,7 @@
   .green-italic {
     text-align: center;
     color: #0C0;
-    font-style: italic; 
+    font-style: italic;
   }
   .wrapper {
     text-align: left;

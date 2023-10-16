@@ -1,4 +1,6 @@
 import EventEmitter from 'events';
+import { i18n } from './I18n.js';
+const { t } = i18n.global
 
 const universalLayout = {
   forte: ["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7","Digit8","Digit9","Digit0"],
@@ -14,12 +16,16 @@ const defaultVelocities = {
   pianissimo: 32,
 };
 
+// Using vue-i18n t here is sadly not sufficient for it to change on locale change
+// A separate method deals with updating these labels
+// TODO : should we just put them elsewhere and inject them ?
+
 const defaultInputs = {
-  0: { id: '0', name: 'Computer keyboard' }
+  0: { id: '0', name: t('ioController.defaultInput') }
 };
 
 const defaultOutputs = {
-  0: { id: '0', name: 'Internal sampler' }
+  0: { id: '0', name: t('ioController.defaultOutput') }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -257,6 +263,13 @@ class IOController extends EventEmitter {
         )
       )
     });
+  }
+
+  // Update the necessary labels. This is semantically unrelated to the component and looks very ugly here.
+
+  changeLocale(defaultInputLabel, defaultOutputLabel) {
+    defaultInputs[0].name = defaultInputLabel;
+    defaultOutputs[0].name = defaultOutputLabel;
   }
 };
 

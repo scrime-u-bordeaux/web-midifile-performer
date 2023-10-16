@@ -1,6 +1,6 @@
 import { createApp }      from 'vue';
-// import MidifilePerformer  from 'midifile-performer';
-// import performer          from './utilities/NaiveMidifilePerformer';
+import { i18n } from './utilities/I18n'
+
 import ioctl, { defaultInputs, defaultVelocities } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth              from './utilities/Synth';
@@ -15,6 +15,7 @@ Promise.all([
 .then(() => {
   const app = createApp(App);
 
+  app.use(i18n);
   app.use(router);
   app.use(store);
 
