@@ -86,14 +86,14 @@
     "io": {
       "heading": "Gérer les entrées MIDI et les sorties audio",
       "default": "Par défaut, le clavier d’ordinateur est fonctionnel ; les quatre rangées alphanumériques offrent chacune dix touches avec une vélocité commune : de pianissimo pour la rangée du bas (commençant par W sur un clavier AZERTY), jusqu'à fortissimo pour la rangée du haut (chiffres). S'il est présent, le trackpad est aussi actif. Vous pouvez, au besoin, ajuster les vélocités de ces rangées.",
-      "custom": "Vous pouvez aussi insérer un clavier Midi en USB comme entrée alternative. Un synthétiseur piano intégré est sélectionné comme sortie audio par défaut. Si vous disposez de vos propres VSTs (Pianoteq par exemple), ils apparaîtront dans la liste des sorties audio."
+      "custom": "Vous pouvez aussi insérer un clavier MIDI en USB comme entrée alternative. Un synthétiseur piano intégré est sélectionné comme sortie audio par défaut. Si vous disposez de vos propres VSTs (Pianoteq par exemple), ils apparaîtront dans la liste des sorties audio."
     },
     "score": {
       "heading": "Choix et gestion des partitions à jouer",
       "instructions": "Importez une partition au format .mid pour pouvoir l'interpréter à votre façon. Pour cela, cliquez sur le bouton « Charger un fichier MIDI », ou glissez-déposez le fichier sur la page.",
       "advice": {
         "heading": "Conseils pour gérer vos fichiers dans votre ordinateur",
-        "content": "Créez un dossier par oeuvre/compositeur dans lequel vous placez la partition PDF, la partition MIDI et vos interprétations."
+        "content": "Vous pouvez créer un dossier par oeuvre/compositeur où placer la partition PDF, la partition MIDI et vos différentes interprétations."
       }
     },
     "perform": {

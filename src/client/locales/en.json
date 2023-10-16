@@ -48,7 +48,7 @@
   },
   "midiFilePerformer": {
     "contextualization": {
-      "firstLine": "Upload any MIDI file of your choice to interpret it as you please!",
+      "firstLine": "Upload any MIDI file to interpret it as you please!",
       "secondLine": "You can use an external MIDI controller, or your computer keyboard.",
       "thirdLine": "Try altering legato, tempo or velocity."
     },
@@ -85,7 +85,7 @@
     "how": "How to use the Midifile Performer ?",
     "io": {
       "heading": "Manage MIDI inputs and audio outputs",
-      "default": "By default, your computer keyboard can be used; the four alphanumerical rows each have ten active keys sharing the same velocity: from pianissimo for the lowermost row (beginning with Z on a QWERTY keyboard) to fortissimo for the uppermost row (the number row). If your device has a trackpad, it will be active as well. These velocities may be adjusted if need be.",
+      "default": "By default, your computer keyboard can be used; the four alphanumerical rows each have ten active keys sharing the same velocity: from pianissimo for the lowermost row (beginning with Z on a QWERTY keyboard) to fortissimo for the uppermost row (the number row). If your device has a trackpad, it will be active as well. These velocities may be adjusted to your convenience.",
       "custom": "You may also plug in any USB MIDI controller to pilot the application. A built-in piano synth is the default audio output, but any VSTs of your own (e.g. : Pianoteq) may also be selected."
     },
     "score": {
