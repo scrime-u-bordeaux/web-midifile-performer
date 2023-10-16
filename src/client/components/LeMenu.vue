@@ -139,7 +139,8 @@ export default {
   methods: {
     onLocaleChange(e) {
       // Through watching this, the app can update anything that vue-i18n doesn't automatically update itself
-      this.$emit('localeChanged',this.$i18n.locale)
+      this.$emit('localeChanged', this.$i18n.locale)
+      localStorage.setItem('locale', this.$i18n.locale)
     }
   }
 };
