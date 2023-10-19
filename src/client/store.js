@@ -78,16 +78,16 @@ const store = createStore({
     setMfpMidiFile(state, file) {
       state.mfpMidiFile = { ...file };
     },
-    noteOn(state, { noteNumber, velocity }) {
-      if (noteNumber >= state.minKeyboardNote &&
-          noteNumber <= state.maxKeyboardNote) {
-        state.keyboardState[noteNumber - state.minKeyboardNote] = velocity > 0;
+    animateNoteOn(state, note) {
+      if (note.pitch >= state.minKeyboardNote &&
+          note.pitch <= state.maxKeyboardNote) {
+        state.keyboardState[note.pitch - state.minKeyboardNote] = note.velocity > 0;
       }
     },
-    noteOff(state, { noteNumber, velocity }) {
-      if (noteNumber >= state.minKeyboardNote &&
-          noteNumber <= state.maxKeyboardNote) {
-        state.keyboardState[noteNumber - state.minKeyboardNote] = false;
+    animateNoteOff(state, note) {
+      if (note.pitch >= state.minKeyboardNote &&
+          note.pitch <= state.maxKeyboardNote) {
+        state.keyboardState[note.pitch - state.minKeyboardNote] = false;
       }
     },
     allNotesOff(state) {

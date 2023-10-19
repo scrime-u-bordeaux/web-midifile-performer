@@ -51,8 +51,8 @@ export default {
       'setCurrentInputId',
       'setCurrentOutputId',
       // 'setKeyboardState',
-      'noteOn',
-      'noteOff',
+      'animateNoteOn',
+      'animateNoteOff',
       'allNotesOff',
       'setSequenceLength',
       'setSequenceStart',
@@ -89,21 +89,14 @@ export default {
       }
       this.performer.command(cmd);
     },
+    onNotes(notes) {
+      this.ioctl.playNoteEvents(notes)
+    },
     onNoteOn(note) {
-      //this.synth.noteOn(note);
-      this.noteOn(note); // update keyboard state
-      const { noteNumber, velocity, channel } = note;
-      this.ioctl.noteEvents([
-        { on: true, pitch: noteNumber, velocity, channel }
-      ]);
+      this.animateNoteOn(note)
     },
     onNoteOff(note) {
-      //this.synth.noteOff(note);
-      this.noteOff(note); // update keyboard state
-      const { noteNumber, velocity, channel } = note;
-      this.ioctl.noteEvents([
-        { on: false, pitch: noteNumber, velocity, channel }
-      ]);
+      this.animateNoteOff(note)
     },
     onAllNotesOff() {
       this.allNotesOff(); // update keyboard state
@@ -136,8 +129,7 @@ export default {
     // await this.performer.initialize();
 
     document.addEventListener('click', this.onUserClick);
-    this.performer.addListener('noteon', this.onNoteOn);
-    this.performer.addListener('noteoff', this.onNoteOff);
+    this.performer.addListener('notes', this.onNotes);
     this.performer.addListener('allnotesoff', () => {
       this.ioctl.allNotesOff();
       this.allNotesOff();
@@ -153,6 +145,8 @@ export default {
     this.ioctl.addListener('currentInputId', this.onCurrentInputIdChanged);
     this.ioctl.addListener('currentOutputId', this.onCurrentOutputIdChanged);
     this.ioctl.addListener('command', this.onCommand);
+    this.ioctl.addListener('noteOn', this.onNoteOn);
+    this.ioctl.addListener('noteOff', this.onNoteOff);
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
     this.ioctl.updateInputsAndOutputs();
 

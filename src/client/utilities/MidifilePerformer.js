@@ -173,7 +173,7 @@ function mergeTracks({ division, format, tracks }) {
 }
 
 /**
- * Another utility : generate midi note events from a vector of noteData.
+ * Convert a C++-WASM vector of noteData to an array of JS objects.
  * Used by MidifilePerformer.loadArrayBuffer when setting up the note events
  * callback : this.performer.setNoteEventsCallback(() => { ... });
  */
@@ -182,10 +182,7 @@ function noteEventsFromNoteDataVector(notes) {
   for (let i = 0; i < notes.size(); ++i) {
     const e = notes.get(i);
     const { on, pitch, velocity, channel } = e;
-    res.push({
-      event: on ? 'noteon' : 'noteoff',
-      data: { noteNumber: pitch, velocity, channel }
-    });
+    res.push({ on, pitch, velocity, channel });
   }
   return res;
 }
@@ -258,12 +255,9 @@ class MidifilePerformer extends EventEmitter {
 
     this.performer.finalize();
 
-    this.performer.setNoteEventsCallback(notes => {
-      const events = noteEventsFromNoteDataVector(notes);
-      events.forEach(({ event, data }) => {
-        this.emit(event, data);
-      });
-    });
+    this.performer.setNoteEventsCallback(notes =>
+      this.emit('notes', noteEventsFromNoteDataVector(notes))
+    );
 
     this.performer.setLoopIndices(0, this.performer.size() - 1);
     this.sequenceStartIndex = this.performer.getLoopStartIndex();

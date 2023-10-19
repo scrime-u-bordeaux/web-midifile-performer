@@ -226,10 +226,11 @@ class IOController extends EventEmitter {
     }
   }
 
-  noteEvents(events) { // e is an array of { on, pitch, velocity, channel } objects
+  playNoteEvents(events) { // e is an array of { on, pitch, velocity, channel } objects
     if (this.currentOutputId !== '0') {
       for (const e of events) {
         const { on, pitch, velocity, channel } = e;
+        this.emit(on ? "noteOn" : "noteOff", e)
         const note = [
           // we only manipulate channels between 1 and 16 in the JS code.
           // we increment them directly when parsing the MIDI file and set them
@@ -241,15 +242,22 @@ class IOController extends EventEmitter {
         this.outputs[this.currentOutputId].send(note);
       }
     } else {
-      //console.log('received note events', events);
-      for (const e of events) {
-        const { on, pitch, velocity, channel } = e;
-        if (on) {
-          this.sampler.noteOn({ noteNumber: pitch, velocity });
-        } else {
-          this.sampler.noteOff({ noteNumber: pitch, velocity });
-        }
-      }
+      // Reorder to shift note offs before their note ons.
+      // This is essential to avoid shadow notes.
+      // Normally, the MFP lib should already be doing this, and the chronology code does indeed seem to shift them.
+      // This will be removed once that is figured out.
+
+      const noteOnEvents = events.filter(e => e.on)
+      const noteOffEvents = events.filter(e => !e.on)
+      const reorderedEvents = [ ...noteOffEvents, ...noteOnEvents ]
+
+      reorderedEvents.forEach(e => {
+        const { on, pitch, velocity, channel } = e
+
+        this.emit(on ? "noteOn" : "noteOff", e)
+        if(on) this.sampler.noteOn({noteNumber: pitch, velocity, channel})
+        else this.sampler.noteOff({noteNumber: pitch, velocity, channel})
+      })
     }
   }
 
