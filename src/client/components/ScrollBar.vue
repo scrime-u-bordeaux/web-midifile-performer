@@ -310,6 +310,7 @@ export default {
   created() {
     document.addEventListener('mousemove', this.drag);
     document.addEventListener('mouseup', this.endDrag);
+    document.addEventListener('keydown', this.onKeyDown);
   },
   mounted() {
     this.boundingRect = this.$refs['scroll-bar'].getBoundingClientRect();
@@ -317,6 +318,7 @@ export default {
   beforeUnmount() {
     document.removeEventListener('mousemove', this.drag);
     document.removeEventListener('mouseup', this.endDrag);
+    document.removeEventListener('keydown', this.onKeyDown);
   },
   methods: {
     onStartInput(e) {
@@ -407,6 +409,12 @@ export default {
       // however, this induces a lateral workflow between components that will be harder to maintain in the long run.
       // a little duplication seems preferrable (unless we can find a third, better solution)
       this.$emit('modeChange', newMode);
+    },
+    onKeyDown(e) {
+      if(this.hasBounds) { // I don't think most users will want to use the arrow keys for velocities or playback speed, so this avoids having to manage focus
+        if(e.code==="ArrowLeft") this.$emit("index",this.index - 1)
+        if(e.code==="ArrowRight") this.$emit("index",this.index + 1)
+      }
     }
   },
 };

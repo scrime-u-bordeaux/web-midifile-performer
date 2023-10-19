@@ -84,10 +84,8 @@ export default {
     // THIS IS WHERE WE ACTUALLY USE THE MIDIFILE PERFORMER STUFF :
     onCommand(cmd) {
       if(this.performer.mode !== 'perform') {
-        this.performer.setMode('silent') // make sure the playing loop stops
         this.performer.setMode('perform')
         this.setPerformModeStartedAt(Date.now()) // inform watchers, e.g. the scroll bar to set the button to pause
-        // this.performer.setSequenceIndex(this.performer.index+1) // avoid repeating the current set ; but this can seem offputting too...is there a good solution to this ?
       }
       this.performer.command(cmd);
     },

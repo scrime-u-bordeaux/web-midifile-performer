@@ -12,7 +12,7 @@ const chordDeltaMsDateThreshold = 20;
  * @typedef midiEvent - An object with at least a delta field representing a MIDI event
  * @type {object}
  * @property {number} delta - Delta time with the previous event in ticks
- * 
+ *
  * @typedef midiJson - An object containing all the useful information from a MIDI file
  * @type {object}
  * @property {number} division - PPQ (ticks per quarter) of the MIDI file
@@ -43,36 +43,36 @@ async function parseMidiArrayBuffer(buffer) {
 /**
  * We want to compute the absolute date or global delta time in milliseconds
  * for all events in a SMF (Standard MIDI File)
- * 
+ *
  * This is required to provide a correct dt value when calling
  * performer.pushEvent(dt, noteData) and to enable playback of the chronology.
- * 
+ *
  * A SMF provides a division and a tempo parameter.
  * - Assuming the division is in PPQ (not frames per second) unit,
  *   it represents the number of pulses/ticks per quarter/beat.
  * - The tempo represents the number of microseconds per quarter/beat, has a
  *   default value of 500000, and can vary over time when setTempo events
  *   occur.
- * 
+ *
  * In short : current tick duration in microseconds = current tempo / division
- * 
+ *
  * NB : the time signature of the file, and eventual further time signature
- * events in the file, are not involved in computing a tick's duration (right ?) 
+ * events in the file, are not involved in computing a tick's duration (right ?)
  * see : https://www.recordingblogs.com/wiki/time-division-of-a-midi-file
- * 
+ *
  * Problem :
  * Many SMFs have several tracks, and the delta times of all the events in a
  * track follow their own timeline, specific to this track.
  * Plus we have to take setTempo events into account, which make the
  * duration of a tick vary over time, and can occur anytime in any track.
- * 
+ *
  * Solution :
  * - compute the absolute date in ticks for each event of interest (setTempo,
  *   noteOn and noteOff), in each track.
  * - sort all these events by absolute date in ticks.
  * - iterate over the sorted events to reconstruct tempo-independent delta times
  *   in whatever unit (us, ms, ...)
- * 
+ *
  * NB : only format 1 files will work for now because events of different tracks
  * are merged as if they were simultaneous. Handling format 2 would require to
  * modify the mergeTracks function a little bit : accumulate all deltas instead
@@ -126,9 +126,9 @@ function mergeTracks({ division, format, tracks }) {
 
   allEvents.sort((a, b) => {
     if (a.tickDate < b.tickDate) return -1;
-    
+
     if (a.tickDate > b.tickDate) return 1;
-    
+
     if (a.tickDate === b.tickDate) { // make sure tempo events always come first
       if (a.type === 'tempo' && !b.type === 'tempo') return -1;
       if (!a.type === 'tempo' && b.type === 'tempo') return 1;
@@ -143,8 +143,8 @@ function mergeTracks({ division, format, tracks }) {
   let tickDuration = defaultTickDuration;
   let prevTickDate = 0;
   let msDate = 0;
-  let prevMsDate = 0; 
-  
+  let prevMsDate = 0;
+
   allEvents.forEach((e, i) => {
     // reconstruct delta times in ticks and convert them to milliseconds :
     // (tick dates and tickDuration are guaranteed to be integers)
@@ -190,6 +190,17 @@ function noteEventsFromNoteDataVector(notes) {
   return res;
 }
 
+class InterruptionGuard {
+  constructor(dt, startTimeStamp) {
+    this.dt = Math.min(dt,1000) || 0; // we can interrupt something longer than a second, it's about delays between ordinary notes
+    this.startTimeStamp = startTimeStamp || Date.now();
+  }
+
+  canBeInterrupted() {
+    return Date.now() - this.startTimeStamp > this.dt
+  }
+}
+
 /* * * * * * * * * * * * MIDI FILE PERFORMER PLAYER CLASS * * * * * * * * * * */
 
 class MidifilePerformer extends EventEmitter {
@@ -202,6 +213,7 @@ class MidifilePerformer extends EventEmitter {
     this.sequenceEndIndex = 0;
 
     this.mode = 'silent'; // could be 'listen' or 'perform'
+    this.interruptionGuard = new InterruptionGuard()
   }
 
   async initialize() {
@@ -228,14 +240,14 @@ class MidifilePerformer extends EventEmitter {
     // FEED THE PERFORMER //////////////////////////////////////////////////////
 
     this.performer.clear();
-    
+
     // we only manipulate channels between 1 and 16
     // we set them directly here when parsing the MIDI file and we set them
     // back to between 0 to 15 just before sending the MIDI events out in
     // IOController.js
     allNoteEvents.forEach(e => {
       const { delta, on, noteNumber, velocity, channel } = e;
-      console.log(delta);
+      console.log(e);
       this.performer.pushEvent(delta, {
         on,
         pitch: noteNumber,
@@ -302,9 +314,11 @@ class MidifilePerformer extends EventEmitter {
 
   setMode(mode) {
     if (mode === this.mode) return;
+    const previousMode = this.mode
     this.mode = mode;
 
     if (this.mode === 'listen') {
+
       this.performer.setChordVelocityMappingStrategy(
         this.mfp.chordStrategy.none
       );
@@ -312,7 +326,13 @@ class MidifilePerformer extends EventEmitter {
       if (!this.performer.stopped()) {
         this.performer.stop();
       }
-      this.setSequenceIndex(this.performer.getCurrentIndex());
+
+      const index = this.performer.getCurrentIndex()
+
+      if(index === this.performer.getLoopStartIndex() || index === this.performer.getLoopEndIndex())
+        this.setSequenceIndex(this.performer.getLoopStartIndex());
+
+      else this.setSequenceIndex(index+1);
 
       // if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
       //   this.setSequenceIndex(this.performer.getCurrentIndex());
@@ -320,7 +340,8 @@ class MidifilePerformer extends EventEmitter {
       //   this.performer.stop();
       // }
 
-      let pair;
+      let pair; // carry the pair information between calls ; otherwise delays are shifted
+
       const playNextSet = (start, first) => {
         let dt = 0;
         if (start) {
@@ -334,7 +355,7 @@ class MidifilePerformer extends EventEmitter {
         }
 
         dt = first ? 0 : dt;
-        
+
         if (this.performer.stopped()) return;
 
         this.timeout = setTimeout(() => {
@@ -347,6 +368,10 @@ class MidifilePerformer extends EventEmitter {
 
           if (start) this.emit('index', this.performer.getCurrentIndex());
 
+          // Ensure perform mode won't cut off a note.
+          // Must also be done for rendering ending sets so the note offs are properly triggered.
+          this.interruptionGuard = new InterruptionGuard(start ? dt+pair.end.dt : dt)
+
           playNextSet(!start, false);
         }, dt);
       };
@@ -355,14 +380,27 @@ class MidifilePerformer extends EventEmitter {
     }
 
     if (this.mode === 'perform') {
+
+      while(!this.interruptionGuard.canBeInterrupted()) {
+        console.log("Active wait") // maybe there's something more productive to do while waiting ?
+      }
+
+      if (this.timeout && previousMode === "listen") {
+        clearTimeout(this.timeout);
+        this.timeout = null;
+      }
+
       this.performer.setChordVelocityMappingStrategy(
         this.mfp.chordStrategy.clippedScaledFromMax
       );
 
       this.performer.stop();
-      if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
-        this.setSequenceIndex(this.performer.getCurrentIndex());
-      }
+      const index = this.performer.getCurrentIndex()
+
+      if(index === this.performer.getLoopStartIndex() || index === this.performer.getLoopEndIndex())
+        this.setSequenceIndex(this.performer.getLoopStartIndex());
+
+      else this.setSequenceIndex(index+1);
 
       // this.setSequenceIndex(0);
       // this.emit('index', this.performer.getCurrentIndex());
@@ -418,5 +456,3 @@ class MidifilePerformer extends EventEmitter {
 }
 
 export default new MidifilePerformer();
-
-
