@@ -6,6 +6,8 @@ class Synth {
     this.releaseTime = 0.15; // 150 ms
     //this.notes = [];
     this.notes = new Map();
+    this.playingMap = new Map()
+    for(let i = 1; i<=16; i++) this.playingMap.set(i, new Map())
     // A0 is midi note 21 :
     this.minNote = 21;
     // C8 is midi note 108 :
@@ -29,15 +31,8 @@ class Synth {
         .then(async res => {
           const arrayBuffer = await res.arrayBuffer();
 
-          // const buffer = await this.ctx.decodeAudioData(arrayBuffer);
-          // const player = null;
-          // const playing = false;
-          // resolve({ buffer, player, playing, i });
-
           this.ctx.decodeAudioData(arrayBuffer, buffer => {
-            const player = null;
-            const playing = false;
-            resolve({ buffer, player, playing, i });
+            resolve({ buffer, i });
           });
         })
         .catch(e => console.error(e));
@@ -50,64 +45,62 @@ class Synth {
   }
 
   noteOn({ noteNumber, velocity, channel }) {
-    let note = this.getNoteIfInRange(noteNumber, channel);
+    const note = this.getNoteIfInRange(noteNumber);
 
     if (note !== null) {
-      const { buffer, player, playing } = note;
+      const { buffer } = note;
+      let player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
-      if (playing) {
-        player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
-        const val = player.volume.gain.value;
-        player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
-        player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
-      }
+      if (!!player) this.turnOffPlayer(player)
 
-      note.player = this.makePlayer(buffer);
-      note.playing = true;
+      player = this.makePlayer(buffer)
 
-      //////////////////////////////////// velocity specific settings :
+      // ------------------ Velocity-specific settings : -----------------------
 
       const normVelocity = velocity / 127;
 
-      // - velocity driven lowpass filter :
-      // todo : compute this value from a note ratio (nth harmonic) perspective
+      // - Velocity-driven lowpass filter :
+      // TODO : compute this value from a note ratio (nth harmonic) perspective
       // instead of using a fixed frequency
-      note.player.biquad.frequency.value = Math.pow(normVelocity, 3) * 20000 + 1000;
+      player.biquad.frequency.value = Math.pow(normVelocity, 3) * 20000 + 1000;
 
-      // - velocity driven gain :
-      note.player.volume.gain.value = normVelocity;
+      // - Velocity-driven gain :
+      player.volume.gain.value = normVelocity;
       //const ramp = (1 - normVelocity) * 0.01; // 10ms max
       //note.player.volume.gain.setValueAtTime(normVelocity, this.ctx.currentTime + ramp);
 
-      // - velocity driven start time :
+      // - Velocity-driven start time :
       const offset = (1 - normVelocity) * 0.005; // 5ms max
-      note.player.source.start(this.ctx.currentTime, offset);
+      player.source.start(this.ctx.currentTime, offset);
+
+      // -----------------------------------------------------------------------
+
+      this.setPlayerForNoteOnChannel(noteNumber, channel, player);
     }
   }
 
-  noteOff({ noteNumber, velocity, channel }) {
+  noteOff({ noteNumber, velocity, channel }) { // TODO : use velocity to influence how fast the note turns off (what computation should be made ? logarithmic ?)
     const note = this.getNoteIfInRange(noteNumber, channel);
 
     if (note !== null) {
-      const { buffer, player, playing } = note;
+      const player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
-      if (playing) {
-        player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
-        const val = player.volume.gain.value;
-        player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
-        player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
-        note.playing = false;
+      if (!!player) {
+        this.turnOffPlayer(player)
+        this.removePlayerForNoteOnChannel(noteNumber, channel)
       }
     }
   }
 
   allNotesOff() {
-    for (let i = this.minNote; i <= this.maxNote; ++i) {
-      this.noteOff({ noteNumber: i, velocity: 0 });
+    for(let channel = 1; channel <= 16; channel++) {
+      for (let i = this.minNote; i <= this.maxNote; ++i) {
+        this.noteOff({ noteNumber: i, velocity: 0, channel: channel});
+      }
     }
   }
 
-  getNoteIfInRange(noteNumber, channel) {
+  getNoteIfInRange(noteNumber) {
     if (
       noteNumber >= this.minNote &&
       noteNumber <= this.maxNote &&
@@ -136,6 +129,28 @@ class Synth {
     volume.connect(this.ctx.destination);
 
     return { source, biquad, volume };
+  }
+
+  getPlayerForNoteOnChannel(noteNumber, channel) {
+    const currentChannelNotes = this.playingMap.get(channel)
+    return currentChannelNotes.get(noteNumber)
+  }
+
+  setPlayerForNoteOnChannel(noteNumber, channel, player) {
+    const currentChannelNotes = this.playingMap.get(channel)
+    currentChannelNotes.set(noteNumber, player)
+  }
+
+  removePlayerForNoteOnChannel(noteNumber, channel) {
+    const currentChannelNotes = this.playingMap.get(channel)
+    currentChannelNotes.delete(noteNumber)
+  }
+
+  turnOffPlayer(player) {
+    player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
+    const val = player.volume.gain.value;
+    player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
+    player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
   }
 };
 

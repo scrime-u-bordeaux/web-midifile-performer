@@ -219,7 +219,8 @@ class MidifilePerformer extends EventEmitter {
     this.performer = new this.mfp.Performer({
       unmeet: true,
       complete: false,
-      shiftMode: this.mfp.shiftMode.pitchOnly, // to guard against any shadow notes for single-channel outputs, like our built-in synth
+      // we can't simply use pitch-only shifting : for unclear reasons, it creates additional staccato
+      shiftMode: this.mfp.shiftMode.pitchAndChannel,
       temporalResolution: chordDeltaMsDateThreshold,
     });
     this.performer.setChordVelocityMappingStrategy(
