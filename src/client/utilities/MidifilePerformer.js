@@ -256,15 +256,33 @@ class MidifilePerformer extends EventEmitter {
 
     this.performer.finalize();
 
-    this.performer.setNoteEventsCallback(notes =>
+    this.performer.setNoteEventsCallback(notes => {
       this.emit('notes', noteEventsFromNoteDataVector(notes))
-    );
+
+      // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
+      // Sadly, it's not enough to update the index as the mode shifts :
+      // it must also be done when the index is reached via rendering.
+
+      if(this.mode!=="silent" && !this.performer.stopped()) { // Technically the check against stopped is redundant since we're not stopping the performer anymore
+        if(this.performer.getCurrentIndex() === this.performer.getLoopEndIndex())
+          this.endAlreadyPlayed = true;
+        else if(this.performer.getCurrentIndex() === this.performer.getLoopStartIndex()) {
+          this.startAlreadyPlayed = true;
+          this.endAlreadyPlayed = false; // yes, this is necessary, or else jumping to the end will be buggy
+        }
+        else {
+          this.startAlreadyPlayed = false;
+          this.endAlreadyPlayed = false;
+        }
+      }
+    });
 
     this.performer.setLoopIndices(0, this.performer.size() - 1);
     this.sequenceStartIndex = this.performer.getLoopStartIndex();
     this.sequenceEndIndex = this.performer.getLoopEndIndex();
-    // this.performer.setCurrentIndex(0);
     this.setSequenceIndex(0);
+    this.startAlreadyPlayed = false;
+    this.endAlreadyPlayed = false;
 
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////
 
@@ -312,69 +330,30 @@ class MidifilePerformer extends EventEmitter {
     const previousMode = this.mode
     this.mode = mode;
 
+    // Historically the performer was stopped on mode shift
+    // This doesn't seem necessary anymore
+
+    // if (!this.performer.stopped()) {
+    //   this.performer.stop();
+    // }
+
+    this.#updateIndexOnModeShift()
+
     if (this.mode === 'listen') {
 
       this.performer.setChordVelocityMappingStrategy(
         this.mfp.chordStrategy.none
       );
 
-      if (!this.performer.stopped()) {
-        this.performer.stop();
-      }
-
-      const index = this.performer.getCurrentIndex()
-
-      if(index === this.performer.getLoopStartIndex() || index === this.performer.getLoopEndIndex())
-        this.setSequenceIndex(this.performer.getLoopStartIndex());
-
-      else this.setSequenceIndex(index+1);
-
-      // if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
-      //   this.setSequenceIndex(this.performer.getCurrentIndex());
-      // } else {
-      //   this.performer.stop();
-      // }
-
       let pair; // carry the pair information between calls ; otherwise delays are shifted
 
-      const playNextSet = (start, first) => {
-        let dt = 0;
-        if (start) {
-          pair = this.performer.peekNextSetPair();
-          dt = pair.start.dt;
-          // const nextIndex = this.performer.getNextIndex();
-          // if (nextIndex === this.performer.getLoopStartIndex()) { /* ... */ }
-          // if (nextIndex === this.performer.getLoopEndIndex()) { /* ... */ }
-        } else  {
-          dt = pair.end.dt;
-        }
-
-        dt = first ? 0 : dt;
-
-        if (this.performer.stopped()) return;
-
-        this.timeout = setTimeout(() => {
-          this.performer.render({
-            pressed: start,
-            id: 1,
-            velocity: (start ? 127 : 0),
-            channel: 1
-          });
-
-          if (start) this.emit('index', this.performer.getCurrentIndex());
-
-          // Ensure perform mode won't cut off a note.
-          // Must also be done for rendering ending sets so the note offs are properly triggered.
-          this.interruptionGuard = new InterruptionGuard(start ? dt+pair.end.dt : dt)
-
-          playNextSet(!start, false);
-        }, dt);
-      };
-
-      playNextSet(true, true);
+      this.#playNextSet(pair, true, true);
     }
 
     if (this.mode === 'perform') {
+
+      // Wait for any notes from listen mode to finish playing
+      // (if they last less than a second)
 
       while(!this.interruptionGuard.canBeInterrupted()) {
         console.log("Active wait") // maybe there's something more productive to do while waiting ?
@@ -388,39 +367,14 @@ class MidifilePerformer extends EventEmitter {
       this.performer.setChordVelocityMappingStrategy(
         this.mfp.chordStrategy.clippedScaledFromMax
       );
-
-      this.performer.stop();
-      const index = this.performer.getCurrentIndex()
-
-      if(index === this.performer.getLoopStartIndex() || index === this.performer.getLoopEndIndex())
-        this.setSequenceIndex(this.performer.getLoopStartIndex());
-
-      else this.setSequenceIndex(index+1);
-
-      // this.setSequenceIndex(0);
-      // this.emit('index', this.performer.getCurrentIndex());
-      // console.log(this.performer.getCurrentIndex());
-      // todo : start recording events automatically
     }
 
     if (this.mode === 'silent') {
-      this.performer.stop();
-      if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
-        this.setSequenceIndex(this.performer.getCurrentIndex());
-      }
-
-      // if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
-      //   this.setSequenceIndex(this.performer.getCurrentIndex());
-      // } else {
-      //   this.performer.stop();
-      // }
-
       if (this.timeout) {
         clearTimeout(this.timeout);
         this.timeout = null;
       }
-      // this.setSequenceIndex(0);
-      // console.log(this.performer.getCurrentIndex());
+
       this.emit('allnotesoff');
     }
   }
@@ -440,14 +394,78 @@ class MidifilePerformer extends EventEmitter {
     // const noteEvents = this.performer.render(cmd);
     // USE NOTE EVENTS CALLBACK INSTEAD !
   }
-  //*
-  allNotesOff() {
-    const velocity = 0;
-    for (let channel = 1; channel <= 16; ++channel)
-      for (let noteNumber = 0; noteNumber < 128; noteNumber++)
-        this.emit('noteoff', { noteNumber, velocity, channel });
+
+  // Passive playback (listen) algorithm
+
+  #playNextSet(pair, start, first) {
+    let dt = 0;
+    if (start) {
+      pair = this.performer.peekNextSetPair();
+      dt = pair.start.dt;
+      // const nextIndex = this.performer.getNextIndex();
+      // if (nextIndex === this.performer.getLoopStartIndex()) { /* ... */ }
+      // if (nextIndex === this.performer.getLoopEndIndex()) { /* ... */ }
+    } else  {
+      dt = pair.end.dt;
+    }
+
+    dt = first ? 0 : dt;
+
+    if (this.performer.stopped()) return;
+
+    this.timeout = setTimeout(() => {
+      this.performer.render({
+        pressed: start,
+        id: 1,
+        velocity: (start ? 127 : 0),
+        channel: 1
+      });
+
+      if (start) this.emit('index', this.performer.getCurrentIndex());
+
+      // Ensure perform mode won't cut off a note.
+      // Must also be done for rendering ending sets so the note offs are properly triggered.
+      this.interruptionGuard = new InterruptionGuard(start ? dt+pair.end.dt : dt)
+
+      this.#playNextSet(pair, !start, false);
+    }, dt);
+  };
+
+  // This ugly logic is due to edge cases around the start and loop indices.
+  // When switching modes, we do not want the new mode to repeat the previous set.
+  // This is simple for any non-boundary index : just advance by one.
+  // But, if we're at the start or end, we do want to stay there to actually play it,
+  // without repeating it on a mode shift.
+
+  #updateIndexOnModeShift() {
+    if(this.mode==="silent") {
+      if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
+        this.setSequenceIndex(this.performer.getCurrentIndex());
+      }
+    } else {
+      const index = this.performer.getCurrentIndex()
+
+      // If we are at the start and haven't played the start (resp. : end)...
+
+      if((index === this.performer.getLoopStartIndex() && !this.startAlreadyPlayed)
+        || (index === this.performer.getLoopEndIndex() && !this.endAlreadyPlayed)) {
+
+          // ...then we must play that, first
+          this.setSequenceIndex(this.performer.getCurrentIndex());
+
+          // and remember that it's done
+          index === this.performer.getLoopStartIndex() ?
+            this.startAlreadyPlayed = true : this.endAlreadyPlayed = true
+        }
+
+      else { // we need to play the next set (move forward, do not repeat the last one)
+        this.setSequenceIndex((index+1)%(this.performer.getLoopEndIndex()+1)); // ensure we stay within the bounds of the indices
+        // the boundaries have been exceeded
+        this.startAlreadyPlayed = false;
+        this.endAlreadyPlayed = false;
+      }
+    }
   }
-  //*/
 }
 
 export default new MidifilePerformer();
