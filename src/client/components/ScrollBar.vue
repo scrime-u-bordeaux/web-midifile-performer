@@ -412,7 +412,7 @@ export default {
     },
     onKeyDown(e) {
       if(this.hasBounds) { // I don't think most users will want to use the arrow keys for velocities or playback speed, so this avoids having to manage focus
-        if(e.code==="ArrowLeft") this.$emit("index",this.index - 1)
+        if(e.code==="ArrowLeft") this.$emit("index",Math.max(this.index - 1, 0))
         if(e.code==="ArrowRight") this.$emit("index",this.index + 1)
       }
     }
