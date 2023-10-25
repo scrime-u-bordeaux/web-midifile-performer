@@ -27,7 +27,7 @@
   </div>
 
   <div>
-    <h1> {{$t('lookForScores.google.first')}} <i> {{$t('lookForScores.google.second')}} </i> </h1>
+    <h1> {{$t('lookForScores.google.first')}} <i> <a href="https://www.google.com" target="_blank"> {{$t('lookForScores.google.second')}} </a> </i> </h1>
   </div>
 </div>
 </div>
