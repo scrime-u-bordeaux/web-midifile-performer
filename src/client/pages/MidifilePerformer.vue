@@ -194,7 +194,7 @@ export default {
       displayKeyboardSettings: false,
       keyboardVelocities: { ...this.defaultKeyboardVelocities },
       MIN_VELOCITY: 0,
-      MAX_VELOCITY: 255,
+      MAX_VELOCITY: 127,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt())
     };
   },
