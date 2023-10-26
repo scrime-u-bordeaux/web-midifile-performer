@@ -16,16 +16,24 @@ const defaultVelocities = {
   pianissimo: 32,
 };
 
+const DEFAULT_IO_ID = '0'
+
+const MIDI_COMMAND_MASK = 0xF0;
+const MIDI_CHANNEL_MASK = 0x0F
+
+const MIDI_NOTE_ON_COMMAND = 144
+const MIDI_NOTE_OFF_COMMAND = 128
+
 // Using vue-i18n t here is sadly not sufficient for it to change on locale change
 // A separate method deals with updating these labels
 // TODO : should we just put them elsewhere and inject them ?
 
 const defaultInputs = {
-  0: { id: '0', name: t('ioController.defaultInput') }
+  0: { id: DEFAULT_IO_ID, name: t('ioController.defaultInput') }
 };
 
 const defaultOutputs = {
-  0: { id: '0', name: t('ioController.defaultOutput') }
+  0: { id: DEFAULT_IO_ID, name: t('ioController.defaultOutput') }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -36,14 +44,19 @@ class IOController extends EventEmitter {
 
     this.midiAccess = null;
 
-    this.currentInputId = '0';
-    this.currentOutputId = '0';
+    this.currentInputId = DEFAULT_IO_ID;
+    this.currentOutputId = DEFAULT_IO_ID;
     this.updateInputsAndOutputs();
 
     document.addEventListener('keydown', this.onKeyDown.bind(this));
     document.addEventListener('keyup', this.onKeyUp.bind(this));
 
     this.keyCommandsState = new Map();
+
+    // This is necessary to be able to add and remove the listener at will
+    // Otherwise, calling bind() on the fly creates a new function reference, and removal is never applied...
+    // I would say there has to be a smarter way to do this, but hey, it's JavaScript
+    this.boundOnMidiListener = this.onMIDIMessage.bind(this)
 
     this.refreshVelocities(defaultVelocities)
   }
@@ -53,7 +66,7 @@ class IOController extends EventEmitter {
   }
 
   onKeyDown(e) {
-    if (this.currentInputId !== '0'
+    if (this.currentInputId !== DEFAULT_IO_ID
         || e.repeat)
       return;
 
@@ -74,7 +87,7 @@ class IOController extends EventEmitter {
   }
 
   onKeyUp(e) {
-    if (this.currentInputId !== '0') return;
+    if (this.currentInputId !== DEFAULT_IO_ID) return;
 
     if (this.keyCommandsState.has(e.code)) {
       let { pressed, id, velocity } = this.keyCommandsState.get(e.code);
@@ -136,21 +149,21 @@ class IOController extends EventEmitter {
     // inputId = `${inputId}`;
     console.log(inputId);
     console.log(this.currentInputId);
-    if (this.currentInputId !== '0') {
+    if (this.currentInputId !== DEFAULT_IO_ID) {
       this.inputs[this.currentInputId].removeEventListener(
         'midimessage',
-        this.onMIDIMessage,
+        this.boundOnMidiListener,
       );
     }
 
     this.currentInputId = inputId;
 
-    if (this.currentInputId !== '0') {
+    if (this.currentInputId !== DEFAULT_IO_ID) {
       console.log(this.currentInputId);
       console.log(this.inputs[this.currentInputId]);
       this.inputs[this.currentInputId].addEventListener(
         'midimessage',
-        this.onMIDIMessage.bind(this),
+        this.boundOnMidiListener,
       );
     }
 
@@ -161,7 +174,7 @@ class IOController extends EventEmitter {
     // this.allNotesOff();
     // outputId = `${outputId}`;
     // send all notes off before clearing ?
-    if (this.currentOutputId !== '0') {
+    if (this.currentOutputId !== DEFAULT_IO_ID) {
       console.log(this.currentOutputId);
       console.log(this.outputs[this.currentOutputId]);
       // this.outputs[this.currentOutputId].clear();
@@ -174,7 +187,7 @@ class IOController extends EventEmitter {
   allNotesOff() {
     this.emit('allnotesoff');
     console.log("calling all sound off");
-    if (this.currentOutputId !== '0') {
+    if (this.currentOutputId !== DEFAULT_IO_ID) {
       const id = this.currentOutputId;
       for (let channel = 0; channel < 16; ++channel) {
         let msg;
@@ -197,11 +210,15 @@ class IOController extends EventEmitter {
 
   onMIDIMessage(msg) {
     const [ e, id, value ] = msg.data;
-    const status = e  >> 4;
-    const channel = (e & 0x0F);
+
+    const status = (e & MIDI_COMMAND_MASK);
+    const channel = (e & MIDI_CHANNEL_MASK);
+    // This is actually a simplification : messages above Fx are individually numbered without channels
+    // For instance : FE is not "command Fx on channel E" but the individual message "active sensing", and FF is "System reset", etc
+    // For now, we won't transmit messages above F, so we can always assume the lower nibble is the channel.
 
     switch (status) {
-      case 8:
+      case MIDI_NOTE_OFF_COMMAND:
         this.emit('command', {
           pressed: false,
           id,
@@ -209,7 +226,7 @@ class IOController extends EventEmitter {
           channel,
         });
         break;
-      case 9:
+      case MIDI_NOTE_ON_COMMAND:
         this.emit('command', {
           pressed: value > 0, // a note on with a null velocity is a note off
           id,
@@ -217,12 +234,9 @@ class IOController extends EventEmitter {
           channel,
         });
         break;
-      case 11:
-        // emit control changes ? (sustain pedal is CC 64)
-        break;
       default:
-        // emit other messages ?
-        break;
+        if(this.currentOutputId !== DEFAULT_IO_ID)
+          this.outputs[this.currentOutputId].send(msg.data) // Simply pass non-note messages to the output
     }
   }
 
@@ -233,7 +247,7 @@ class IOController extends EventEmitter {
       const { on, pitch, velocity, channel } = e;
       this.emit(on ? "noteOn" : "noteOff", e)
 
-      if (this.currentOutputId !== '0') { // external audio output
+      if (this.currentOutputId !== DEFAULT_IO_ID) { // external audio output
         // Convert JS object to MIDI bytes
 
         const note = [
