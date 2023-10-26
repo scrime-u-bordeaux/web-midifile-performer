@@ -287,6 +287,9 @@ export default {
 
     // const mididata = await Promise.all(promises);
     // console.log(mididata);
+
+    // Ensure we kill all sound in external outputs when the page is closed or refreshed
+    addEventListener('beforeunload', () => this.ioctl.allNotesOff())
   },
   beforeUnmount() {
     // document.removeEventListener('keydown', this.onKeyDown);
