@@ -53,6 +53,10 @@ class IOController extends EventEmitter {
 
     this.keyCommandsState = new Map();
 
+    // This is necessary to be able to add and remove the listener at will
+    // Otherwise, calling bind() on the fly creates a new function reference, and removal is never applied...
+    this.boundOnMidiListener = this.onMIDIMessage.bind(this)
+
     this.refreshVelocities(defaultVelocities)
   }
 
@@ -147,7 +151,7 @@ class IOController extends EventEmitter {
     if (this.currentInputId !== DEFAULT_IO_ID) {
       this.inputs[this.currentInputId].removeEventListener(
         'midimessage',
-        this.onMIDIMessage,
+        this.boundOnMidiListener,
       );
     }
 
@@ -158,7 +162,7 @@ class IOController extends EventEmitter {
       console.log(this.inputs[this.currentInputId]);
       this.inputs[this.currentInputId].addEventListener(
         'midimessage',
-        this.onMIDIMessage.bind(this),
+        this.boundOnMidiListener,
       );
     }
 
@@ -231,7 +235,7 @@ class IOController extends EventEmitter {
         break;
       default:
         if(this.currentOutputId !== DEFAULT_IO_ID)
-          this.outputs[this.this.currentOutputId].send(msg.data) // Simply pass non-note messages to the output 
+          this.outputs[this.this.currentOutputId].send(msg.data) // Simply pass non-note messages to the output
     }
   }
 
