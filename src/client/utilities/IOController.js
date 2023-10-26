@@ -55,6 +55,7 @@ class IOController extends EventEmitter {
 
     // This is necessary to be able to add and remove the listener at will
     // Otherwise, calling bind() on the fly creates a new function reference, and removal is never applied...
+    // I would say there has to be a smarter way to do this, but hey, it's JavaScript
     this.boundOnMidiListener = this.onMIDIMessage.bind(this)
 
     this.refreshVelocities(defaultVelocities)
@@ -235,7 +236,7 @@ class IOController extends EventEmitter {
         break;
       default:
         if(this.currentOutputId !== DEFAULT_IO_ID)
-          this.outputs[this.this.currentOutputId].send(msg.data) // Simply pass non-note messages to the output
+          this.outputs[this.currentOutputId].send(msg.data) // Simply pass non-note messages to the output
     }
   }
 
