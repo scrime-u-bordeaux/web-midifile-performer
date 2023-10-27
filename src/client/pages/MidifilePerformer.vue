@@ -233,6 +233,7 @@ export default {
   async mounted() {
     console.log(this)
     this.performer.clear();
+    this.$emit("canPerform",true)
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
@@ -243,6 +244,11 @@ export default {
 
   },
   beforeUnmount() {
+    console.log("MFP unmount")
+    this.$emit("canPerform",false)
+    this.performer.setMode('silent');
+    this.ioctl.allNotesOff()
+
     document.removeEventListener('keydown',this.onKeyDown)
   },
   methods: {

@@ -11,7 +11,7 @@
     @localeChanged="onLocaleChanged"
   />
 
-  <router-view id="app-content" />
+  <router-view id="app-content" @canPerform="updateCanPerform"/>
 </template>
 
 <script>
@@ -31,7 +31,7 @@ export default {
   data() {
     return {
       audioContext: null,
-      speed: 1,
+      canPerform: false // avoid playing from non-MFP tabs
     };
   },
   computed: {
@@ -83,11 +83,13 @@ export default {
     },
     // THIS IS WHERE WE ACTUALLY USE THE MIDIFILE PERFORMER STUFF :
     onCommand(cmd) {
-      if(this.performer.mode !== 'perform') {
-        this.performer.setMode('perform')
-        this.setPerformModeStartedAt(Date.now()) // inform watchers, e.g. the scroll bar to set the button to pause
+      if(this.canPerform) {
+        if(this.performer.mode !== 'perform') {
+          this.performer.setMode('perform')
+          this.setPerformModeStartedAt(Date.now()) // inform watchers, e.g. the scroll bar to set the button to pause
+        }
+        this.performer.command(cmd);
       }
-      this.performer.command(cmd);
     },
     onNotes(notes) {
       this.ioctl.playNoteEvents(notes)
@@ -123,6 +125,9 @@ export default {
       this.synth.setContext(this.audioContext);
       await this.synth.loadSounds();
     },
+    updateCanPerform(e) {
+      this.canPerform = e
+    }
   },
   async created() {
     // await this.$store.dispatch('loadMidiBuffers');

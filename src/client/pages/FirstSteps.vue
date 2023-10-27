@@ -64,7 +64,7 @@ import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 
 export default {
-  inject: [ 'performer' ],
+  inject: [ 'performer', 'ioctl' ],
   components: { BachPrelude, Keyboard, ScrollBar },
   computed: {
     ...mapState([
@@ -182,10 +182,13 @@ export default {
     document.addEventListener('keydown',this.onKeyDown)
   },
   mounted() {
-    // ?
+    this.$emit("canPerform",true)
   },
   beforeUnmount() {
+    this.$emit("canPerform",false)
     this.performer.setMode('silent');
+    this.ioctl.allNotesOff()
+
     this.performer.removeListener('index', this.onPerformerIndexChange);
     document.removeEventListener('keydown',this.onKeyDown)
   },
