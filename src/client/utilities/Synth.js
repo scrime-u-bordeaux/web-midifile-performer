@@ -1,7 +1,13 @@
-class Synth {
+import EventEmitter from 'events';
+
+const NUMBER_OF_KEYS = 88
+
+class Synth extends EventEmitter {
   constructor() {
     //const AudioContext = window.AudioContext || window.webkitAudioContext;
     //this.ctx = new AudioContext();
+    super()
+
     this.ctx = null;
     this.releaseTime = 0.15; // 150 ms
     //this.notes = [];
@@ -24,14 +30,21 @@ class Synth {
 
     const promises = [];
 
-    // notes.length == 88 (A0 to C8)
+    let notesFetched = 0;
+    let notesDecoded = 0;
+
     notes.forEach((note, i) => {
       promises.push(new Promise((resolve, reject) => {
         fetch(`samples/${note}.mp3`)
         .then(async res => {
+          notesFetched += 1
+          this.emit('notesFetched', notesFetched)
+
           const arrayBuffer = await res.arrayBuffer();
 
           this.ctx.decodeAudioData(arrayBuffer, buffer => {
+            notesDecoded += 1
+            this.emit('notesDecoded', notesDecoded)
             resolve({ buffer, i });
           });
         })
@@ -245,4 +258,6 @@ const notes = [
   'C8',
 ];
 
-export default new Synth();
+const synth = new Synth()
+
+export { synth as default, NUMBER_OF_KEYS }

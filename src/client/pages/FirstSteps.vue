@@ -1,5 +1,7 @@
 <template>
-  <div class="container">
+  <LoadingScreen v-if="displayLoadingScreen"/>
+
+  <div v-else class="container">
     <bach-prelude
       class="score"
       :cursor="cursor"/>
@@ -62,10 +64,11 @@ import { mapState, mapMutations } from 'vuex';
 import BachPrelude from '../components/BachPrelude.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
+import LoadingScreen from '../components/LoadingScreen.vue';
 
 export default {
-  inject: [ 'performer', 'ioctl' ],
-  components: { BachPrelude, Keyboard, ScrollBar },
+  inject: [ 'performer', 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
+  components: { BachPrelude, Keyboard, ScrollBar, LoadingScreen },
   computed: {
     ...mapState([
       'firstStepsMidiFile',
@@ -76,7 +79,12 @@ export default {
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
+      'synthNotesDecoded'
     ]),
+    displayLoadingScreen() {
+      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID) 
+        && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
+    }
   },
   data() {
     return {
