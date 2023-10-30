@@ -1,5 +1,7 @@
 <template>
-  <div v-if="synthNotesDecoded === 88" class="container">
+  <LoadingScreen v-if="displayLoadingScreen"/>
+
+  <div v-else class="container">
     <bach-prelude
       class="score"
       :cursor="cursor"/>
@@ -41,8 +43,6 @@
     </button>
     </div>
   </div>
-
-  <LoadingScreen v-else/>
 </template>
 
 <style scoped>
@@ -67,7 +67,7 @@ import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue';
 
 export default {
-  inject: [ 'performer', 'ioctl' ],
+  inject: [ 'performer', 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
   components: { BachPrelude, Keyboard, ScrollBar, LoadingScreen },
   computed: {
     ...mapState([
@@ -81,6 +81,10 @@ export default {
       'sequenceIndex',
       'synthNotesDecoded'
     ]),
+    displayLoadingScreen() {
+      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID) 
+        && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
+    }
   },
   data() {
     return {

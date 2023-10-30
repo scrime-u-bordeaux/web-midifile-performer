@@ -5,10 +5,10 @@
     </div>
     <div class="variable-message">
       <div class="fetching-message">
-        {{ userClickOccurred ? `${$t('loading.fetched')} ${synthNotesFetched} / 88` : ''}}
+        {{ userClickOccurred ? `${$t('loading.fetched')} ${synthNotesFetched} / ${NUMBER_OF_KEYS}` : ''}}
       </div>
       <div class="decoding-message">
-        {{ userClickOccurred ? `${$t('loading.decoded')} ${synthNotesDecoded} / 88` : '' }}
+        {{ userClickOccurred ? `${$t('loading.decoded')} ${synthNotesDecoded} / ${NUMBER_OF_KEYS}` : '' }}
       </div>
     </div>
   </div>
@@ -40,6 +40,7 @@
 import { mapState } from 'vuex';
 
 export default {
+  inject: [ 'NUMBER_OF_KEYS' ],
   computed: {
     ...mapState([
       'userClickOccurred',

@@ -165,6 +165,11 @@ export default {
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
     this.ioctl.updateInputsAndOutputs();
 
+    const savedInput = localStorage.getItem('input');
+    if(!!savedInput) this.ioctl.setInput(savedInput);
+    const savedOutput = localStorage.getItem('output');
+    if(!!savedOutput) this.ioctl.setOutput(savedOutput);
+
     this.synth.addListener('notesFetched', this.onNotesFetched);
     this.synth.addListener('notesDecoded', this.onNotesDecoded);
 

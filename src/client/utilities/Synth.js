@@ -1,11 +1,13 @@
 import EventEmitter from 'events';
 
+const NUMBER_OF_KEYS = 88
+
 class Synth extends EventEmitter {
   constructor() {
     //const AudioContext = window.AudioContext || window.webkitAudioContext;
     //this.ctx = new AudioContext();
     super()
-    
+
     this.ctx = null;
     this.releaseTime = 0.15; // 150 ms
     //this.notes = [];
@@ -27,8 +29,6 @@ class Synth extends EventEmitter {
       throw new Error(`audioContext not set`);
 
     const promises = [];
-
-    // notes.length == 88 (A0 to C8)
 
     let notesFetched = 0;
     let notesDecoded = 0;
@@ -258,4 +258,6 @@ const notes = [
   'C8',
 ];
 
-export default new Synth();
+const synth = new Synth()
+
+export { synth as default, NUMBER_OF_KEYS }

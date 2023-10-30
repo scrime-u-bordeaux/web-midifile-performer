@@ -1,9 +1,9 @@
 import { createApp }      from 'vue';
 import { i18n } from './utilities/I18n'
 
-import ioctl, { defaultInputs, defaultVelocities } from './utilities/IOController';
+import ioctl, { defaultInputs, defaultVelocities, DEFAULT_IO_ID } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
-import synth              from './utilities/Synth';
+import synth, { NUMBER_OF_KEYS }              from './utilities/Synth';
 import store              from './store';
 import router             from './router';
 import App                from './App.vue';
@@ -15,13 +15,26 @@ Promise.all([
 .then(() => {
   const app = createApp(App);
 
+  // Exterior dependencies
+
   app.use(i18n);
   app.use(router);
   app.use(store);
 
-  app.provide('ioctl', ioctl);
+  // Constants
+
+  app.provide('DEFAULT_IO_ID', DEFAULT_IO_ID)
+  app.provide('NUMBER_OF_KEYS', NUMBER_OF_KEYS)
+
+  // Default variables
+
   app.provide('defaultMidiInput', defaultInputs);
   app.provide('defaultKeyboardVelocities', defaultVelocities);
+
+
+  // Utilities
+
+  app.provide('ioctl', ioctl);
   app.provide('performer', performer);
   app.provide('synth', synth);
 

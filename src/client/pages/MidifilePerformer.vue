@@ -1,5 +1,7 @@
 <template>
-  <div v-if="synthNotesDecoded === 88" class="mfp-container"
+  <LoadingScreen v-if="displayLoadingScreen"/>
+
+  <div v-else class="mfp-container"
     @drop="onDrop"
     @dragover="onDragOver">
 
@@ -88,8 +90,6 @@
       </div>
     </div>
   </div>
-
-  <LoadingScreen v-else/>
 </template>
 
 <style scoped>
@@ -187,7 +187,7 @@ const noInputFileMsg = 'Aucun fichier sélectionné';
 const KEYBOARD_INPUT_ID = "0"
 
 export default {
-  inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities' ],
+  inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
   components: { IOManager, Keyboard, ScrollBar, LoadingScreen },
   data() {
     return {
@@ -216,6 +216,10 @@ export default {
     trimmedTitle() {
       return this.mfpMidiFile.title.length < 45 ?
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
+    },
+    displayLoadingScreen() {
+      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
+        && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
     },
     currentMode: {
       // Instead of putting guards here, we could use v-show to hide the scroll bar and not v-if,

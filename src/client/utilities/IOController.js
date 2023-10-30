@@ -157,6 +157,7 @@ class IOController extends EventEmitter {
     }
 
     this.currentInputId = inputId;
+    localStorage.setItem('input', inputId)
 
     if (this.currentInputId !== DEFAULT_IO_ID) {
       console.log(this.currentInputId);
@@ -179,7 +180,9 @@ class IOController extends EventEmitter {
       console.log(this.outputs[this.currentOutputId]);
       // this.outputs[this.currentOutputId].clear();
     }
+
     this.currentOutputId = outputId;
+    localStorage.setItem('output',outputId)
 
     this.emit('currentOutputId', this.currentOutputId);
   }
@@ -291,4 +294,4 @@ class IOController extends EventEmitter {
 
 const ioctl = new IOController()
 
-export { ioctl as default, defaultInputs, defaultVelocities }
+export { ioctl as default, defaultInputs, defaultVelocities, DEFAULT_IO_ID }

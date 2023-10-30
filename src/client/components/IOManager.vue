@@ -17,6 +17,7 @@
       <select @change="selectedOutputChanged">
         <option
           v-for="output in outputs"
+          :disabled="preventUnloadedSynthSelect(output)"
           :value="output.id"
           :selected="output.id === currentOutputId">
           {{ output.name }}
@@ -42,14 +43,15 @@ button { display: block; font-size: 1em; height: fit-content;}
 import { mapState } from 'vuex';
 
 export default {
-  inject: [ 'ioctl' ],
+  inject: [ 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
   computed: {
     ...mapState([
       'inputs',
       'outputs',
       'currentInputId',
       'currentOutputId',
-    ]),
+      'synthNotesDecoded'
+    ])
   },
   created() {
     this.ioctl.addListener('command', this.onCommand);
@@ -58,6 +60,9 @@ export default {
     this.ioctl.removeListener('command', this.onCommand);
   },
   methods: {
+    preventUnloadedSynthSelect(output) {
+      return output.id === this.DEFAULT_IO_ID && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
+    },
     selectedInputChanged(e) {
       const id = e.target.value;
       this.ioctl.setInput(id);
