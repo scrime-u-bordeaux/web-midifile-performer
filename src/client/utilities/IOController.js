@@ -10,10 +10,10 @@ const universalLayout = {
 }
 
 const defaultVelocities = {
-  forte: 127,
-  mezzo: 100,
-  piano: 64,
-  pianissimo: 32,
+  forte: 75,
+  mezzo: 55,
+  piano: 30,
+  pianissimo: 15,
 };
 
 const DEFAULT_IO_ID = '0'
