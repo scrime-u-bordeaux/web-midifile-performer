@@ -43,7 +43,10 @@ const store = createStore({
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
-      performModeStartedAt: 0
+      performModeStartedAt: 0,
+      userClickOccurred: false,
+      synthNotesFetched: 0,
+      synthNotesDecoded: 0,
     };
   },
   getters: {
@@ -119,6 +122,15 @@ const store = createStore({
     },
     setPerformModeStartedAt(state, time) {
       state.performModeStartedAt = time;
+    },
+    setUserClickOccurred(state) {
+      state.userClickOccurred = true;
+    },
+    setSynthNotesFetched(state, amount) {
+      state.synthNotesFetched = amount;
+    },
+    setSynthNotesDecoded(state, amount) {
+      state.synthNotesDecoded = amount
     }
     ////////////////////////////////////////////////////////////////////////////
   },

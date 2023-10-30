@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div v-if="synthNotesDecoded === 88" class="container">
     <bach-prelude
       class="score"
       :cursor="cursor"/>
@@ -41,6 +41,8 @@
     </button>
     </div>
   </div>
+
+  <LoadingScreen v-else/>
 </template>
 
 <style scoped>
@@ -62,10 +64,11 @@ import { mapState, mapMutations } from 'vuex';
 import BachPrelude from '../components/BachPrelude.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
+import LoadingScreen from '../components/LoadingScreen.vue';
 
 export default {
   inject: [ 'performer', 'ioctl' ],
-  components: { BachPrelude, Keyboard, ScrollBar },
+  components: { BachPrelude, Keyboard, ScrollBar, LoadingScreen },
   computed: {
     ...mapState([
       'firstStepsMidiFile',
@@ -76,6 +79,7 @@ export default {
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
+      'synthNotesDecoded'
     ]),
   },
   data() {

@@ -58,7 +58,10 @@ export default {
       'setSequenceStart',
       'setSequenceEnd',
       'setSequenceIndex',
-      'setPerformModeStartedAt'
+      'setPerformModeStartedAt',
+      'setUserClickOccurred',
+      'setSynthNotesFetched',
+      'setSynthNotesDecoded'
     ]),
     onInputsChanged(inputs) {
       this.setInputs(inputs);
@@ -115,6 +118,7 @@ export default {
     },
     async onUserClick(e) {
       document.removeEventListener('click', this.onUserClick);
+      this.setUserClickOccurred()
       console.log('audio context should be ok on safari now');
 
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -127,6 +131,12 @@ export default {
     },
     updateCanPerform(e) {
       this.canPerform = e
+    },
+    onNotesFetched(e) {
+      this.setSynthNotesFetched(e)
+    },
+    onNotesDecoded(e) {
+      this.setSynthNotesDecoded(e)
     }
   },
   async created() {
@@ -154,6 +164,9 @@ export default {
     this.ioctl.addListener('noteOff', this.onNoteOff);
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
     this.ioctl.updateInputsAndOutputs();
+
+    this.synth.addListener('notesFetched', this.onNotesFetched);
+    this.synth.addListener('notesDecoded', this.onNotesDecoded);
 
     // navigator.requestMIDIAccess() not supported in FF :(
     // => must implement own General MIDI-like piano synth (see Synth class)

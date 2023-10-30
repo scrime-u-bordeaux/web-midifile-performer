@@ -1,5 +1,5 @@
 <template>
-  <div class="mfp-container"
+  <div v-if="synthNotesDecoded === 88" class="mfp-container"
     @drop="onDrop"
     @dragover="onDragOver">
 
@@ -88,6 +88,8 @@
       </div>
     </div>
   </div>
+
+  <LoadingScreen v-else/>
 </template>
 
 <style scoped>
@@ -179,13 +181,14 @@ import { mapMutations, mapState } from 'vuex';
 import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
+import LoadingScreen from '../components/LoadingScreen.vue'
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
 const KEYBOARD_INPUT_ID = "0"
 
 export default {
   inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities' ],
-  components: { IOManager, Keyboard, ScrollBar },
+  components: { IOManager, Keyboard, ScrollBar, LoadingScreen },
   data() {
     return {
       fileName: noInputFileMsg,
@@ -207,7 +210,8 @@ export default {
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
-      'sequenceLength'
+      'sequenceLength',
+      'synthNotesDecoded'
     ]),
     trimmedTitle() {
       return this.mfpMidiFile.title.length < 45 ?
