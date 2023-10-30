@@ -69,7 +69,8 @@
     "export": "Export",
     "noScores": {
       "message": "Looking for scores? You can find some",
-      "link": "here!"
+      "link": "here!",
+      "standalone": "Find more scores"
     },
     "help": "Help"
   },

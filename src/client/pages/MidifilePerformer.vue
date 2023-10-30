@@ -22,7 +22,12 @@
         <label for="file" class="file-label">
           {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
         </label>
-        <div class="file-name" v-if="mfpMidiFile.buffer">{{ trimmedTitle }}</div>
+        <div class="file-name-container" v-if="mfpMidiFile.buffer">
+          <div class="file-name">{{ trimmedTitle }}</div>
+          <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
+            {{ $t('midiFilePerformer.noScores.standalone') }}
+          </span>
+        </div>
         <div class="search-score-hint" v-else>
           {{ $t('midiFilePerformer.noScores.message') }}
           <span class="link" @click="$router.push('/look-for-scores')">
@@ -125,6 +130,14 @@
 }
 .file-input.align-column {
   flex-direction: column;
+}
+.file-name-container {
+  margin-bottom: 0.25em;
+  padding: 0.5em 1em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .file-name {
   margin: 0 0.25em 0.25em;

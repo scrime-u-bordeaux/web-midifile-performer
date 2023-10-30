@@ -69,7 +69,8 @@
     "export": "Exporter",
     "noScores": {
       "message": "Vous n'avez pas de partitions ? Trouvez-en de nouvelles",
-      "link": "ici !"
+      "link": "ici !",
+      "standalone": "Trouver d'autres partitions"
     },
     "help": "Aide"
   },
