@@ -74,7 +74,7 @@
           {{ $t('midiFilePerformer.keyboardVelocity.' + (!displayKeyboardSettings ? 'display' : 'hide')) }}
         </span>
         <div v-if="displayKeyboardSettings">
-          <div v-for="(velocity, category) in keyboardVelocities" class="velocity-slider">
+          <div v-for="(velocity, category) in currentKeyboardVelocities" class="velocity-slider">
             <scroll-bar class="velocity-scroll"
               :hasBounds="false"
               :start="MIN_VELOCITY"
@@ -184,7 +184,6 @@ import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
-const KEYBOARD_INPUT_ID = "0"
 
 export default {
   inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
@@ -193,12 +192,12 @@ export default {
     return {
       fileName: noInputFileMsg,
       fileArrayBuffer: null,
+      currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
       isInputKeyboard: true,
       displayKeyboardSettings: false,
-      keyboardVelocities: { ...this.defaultKeyboardVelocities },
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
-      MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt())
+      MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
     };
   },
   computed: {
@@ -312,8 +311,7 @@ export default {
       this.performer.setMode(mode);
     },
     onInputChange(input) {
-      console.log(input, KEYBOARD_INPUT_ID)
-      this.isInputKeyboard = (input === KEYBOARD_INPUT_ID)
+      this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
     },
     onStartChange(i) {
       this.performer.setSequenceBounds(i, this.sequenceEnd);
@@ -328,8 +326,8 @@ export default {
       this.performer.setSequenceBounds(this.sequenceStart, i);
     },
     setRowVelocity(i, category) {
-      this.keyboardVelocities[category] = i
-      this.ioctl.refreshVelocities(this.keyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
+      this.currentKeyboardVelocities[category] = i
+      this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
     },
     async onDrop(e) {
       e.preventDefault()

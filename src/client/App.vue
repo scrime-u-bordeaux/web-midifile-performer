@@ -26,7 +26,7 @@ import Guide                        from './pages/Guide.vue';
 import LookForScores                from './pages/LookForScores.vue';
 
 export default {
-  inject: [ 'ioctl', 'performer', 'synth' ], // get instance vars (set with provide())
+  inject: [ 'ioctl', 'performer', 'synth', 'defaultKeyboardVelocities' ], // get instance vars (set with provide())
   components: { LeMenu, PopUp, Guide, LookForScores },
   data() {
     return {
@@ -164,6 +164,11 @@ export default {
     this.ioctl.addListener('noteOff', this.onNoteOff);
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
     this.ioctl.updateInputsAndOutputs();
+
+    const savedVelocities = JSON.parse(localStorage.getItem("velocities"))
+    console.log(savedVelocities)
+    const startingVelocities = !!savedVelocities ? savedVelocities : this.defaultKeyboardVelocities
+    this.ioctl.refreshVelocities(startingVelocities)
 
     const savedInput = localStorage.getItem('input');
     if(!!savedInput) this.ioctl.setInput(savedInput);

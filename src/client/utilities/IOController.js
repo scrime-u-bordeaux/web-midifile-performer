@@ -51,7 +51,7 @@ class IOController extends EventEmitter {
     document.addEventListener('keydown', this.onKeyDown.bind(this));
     document.addEventListener('keyup', this.onKeyUp.bind(this));
 
-    this.keyCommandsState = new Map();
+    this.keyCommandsState = new Map(); // TODO : this map seems awkward and could potentially be ditched for a combination of a currentVelocities object and the universalLayout object
 
     // This is necessary to be able to add and remove the listener at will
     // Otherwise, calling bind() on the fly creates a new function reference, and removal is never applied...
@@ -272,6 +272,16 @@ class IOController extends EventEmitter {
     })
   }
 
+  getCurrentVelocities() {
+    const velocityTemplate = { ...defaultVelocities }
+
+    Object.keys(velocityTemplate).forEach(category =>
+      velocityTemplate[category] = this.keyCommandsState.get(universalLayout[category][0]).velocity
+    )
+
+    return velocityTemplate
+  }
+
   refreshVelocities(velocities) {
     Object.keys(universalLayout).forEach((k, catIndex) => {
       const velocityCategory = universalLayout[k];
@@ -282,6 +292,9 @@ class IOController extends EventEmitter {
         )
       )
     });
+
+    if(velocities !== defaultVelocities) // Object identity by address ; one rare case where this is useful
+      localStorage.setItem("velocities", JSON.stringify(!!velocities.target ? velocities.target : velocities))
   }
 
   // Update the necessary labels. This is semantically unrelated to the component and looks very ugly here.
