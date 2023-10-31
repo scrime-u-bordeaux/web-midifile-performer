@@ -208,6 +208,8 @@ export default {
       currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
       isInputKeyboard: true,
       displayKeyboardSettings: false,
+      spacePressed: false,
+      pauseWithRelease: false,
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
@@ -249,6 +251,7 @@ export default {
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
+    document.addEventListener('keyup',this.onKeyUp)
   },
   async mounted() {
     console.log(this)
@@ -270,6 +273,7 @@ export default {
     this.ioctl.allNotesOff()
 
     document.removeEventListener('keydown',this.onKeyDown)
+    document.removeEventListener('keyup',this.onKeyUp)
   },
   methods: {
     ...mapMutations([
@@ -352,7 +356,21 @@ export default {
     onKeyDown(e) {
       if(e.code === 'Space') {
         e.preventDefault()
-        this.$refs.mainScrollBar.onClickListen()
+        if(!this.spacePressed) {
+          this.spacePressed = true;
+          this.$refs.mainScrollBar.onClickListen()
+        } else {
+          this.pauseWithRelease = true;
+        }
+      }
+    },
+    onKeyUp(e) {
+      if(e.code === 'Space' && this.spacePressed) {
+        this.spacePressed = false;
+        if(this.pauseWithRelease) {
+          this.pauseWithRelease = false;
+          if(this.performer.mode === 'listen') this.$refs.mainScrollBar.onClickListen()
+        }
       }
     }
   }

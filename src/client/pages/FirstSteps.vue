@@ -82,7 +82,7 @@ export default {
       'synthNotesDecoded'
     ]),
     displayLoadingScreen() {
-      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID) 
+      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
         && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
     }
   },
@@ -164,7 +164,9 @@ export default {
         { x: 4300, y: 1750 },
         { x: 4430, y: 1750 },
         { x: 4560, y: 1750 },
-      ]
+      ],
+      spacePressed: false,
+      pauseWithRelease: false
     };
   },
   async created() {
@@ -188,6 +190,7 @@ export default {
     // Activate pause function (duplication with MFP view, but this is the case for everything else on this page)
 
     document.addEventListener('keydown',this.onKeyDown)
+    document.addEventListener('keyup',this.onKeyUp)
   },
   mounted() {
     this.$emit("canPerform",true)
@@ -199,6 +202,7 @@ export default {
 
     this.performer.removeListener('index', this.onPerformerIndexChange);
     document.removeEventListener('keydown',this.onKeyDown)
+    document.removeEventListener('keyup',this.onKeyUp)
   },
   methods: {
     ...mapMutations([
@@ -233,7 +237,21 @@ export default {
     onKeyDown(e) {
       if(e.code === 'Space') {
         e.preventDefault()
-        this.$refs.scrollBar.onClickListen()
+        if(!this.spacePressed) {
+          this.spacePressed = true;
+          this.$refs.scrollBar.onClickListen()
+        } else {
+          this.pauseWithRelease = true;
+        }
+      }
+    },
+    onKeyUp(e) {
+      if(e.code === 'Space' && this.spacePressed) {
+        this.spacePressed = false;
+        if(this.pauseWithRelease) {
+          this.pauseWithRelease = false;
+          if(this.performer.mode === 'listen') this.$refs.scrollBar.onClickListen()
+        }
       }
     }
   },
