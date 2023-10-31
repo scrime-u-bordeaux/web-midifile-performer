@@ -211,6 +211,9 @@ class MidifilePerformer extends EventEmitter {
 
     this.mode = 'silent'; // could be 'listen' or 'perform'
     this.interruptionGuard = new InterruptionGuard()
+
+    this.performVelocitySaved = false;
+    this.savedVelocity = 127;
   }
 
   async initialize() {
@@ -283,6 +286,7 @@ class MidifilePerformer extends EventEmitter {
     this.setSequenceIndex(0);
     this.startAlreadyPlayed = false;
     this.endAlreadyPlayed = false;
+    this.performVelocitySaved = false;
 
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////
 
@@ -342,7 +346,9 @@ class MidifilePerformer extends EventEmitter {
     if (this.mode === 'listen') {
 
       this.performer.setChordVelocityMappingStrategy(
-        this.mfp.chordStrategy.none
+        this.performVelocitySaved ?
+          this.mfp.chordStrategy.clippedScaledFromMax :
+          this.mfp.chordStrategy.none
       );
 
       let pair; // carry the pair information between calls ; otherwise delays are shifted
@@ -388,7 +394,13 @@ class MidifilePerformer extends EventEmitter {
 
     // this.emit('index', this.index);
     this.performer.render(cmd);
-    if (cmd.pressed) this.emit('index', this.performer.getCurrentIndex());
+
+    if (cmd.pressed) {
+      this.emit('index', this.performer.getCurrentIndex());
+
+      if(!this.performVelocitySaved) this.performVelocitySaved = true;
+      this.savedVelocity = cmd.velocity
+    }
 
     // DON'T RETURN ANYTHING ANYMORE :
     // const noteEvents = this.performer.render(cmd);
@@ -417,7 +429,7 @@ class MidifilePerformer extends EventEmitter {
       this.performer.render({
         pressed: start,
         id: 1,
-        velocity: (start ? 127 : 0),
+        velocity: (start ? this.savedVelocity : 0),
         channel: 1
       });
 
