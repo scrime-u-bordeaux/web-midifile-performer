@@ -166,7 +166,6 @@ export default {
     this.ioctl.updateInputsAndOutputs();
 
     const savedVelocities = JSON.parse(localStorage.getItem("velocities"))
-    console.log(savedVelocities)
     const startingVelocities = !!savedVelocities ? savedVelocities : this.defaultKeyboardVelocities
     this.ioctl.refreshVelocities(startingVelocities)
 
