@@ -25,7 +25,8 @@
       @index="onScrollBarIndexChange"
       @start="onScrollBarStartChange"
       @end="onScrollBarEndChange"
-      @modeChange="onModeChange"/>
+      @modeChange="onModeChange"
+      @silence="onSilence"/>
 
     <div>
 
@@ -234,12 +235,16 @@ export default {
     onModeChange(mode) {
       this.performer.setMode(mode);
     },
+    onSilence() {
+      if(this.performer.mode === 'listen') this.$refs.scrollBar.toggleListen() // keep scrollbar state consistent if listen mode
+      else this.performer.setMode('silent') // simply silence if perform mode
+    },
     onKeyDown(e) {
       if(e.code === 'Space') {
         e.preventDefault()
         if(!this.spacePressed) {
           this.spacePressed = true;
-          this.$refs.scrollBar.onClickListen()
+          this.$refs.scrollBar.toggleListen()
         } else {
           this.pauseWithRelease = true;
         }
@@ -250,7 +255,7 @@ export default {
         this.spacePressed = false;
         if(this.pauseWithRelease) {
           this.pauseWithRelease = false;
-          if(this.performer.mode === 'listen') this.$refs.scrollBar.onClickListen()
+          if(this.performer.mode === 'listen') this.$refs.scrollBar.toggleListen()
         }
       }
     }

@@ -78,7 +78,7 @@
     <div v-if="hasBounds" class="play-button-container">
       <div class="play-button"
        :class="currentMode === 'listen' ? 'pause-icon' : 'play-icon'"
-       @click="onClickListen">
+       @click="toggleListen">
       </div>
     </div>
 
@@ -123,6 +123,10 @@
         @input="onEndInput" />
         <!-- @change="onEndChange" /> -->
     </div>
+
+    <div v-if="hasBounds" class="stop-button-container" @click="silence()">
+      <div class="stop-button"></div>
+    </div>
   </div>
 </div>
 </template>
@@ -134,7 +138,7 @@
   align-items: center;
 }
 .scroll-bar-container.vertical-layout .full-width{
-  width: 100%;
+  width: var(--score-width)
 }
 .scroll-bar-container.horizontal-layout {
   display: flex;
@@ -214,6 +218,12 @@ rect, circle {
   height: 1.875rem;
   border-style: double;
   border-width: 0 0 0 1.875rem;
+}
+.stop-button {
+  cursor: pointer;
+  width: 1.875rem;
+  height: 1.875rem;
+  background-color: red;
 }
 .indices .no-padding-indice {
   padding-right: 0;
@@ -403,7 +413,7 @@ export default {
       if (this.dragging === null) return;
       this.dragging = null;
     },
-    onClickListen(e) {
+    toggleListen(e) {
       const newMode = this.currentMode === 'listen' ? 'silent' : 'listen';
       this.currentMode = newMode // to avoid such duplication, it's possible to use the store.
       // however, this induces a lateral workflow between components that will be harder to maintain in the long run.
@@ -415,6 +425,9 @@ export default {
         if(e.code==="ArrowLeft") this.$emit("index",Math.max(this.index - 1, 0))
         if(e.code==="ArrowRight") this.$emit("index",this.index + 1)
       }
+    },
+    silence() {
+      this.$emit('silence')
     }
   },
 };

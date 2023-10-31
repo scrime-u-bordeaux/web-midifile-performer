@@ -56,7 +56,8 @@
       @modeChange="onModeChange"
       @index="onIndexChange"
       @start="onStartChange"
-      @end="onEndChange"/>
+      @end="onEndChange"
+      @silence="onSilence"/>
 
     <div v-if="mfpMidiFile.buffer">
       <div class="control-button-container">
@@ -166,8 +167,10 @@ span.link {
 }
 .index-scroll, .keyboard {
   display: inline-block;
-  max-width: var(--score-width);
   width: 100%;
+}
+.keyboard {
+  max-width: var(--score-width);
 }
 .velocity-slider {
   display: flex;
@@ -342,6 +345,10 @@ export default {
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
     },
+    onSilence() {
+      if(this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
+      else this.performer.setMode('silent') // simply silence if perform mode
+    },
     setRowVelocity(i, category) {
       this.currentKeyboardVelocities[category] = i
       this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
@@ -358,7 +365,7 @@ export default {
         e.preventDefault()
         if(!this.spacePressed) {
           this.spacePressed = true;
-          this.$refs.mainScrollBar.onClickListen()
+          this.$refs.mainScrollBar.toggleListen()
         } else {
           this.pauseWithRelease = true;
         }
@@ -369,7 +376,7 @@ export default {
         this.spacePressed = false;
         if(this.pauseWithRelease) {
           this.pauseWithRelease = false;
-          if(this.performer.mode === 'listen') this.$refs.mainScrollBar.onClickListen()
+          if(this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen()
         }
       }
     }
