@@ -21,6 +21,7 @@
     "start": "Début",
     "current": "Courant",
     "end": "Fin",
+    "speed": "Vitesse",
     "reset": "Réinitialiser"
   },
   "ioController": {

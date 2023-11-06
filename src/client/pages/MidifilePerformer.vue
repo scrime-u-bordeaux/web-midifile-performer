@@ -57,6 +57,7 @@
       @index="onIndexChange"
       @start="onStartChange"
       @end="onEndChange"
+      @speed="onSpeedChange"
       @silence="onSilence"/>
 
     <div v-if="mfpMidiFile.buffer">
@@ -324,6 +325,7 @@ export default {
     async loadMfpMidiBuffer(buffer) {
       this.currentMode = 'silent';
       this.performer.setMode(this.currentMode);
+      this.performer.setPlaybackSpeed(1)
       await this.performer.loadArrayBuffer(buffer);
       this.performer.setSequenceIndex(0);
     },
@@ -344,6 +346,9 @@ export default {
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
+    },
+    onSpeedChange(s) {
+      this.performer.setPlaybackSpeed(s);
     },
     onSilence() {
       if(this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode

@@ -25,6 +25,7 @@
       @index="onScrollBarIndexChange"
       @start="onScrollBarStartChange"
       @end="onScrollBarEndChange"
+      @speed="onSpeedChange"
       @modeChange="onModeChange"
       @silence="onSilence"/>
 
@@ -48,15 +49,16 @@
 
 <style scoped>
 .container {
-  max-width: var(--content-width);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .score, .scroll, .keyboard {
   display: inline-block;
-  max-width: var(--score-width);
   width: 100%;
+}
+.score, .keyboard {
+  max-width: var(--score-width);
 }
 </style>
 
@@ -212,6 +214,7 @@ export default {
     async loadFirstStepsMidiFile() {
       await this.performer.loadArrayBuffer(this.firstStepsMidiFile.buffer);
       this.performer.setMode('silent');
+      this.performer.setPlaybackSpeed(1)
       this.performer.addListener('index', this.onPerformerIndexChange);
       this.performer.setSequenceBounds(0, 63);
       this.performer.setSequenceIndex(0);
@@ -231,6 +234,9 @@ export default {
     },
     onScrollBarEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
+    },
+    onSpeedChange(s) {
+      this.performer.setPlaybackSpeed(s);
     },
     onModeChange(mode) {
       this.performer.setMode(mode);

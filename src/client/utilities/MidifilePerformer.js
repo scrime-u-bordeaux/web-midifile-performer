@@ -208,6 +208,7 @@ class MidifilePerformer extends EventEmitter {
     this.index = 0;
     this.sequenceStartIndex = 0;
     this.sequenceEndIndex = 0;
+    this.playbackSpeed = 1;
 
     this.mode = 'silent'; // could be 'listen' or 'perform'
     this.interruptionGuard = new InterruptionGuard()
@@ -329,6 +330,10 @@ class MidifilePerformer extends EventEmitter {
     this.performer.setLooping(l);
   }
 
+  setPlaybackSpeed(s) {
+    this.playbackSpeed = s
+  }
+
   setMode(mode) {
     if (mode === this.mode) return;
     const previousMode = this.mode
@@ -440,7 +445,7 @@ class MidifilePerformer extends EventEmitter {
       this.interruptionGuard = new InterruptionGuard(start ? dt+pair.end.dt : dt)
 
       this.#playNextSet(pair, !start, false);
-    }, dt);
+    }, dt / this.playbackSpeed);
   };
 
   // This ugly logic is due to edge cases around the start and loop indices.
