@@ -533,6 +533,10 @@ export default {
           // This means modifying the event value. Is this doable ?
         }
     },
+    resetSpeedDisplay() { // FIXME : REPLACE THIS WITH REACTIVITY BY CHANGING THE COMPONENT STRUCTURE
+      // (divorce ScrollBar from Slider, and give ScrollBar a "speed" prop)
+      this.$refs['speed-input'].value = 1
+    },
     silence() {
       this.$emit('silence')
     }

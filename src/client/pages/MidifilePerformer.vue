@@ -328,6 +328,7 @@ export default {
       this.performer.setPlaybackSpeed(1)
       await this.performer.loadArrayBuffer(buffer);
       this.performer.setSequenceIndex(0);
+      this.$refs.mainScrollBar.resetSpeedDisplay();
     },
     onModeChange(mode) {
       this.performer.setMode(mode);
