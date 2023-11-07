@@ -214,7 +214,6 @@ class MidifilePerformer extends EventEmitter {
     this.interruptionGuard = new InterruptionGuard()
 
     this.performVelocitySaved = false;
-    this.savedVelocity = 127;
   }
 
   async initialize() {
@@ -259,6 +258,11 @@ class MidifilePerformer extends EventEmitter {
     });
 
     this.performer.finalize();
+
+    const { maxVelocities, velocityProfile } = this.#createVelocityProfile();
+
+    this.maxVelocities = maxVelocities
+    this.velocityProfile = velocityProfile
 
     this.performer.setNoteEventsCallback(notes => {
       this.emit('notes', noteEventsFromNoteDataVector(notes))
@@ -404,12 +408,47 @@ class MidifilePerformer extends EventEmitter {
       this.emit('index', this.performer.getCurrentIndex());
 
       if(!this.performVelocitySaved) this.performVelocitySaved = true;
-      this.savedVelocity = cmd.velocity
+      this.#refreshMaxVelocities(cmd.velocity)
     }
 
     // DON'T RETURN ANYTHING ANYMORE :
     // const noteEvents = this.performer.render(cmd);
     // USE NOTE EVENTS CALLBACK INSTEAD !
+  }
+
+  /**
+   * Read the chronology from the performer and keep track of the ratio between each set's velocity and the max velocity of the piece.
+   * This is used to conserve velocity variations when using passive playback with a non-null chord velocity mapping
+  **/
+
+  #createVelocityProfile() {
+    const chronology = this.performer.getChronology().getContainer()
+    const startingSets = []
+
+    for(let i = 0; i < chronology.size(); i++) {
+      const start = chronology.get(i).start.events
+      startingSets.push(start)
+    }
+
+    const startingSetsAsObjects = startingSets.map(v => noteEventsFromNoteDataVector(v))
+    const localMaximums = startingSetsAsObjects.map(set => Math.max(...set.map(event => event.velocity)))
+    const maxVelocity = Math.max(...localMaximums)
+
+    return {
+      maxVelocities : localMaximums,
+      velocityProfile: localMaximums.map(localMaximum => localMaximum / maxVelocity)
+    }
+  }
+
+  /**
+   * On each new input, use the velocity profile to redetermine the local velocity for passive playback.
+   * The next index is used, rather than the current one, because the effect begins at the first unplayed set,
+   * i.e. the set at currentIndex+1.
+  **/
+
+  #refreshMaxVelocities(commandVelocity) {
+    const newMaxVelocity = commandVelocity / this.velocityProfile[this.performer.getCurrentIndex()+1]
+    this.maxVelocities = this.velocityProfile.map(ratio => ratio * newMaxVelocity)
   }
 
   // Passive playback (listen) algorithm
@@ -434,7 +473,11 @@ class MidifilePerformer extends EventEmitter {
       this.performer.render({
         pressed: start,
         id: 1,
-        velocity: (start ? this.savedVelocity : 0),
+        velocity: (
+          start ?
+            this.maxVelocities[this.performer.getCurrentIndex()+1] // render has not happened yet, so it's the next index we're after
+            : 0
+          ),
         channel: 1
       });
 
