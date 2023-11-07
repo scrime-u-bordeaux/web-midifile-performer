@@ -303,13 +303,13 @@ class MidifilePerformer extends EventEmitter {
     this.emit('sequence', { length: 0, start: 0, end: 0 });
   }
 
-  setSequenceIndex(sequenceIndex) {
+  setSequenceIndex(sequenceIndex, killSound = true) {
     // const index = Math.max(Math.min(sequenceIndex, this.sequenceEndIndex), this.sequenceStartIndex);
     // this.index = index;
     // this.performer.setCurrentIndex(this.index);
     // this.emit('index', this.index);
 
-    this.index = this.performer.setCurrentIndex(sequenceIndex);
+    this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
     this.emit('index', this.index);
   }
 
@@ -468,7 +468,7 @@ class MidifilePerformer extends EventEmitter {
         || (index === this.performer.getLoopEndIndex() && !this.endAlreadyPlayed)) {
 
           // ...then we must play that, first
-          this.setSequenceIndex(this.performer.getCurrentIndex());
+          this.setSequenceIndex(this.performer.getCurrentIndex(), false);
 
           // and remember that it's done
           index === this.performer.getLoopStartIndex() ?
@@ -476,7 +476,7 @@ class MidifilePerformer extends EventEmitter {
         }
 
       else { // we need to play the next set (move forward, do not repeat the last one)
-        this.setSequenceIndex((index+1)%(this.performer.getLoopEndIndex()+1)); // ensure we stay within the bounds of the indices
+        this.setSequenceIndex((index+1)%(this.performer.getLoopEndIndex()+1), false); // ensure we stay within the bounds of the indices
         // the boundaries have been exceeded
         this.startAlreadyPlayed = false;
         this.endAlreadyPlayed = false;
