@@ -214,6 +214,8 @@ class MidifilePerformer extends EventEmitter {
     this.interruptionGuard = new InterruptionGuard()
 
     this.performVelocitySaved = false;
+    this.maxVelocities = [];
+    this.velocityProfile = [];
   }
 
   async initialize() {
