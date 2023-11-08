@@ -19,10 +19,12 @@ class AllNoteEventsAnalyzer {
 
     for (let i = 0; i < allNoteEvents.length; ++i) {
       const e = allNoteEvents[i];
-      if (e.type !== 'note') continue;
+      // if (e.type !== 'note') continue;
+
+      // console.log('iterating');
 
       const { on, track, channel, noteNumber } = e;
-      const k = JSON.stringify({ channel });
+      const k = JSON.stringify({ track, channel, noteNumber });
 
       if (on) {
         if (notesBuffer.has(k)) {
@@ -40,6 +42,8 @@ class AllNoteEventsAnalyzer {
           } else {
             notesBuffer.set(k, cnt - 1);
           }
+        } else {
+          console.error('error : orphan note off');
         }
       }
     }

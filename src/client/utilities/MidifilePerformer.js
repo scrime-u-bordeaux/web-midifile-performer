@@ -3,6 +3,7 @@ import { parseArrayBuffer } from 'midi-json-parser';
 import { encode }           from 'json-midi-encoder';
 import MidiPlayer           from 'midi-player-js';
 import Performer            from 'midifile-performer';
+import AllNoteEventsAnalyzer from './AllNoteEventsAnalyzer';
 
 const chordDeltaMsDateThreshold = 20;
 
@@ -204,6 +205,7 @@ class MidifilePerformer extends EventEmitter {
   constructor() {
     super();
     this.performer = null;
+    this.analyzer = new AllNoteEventsAnalyzer();
 
     this.index = 0;
     this.sequenceStartIndex = 0;
@@ -239,6 +241,7 @@ class MidifilePerformer extends EventEmitter {
     // this.emit('allnotesoff');
     const midiJson = await parseMidiArrayBuffer(buffer);
     const allNoteEvents = mergeTracks(midiJson);
+    this.analyzer.analyze(allNoteEvents);
 
     // FEED THE PERFORMER //////////////////////////////////////////////////////
 
@@ -250,7 +253,7 @@ class MidifilePerformer extends EventEmitter {
     // IOController.js
     allNoteEvents.forEach(e => {
       const { delta, on, noteNumber, velocity, channel } = e;
-      console.log(e);
+      // console.log(e);
       this.performer.pushEvent(delta, {
         on,
         pitch: noteNumber,
