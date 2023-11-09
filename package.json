@@ -2,7 +2,7 @@
   "name": "midifile-performer-web",
   "version": "1.0.0",
   "description": "project website with online web version of the midifile performer",
-  "main": "index.js",
+  "main": "src/server/index.js",
   "scripts": {
     "build": "webpack",
     "dev": "webpack serve",
