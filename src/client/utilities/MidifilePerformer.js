@@ -436,7 +436,9 @@ class MidifilePerformer extends EventEmitter {
     }
 
     const startingSetsAsObjects = startingSets.map(v => noteEventsFromNoteDataVector(v))
-    const localMaximums = startingSetsAsObjects.map(set => Math.max(...set.map(event => event.velocity)))
+    const localMaximums = startingSetsAsObjects.map(set =>
+      Math.max(...set.filter(event => event.on).map(event => event.velocity))
+    )
     const maxVelocity = Math.max(...localMaximums)
 
     return {
