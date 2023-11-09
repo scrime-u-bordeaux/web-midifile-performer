@@ -208,8 +208,6 @@ class MidifilePerformer extends EventEmitter {
     this.analyzer = new AllNoteEventsAnalyzer();
 
     this.index = 0;
-    this.sequenceStartIndex = 0;
-    this.sequenceEndIndex = 0;
     this.playbackSpeed = 1;
 
     this.mode = 'silent'; // could be 'listen' or 'perform'
@@ -277,9 +275,9 @@ class MidifilePerformer extends EventEmitter {
       // it must also be done when the index is reached via rendering.
 
       if(this.mode!=="silent" && !this.performer.stopped()) { // Technically the check against stopped is redundant since we're not stopping the performer anymore
-        if(this.performer.getCurrentIndex() === this.performer.getLoopEndIndex())
+        if(this.#getCurrentIndex() === this.#getLoopEndIndex())
           this.endAlreadyPlayed = true;
-        else if(this.performer.getCurrentIndex() === this.performer.getLoopStartIndex()) {
+        else if(this.#getCurrentIndex() === this.#getLoopStartIndex()) {
           this.startAlreadyPlayed = true;
           this.endAlreadyPlayed = false; // yes, this is necessary, or else jumping to the end will be buggy
         }
@@ -291,8 +289,6 @@ class MidifilePerformer extends EventEmitter {
     });
 
     this.performer.setLoopIndices(0, this.performer.size() - 1);
-    this.sequenceStartIndex = this.performer.getLoopStartIndex();
-    this.sequenceEndIndex = this.performer.getLoopEndIndex();
     this.setSequenceIndex(0);
     this.startAlreadyPlayed = false;
     this.endAlreadyPlayed = false;
@@ -302,8 +298,8 @@ class MidifilePerformer extends EventEmitter {
 
     this.emit('sequence', {
       length: this.performer.size(),
-      start: this.sequenceStartIndex,
-      end: this.sequenceEndIndex,
+      start: this.#getLoopStartIndex(),
+      end: this.#getLoopEndIndex(),
     });
   }
 
@@ -313,23 +309,18 @@ class MidifilePerformer extends EventEmitter {
   }
 
   setSequenceIndex(sequenceIndex, killSound = true) {
-    // const index = Math.max(Math.min(sequenceIndex, this.sequenceEndIndex), this.sequenceStartIndex);
-    // this.index = index;
-    // this.performer.setCurrentIndex(this.index);
-    // this.emit('index', this.index);
-
     this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
     this.emit('index', this.index);
   }
 
   setSequenceBounds(min, max) {
     this.performer.setLoopIndices(min, max);
-    this.index = this.performer.getCurrentIndex();
+    this.index = this.#getCurrentIndex();
 
     this.emit('sequence', {
       length: this.performer.size(),
-      start: this.performer.getLoopStartIndex(),
-      end: this.performer.getLoopEndIndex(),
+      start: this.#getLoopStartIndex(),
+      end: this.#getLoopEndIndex(),
     });
 
     this.emit('index', this.index);
@@ -410,7 +401,7 @@ class MidifilePerformer extends EventEmitter {
     this.performer.render(cmd);
 
     if (cmd.pressed) {
-      this.emit('index', this.performer.getCurrentIndex());
+      this.emit('index', this.#getCurrentIndex());
 
       if(!this.performVelocitySaved) this.performVelocitySaved = true;
       this.#refreshMaxVelocities(cmd.velocity)
@@ -419,6 +410,32 @@ class MidifilePerformer extends EventEmitter {
     // DON'T RETURN ANYTHING ANYMORE :
     // const noteEvents = this.performer.render(cmd);
     // USE NOTE EVENTS CALLBACK INSTEAD !
+  }
+
+  // ---------------------------------------------------------------------------
+  // ---------------------------PRIVATE METHODS---------------------------------
+  // ---------------------------------------------------------------------------
+
+  // Index wrapping methods
+  // Most of them are direct returns, but at any point we might want to wrap logic around it
+  // (such as the #getNextIndex() method)
+
+  #getCurrentIndex() {
+    return this.performer.getCurrentIndex()
+  }
+
+  // Ensure we stay within bounds at the loop end, even if it's the end of the track
+
+  #getNextIndex() {
+    return (this.#getCurrentIndex() + 1) % (this.#getLoopEndIndex() + 1)
+  }
+
+  #getLoopStartIndex() {
+    return this.performer.getLoopStartIndex()
+  }
+
+  #getLoopEndIndex() {
+    return this.performer.getLoopEndIndex()
   }
 
   /**
@@ -450,11 +467,11 @@ class MidifilePerformer extends EventEmitter {
   /**
    * On each new input, use the velocity profile to redetermine the local velocity for passive playback.
    * The next index is used, rather than the current one, because the effect begins at the first unplayed set,
-   * i.e. the set at currentIndex+1.
+   * i.e. the set at nextIndex.
   **/
 
   #refreshMaxVelocities(commandVelocity) {
-    const newMaxVelocity = commandVelocity / this.velocityProfile[this.performer.getCurrentIndex()+1]
+    const newMaxVelocity = commandVelocity / this.velocityProfile[this.#getNextIndex()]
     this.maxVelocities = this.velocityProfile.map(ratio => ratio * newMaxVelocity)
   }
 
@@ -465,9 +482,6 @@ class MidifilePerformer extends EventEmitter {
     if (start) {
       pair = this.performer.peekNextSetPair();
       dt = pair.start.dt;
-      // const nextIndex = this.performer.getNextIndex();
-      // if (nextIndex === this.performer.getLoopStartIndex()) { /* ... */ }
-      // if (nextIndex === this.performer.getLoopEndIndex()) { /* ... */ }
     } else  {
       dt = pair.end.dt;
     }
@@ -482,13 +496,13 @@ class MidifilePerformer extends EventEmitter {
         id: 1,
         velocity: (
           start ?
-            this.maxVelocities[this.performer.getCurrentIndex()+1] // render has not happened yet, so it's the next index we're after
+            this.maxVelocities[this.#getNextIndex()] // render has not happened yet, so it's the next index we're after
             : 0
           ),
         channel: 1
       });
 
-      if (start) this.emit('index', this.performer.getCurrentIndex());
+      if (start) this.emit('index', this.#getCurrentIndex());
 
       // Ensure perform mode won't cut off a note.
       // Must also be done for rendering ending sets so the note offs are properly triggered.
@@ -506,27 +520,27 @@ class MidifilePerformer extends EventEmitter {
 
   #updateIndexOnModeShift() {
     if(this.mode==="silent") {
-      if (this.performer.getCurrentIndex() < this.performer.getLoopEndIndex()) {
-        this.setSequenceIndex(this.performer.getCurrentIndex());
+      if (this.#getCurrentIndex() < this.#getLoopEndIndex()) {
+        this.setSequenceIndex(this.#getCurrentIndex());
       }
     } else {
-      const index = this.performer.getCurrentIndex()
+      const index = this.#getCurrentIndex()
 
       // If we are at the start and haven't played the start (resp. : end)...
 
-      if((index === this.performer.getLoopStartIndex() && !this.startAlreadyPlayed)
-        || (index === this.performer.getLoopEndIndex() && !this.endAlreadyPlayed)) {
+      if((index === this.#getLoopStartIndex() && !this.startAlreadyPlayed)
+        || (index === this.#getLoopEndIndex() && !this.endAlreadyPlayed)) {
 
           // ...then we must play that, first
-          this.setSequenceIndex(this.performer.getCurrentIndex(), false);
+          this.setSequenceIndex(this.#getCurrentIndex(), false);
 
           // and remember that it's done
-          index === this.performer.getLoopStartIndex() ?
+          index === this.#getLoopStartIndex() ?
             this.startAlreadyPlayed = true : this.endAlreadyPlayed = true
         }
 
       else { // we need to play the next set (move forward, do not repeat the last one)
-        this.setSequenceIndex((index+1)%(this.performer.getLoopEndIndex()+1), false); // ensure we stay within the bounds of the indices
+        this.setSequenceIndex(this.#getNextIndex(), false);
         // the boundaries have been exceeded
         this.startAlreadyPlayed = false;
         this.endAlreadyPlayed = false;
