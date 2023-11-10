@@ -27,7 +27,7 @@
     "json-midi-encoder": "^5.0.49",
     "midi-json-parser": "^8.0.51",
     "midi-player-js": "^2.0.16",
-    "midifile-performer": "^0.4.1",
+    "midifile-performer": "^0.4.4",
     "vue": "^3.2.23",
     "vue-i18n": "^9.5.0",
     "vue-router": "^4.0.12",

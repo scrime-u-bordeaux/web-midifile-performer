@@ -73,7 +73,7 @@ class IOController extends EventEmitter {
     if (this.keyCommandsState.has(e.code)) {
       let { pressed, id, velocity } = this.keyCommandsState.get(e.code);
 
-      if (!pressed) { // should never be true due to e.repeat condition above
+      if (!pressed) { // should always be the case, due to e.repeat condition above
         pressed = true;
         this.keyCommandsState.set(e.code, { pressed, id, velocity });
         this.emit('command', {

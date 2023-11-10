@@ -369,7 +369,7 @@ export default {
     onKeyDown(e) {
       if(e.code === 'Space') {
         e.preventDefault()
-        if(!this.spacePressed) {
+        if(!this.spacePressed) {   // TODO : maybe use the built-in repeat property instead, not sure why I did not originally
           this.spacePressed = true;
           this.$refs.mainScrollBar.toggleListen()
         } else {
