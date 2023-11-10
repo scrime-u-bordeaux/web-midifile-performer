@@ -5,7 +5,7 @@
       <!-- whites -->
       <template v-for="n in layoutVars.whiteNotes">
         <rect class="white-note"
-          v-bind:class="state[n.note - minNote] ? 'active-note' : ''"
+          v-bind:class="state[n.note - minNote] > 0 ? 'active-note' : ''"
           :x="n.x"
           :y="0"
           :width="noteDims.white.width"
@@ -24,7 +24,7 @@
       <!-- blacks -->
       <template v-for="n in layoutVars.blackNotes">
         <rect class="black-note"
-          v-bind:class="state[n.note - minNote] ? 'active-note' : ''"
+          v-bind:class="state[n.note - minNote] > 0 ? 'active-note' : ''"
           :x="n.x"
           :y="0"
           :width="noteDims.black.width"
@@ -158,7 +158,6 @@ export default {
     this.noteStates = [];
     for (let i = 0; i <= this.maxNote - this.minNote; ++i) {
       this.noteStates.push(false);
-      this.state.push(false);
     }
   },
   /*

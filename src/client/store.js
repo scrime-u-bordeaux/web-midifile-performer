@@ -33,12 +33,11 @@ const store = createStore({
       outputs: {},
       currentInputId: 0,
       currentOutputId: 0,
-      //midiBuffers: {},
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
       mfpMidiFile: { id: 'mfp', title: '', url: '', buffer: null },
       minKeyboardNote,
       maxKeyboardNote,
-      keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(false),
+      keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),
       sequenceLength: 0,
       sequenceStart: 0,
       sequenceEnd: 0,
@@ -67,14 +66,6 @@ const store = createStore({
     setCurrentOutputId(state, id) {
       state.currentOutputId = id;
     },
-    // setMidiBuffer(state, bufferData) {
-    //   const { id, ...data } = bufferData;
-    //   state.midiBuffers[id] = data;
-    //   state.midiBuffers = { ...state.midiBuffers };
-    // },
-    // setMidiBuffers(state, buffers) {
-    //   state.midiBuffers = { ...buffers };
-    // },
     setFirstStepsMidiFile(state, file) {
       state.firstStepsMidiFile = { ...file };
     },
@@ -84,18 +75,28 @@ const store = createStore({
     animateNoteOn(state, note) {
       if (note.pitch >= state.minKeyboardNote &&
           note.pitch <= state.maxKeyboardNote) {
-        state.keyboardState[note.pitch - state.minKeyboardNote] = note.velocity > 0;
+        const currentPlayingMask = state.keyboardState[note.pitch - state.minKeyboardNote]
+        const channelMask = 1 << note.channel
+
+        state.keyboardState[note.pitch - state.minKeyboardNote] =
+          note.velocity > 0 ?
+            currentPlayingMask | channelMask :
+            currentPlayingMask & ~channelMask
       }
     },
     animateNoteOff(state, note) {
       if (note.pitch >= state.minKeyboardNote &&
           note.pitch <= state.maxKeyboardNote) {
-        state.keyboardState[note.pitch - state.minKeyboardNote] = false;
+        const currentPlayingMask = state.keyboardState[note.pitch - state.minKeyboardNote]
+        const channelMask = 1 << note.channel
+
+        state.keyboardState[note.pitch - state.minKeyboardNote] =
+          currentPlayingMask & ~channelMask
       }
     },
     allNotesOff(state) {
       for (let n = 0; n < state.maxKeyboardNote - state.minKeyboardNote; ++n) {
-        state.keyboardState[n] = false;
+        state.keyboardState[n] = 0x0;
       }
     },
     ////////////////////////////////////////////////////////////////////////////
@@ -133,7 +134,7 @@ const store = createStore({
       state.synthNotesDecoded = amount
     }
     ////////////////////////////////////////////////////////////////////////////
-  },
+  }
   /*
   actions: {
     async loadMidiBuffers({ commit }) {
