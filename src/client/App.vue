@@ -87,7 +87,7 @@ export default {
     // THIS IS WHERE WE ACTUALLY USE THE MIDIFILE PERFORMER STUFF :
     onCommand(cmd) {
       if(this.canPerform) {
-        if(this.performer.mode !== 'perform') {
+        if(this.performer.mode !== 'perform' && cmd.pressed) { // key releases can never trigger perform mode
           this.performer.setMode('perform')
           this.setPerformModeStartedAt(Date.now()) // inform watchers, e.g. the scroll bar to set the button to pause
         }

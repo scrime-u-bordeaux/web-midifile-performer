@@ -130,8 +130,8 @@
       />
     </div>
 
-    <div v-if="hasBounds" class="stop-button-container" @click="silence()">
-      <div class="stop-button"></div>
+    <div v-if="hasBounds" class="stop-button-container">
+      <div class="stop-button" @click="silence()"></div>
     </div>
   </div>
 </div>
