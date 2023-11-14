@@ -211,7 +211,9 @@ class MidifilePerformer extends EventEmitter {
     this.playbackSpeed = 1;
 
     this.mode = 'silent'; // could be 'listen' or 'perform'
-    this.interruptionGuard = new InterruptionGuard()
+
+    this.interruptionGuard = new InterruptionGuard() // watcher to avoid cutting an automatic starting set too soon
+    this.pendingEndSet = [] // end set for the currently automatically playing starting set ; will be appended to perform mode's first triggered set
 
     this.performVelocitySaved = false;
     this.maxVelocities = [];
@@ -268,7 +270,9 @@ class MidifilePerformer extends EventEmitter {
     this.velocityProfile = velocityProfile
 
     this.performer.setNoteEventsCallback(notes => {
-      this.emit('notes', noteEventsFromNoteDataVector(notes))
+      const receivedNotes = noteEventsFromNoteDataVector(notes)
+      const notesToEmit = this.mode === 'perform' ? [...this.pendingEndSet, ...receivedNotes] : receivedNotes
+      this.emit('notes', notesToEmit)
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :
@@ -366,9 +370,19 @@ class MidifilePerformer extends EventEmitter {
       // Wait for any notes from listen mode to finish playing
       // (if they last less than a second)
 
+      // console.log("Perform mode")
+
+      // console.log("Perform mode started at", Date.now())
+
+      // const startWait = Date.now()
+
       while(!this.interruptionGuard.canBeInterrupted()) {
         console.log("Active wait") // maybe there's something more productive to do while waiting ?
       }
+
+      // const endWait = Date.now()
+
+      // console.log("Waited for ", endWait - startWait)
 
       if (this.timeout && previousMode === "listen") {
         clearTimeout(this.timeout);
@@ -400,16 +414,14 @@ class MidifilePerformer extends EventEmitter {
     // this.emit('index', this.index);
     this.performer.render(cmd);
 
+    this.pendingEndSet = []
+
     if (cmd.pressed) {
       this.emit('index', this.#getCurrentIndex());
 
       if(!this.performVelocitySaved) this.performVelocitySaved = true;
       this.#refreshMaxVelocities(cmd.velocity)
     }
-
-    // DON'T RETURN ANYTHING ANYMORE :
-    // const noteEvents = this.performer.render(cmd);
-    // USE NOTE EVENTS CALLBACK INSTEAD !
   }
 
   // ---------------------------------------------------------------------------
@@ -482,8 +494,11 @@ class MidifilePerformer extends EventEmitter {
     if (start) {
       pair = this.performer.peekNextSetPair();
       dt = pair.start.dt;
+      this.pendingEndSet = noteEventsFromNoteDataVector(pair.end.events)
     } else  {
       dt = pair.end.dt;
+      // retain the pending set during this time, perform may still interrupt
+      // better to trigger it twice than never
     }
 
     dt = first ? 0 : dt;
@@ -504,9 +519,10 @@ class MidifilePerformer extends EventEmitter {
 
       if (start) this.emit('index', this.#getCurrentIndex());
 
-      // Ensure perform mode won't cut off a note.
-      // Must also be done for rendering ending sets so the note offs are properly triggered.
-      this.interruptionGuard = new InterruptionGuard(start ? dt+pair.end.dt : dt)
+      // Ensure perform won't cut off a note too soon.
+      // Not optimal yet. Sometimes perform unavoidably "comes too late". There's room for improvement.
+      this.interruptionGuard = new InterruptionGuard(start ? (dt + pair.end.dt) / this.playbackSpeed : 0)
+      //console.log(`Setting new InterruptionGuard at ${Date.now()} with value ${this.interruptionGuard.dt} for index ${this.#getCurrentIndex()+1}`)
 
       this.#playNextSet(pair, !start, false);
     }, dt / this.playbackSpeed);
