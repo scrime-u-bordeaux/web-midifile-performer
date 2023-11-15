@@ -1,6 +1,6 @@
 {
   "name": "midifile-performer-web",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "project website with online web version of the midifile performer",
   "main": "src/server/index.js",
   "scripts": {
