@@ -21,6 +21,11 @@ const chordDeltaMsDateThreshold = 20;
  * @property {midiEvent[][]} tracks - An array of arrays of {@link midiEvent} objects
  */
 
+const PRETEND_TRIGGER = 42
+const WAIT = 50
+const TRIGGER_NEXT = 60
+
+
 // parsing /////////////////////////////////////////////////////////////////////
 
 /**
@@ -194,8 +199,12 @@ class InterruptionGuard {
     this.startTimeStamp = startTimeStamp || Date.now();
   }
 
-  canBeInterrupted() {
-    return Date.now() - this.startTimeStamp > this.dt
+  playbackInterruptionStatus() {
+    const timeElapsed = Date.now() - this.startTimeStamp
+
+    if(timeElapsed < this.dt / 2) return PRETEND_TRIGGER // Too early to move on : pretend the performed key triggered the last playback starting set
+    else if(this.dt / 2 <= timeElapsed && timeElapsed < this.dt) return WAIT // Too late to pretend : wait until interruption is acceptable
+    else return TRIGGER_NEXT // Proceed with performing next starting set
   }
 }
 
@@ -367,22 +376,15 @@ class MidifilePerformer extends EventEmitter {
 
     if (this.mode === 'perform') {
 
-      // Wait for any notes from listen mode to finish playing
-      // (if they last less than a second)
+      // Handle transition from listen mode
+      //
 
-      // console.log("Perform mode")
+      if(this.interruptionGuard.playbackInterruptionStatus() === PRETEND_TRIGGER)
+        this.pretendTriggerFlag = true
 
-      // console.log("Perform mode started at", Date.now())
-
-      // const startWait = Date.now()
-
-      while(!this.interruptionGuard.canBeInterrupted()) {
-        console.log("Active wait") // maybe there's something more productive to do while waiting ?
+      else while(this.interruptionGuard.playbackInterruptionStatus() === WAIT) {
+          console.log("Active wait") // maybe there's something more productive to do while waiting ?
       }
-
-      // const endWait = Date.now()
-
-      // console.log("Waited for ", endWait - startWait)
 
       if (this.timeout && previousMode === "listen") {
         clearTimeout(this.timeout);
@@ -409,14 +411,26 @@ class MidifilePerformer extends EventEmitter {
     // note : { on, pitch, velocity, channel }
 
     const res = [];
-    if (this.mode !== 'perform') return res;
+    if (this.mode !== 'perform' || this.pretendTriggerFlag) {
+      // Ensure we do not do this more than once
+      this.pretendTriggerFlag = false;
+      // Indicate to listen mode that pretendTrigger was performed,
+      // And thus that it should repeat this index if it resumes there
+      this.repeatIndexFlag = true;
+      return res;
+    }
 
     // this.emit('index', this.index);
     this.performer.render(cmd);
 
+    // Prevent triggering the pending ending set more than once
+
     this.pendingEndSet = []
 
     if (cmd.pressed) {
+      // Releasing the key does not change the index
+      // So this flag only becomes false on key press
+      this.repeatIndexFlag = false;
       this.emit('index', this.#getCurrentIndex());
 
       if(!this.performVelocitySaved) this.performVelocitySaved = true;
@@ -519,10 +533,9 @@ class MidifilePerformer extends EventEmitter {
 
       if (start) this.emit('index', this.#getCurrentIndex());
 
-      // Ensure perform won't cut off a note too soon.
-      // Not optimal yet. Sometimes perform unavoidably "comes too late". There's room for improvement.
+      // Ensure perform won't cut off a note too soon, nor move to the next one too early.
+      // Ending sets can be interrupted just fine (right ?)
       this.interruptionGuard = new InterruptionGuard(start ? (dt + pair.end.dt) / this.playbackSpeed : 0)
-      //console.log(`Setting new InterruptionGuard at ${Date.now()} with value ${this.interruptionGuard.dt} for index ${this.#getCurrentIndex()+1}`)
 
       this.#playNextSet(pair, !start, false);
     }, dt / this.playbackSpeed);
@@ -554,6 +567,15 @@ class MidifilePerformer extends EventEmitter {
           index === this.#getLoopStartIndex() ?
             this.startAlreadyPlayed = true : this.endAlreadyPlayed = true
         }
+
+      else if(this.repeatIndexFlag) { // special case of perform mode interruption
+        // It pretended to trigger a set actually triggered by listen mode.
+        // So the index already moved forward then, but it produced nothing.
+        // If we're here, that means listen mode was set right after that,
+        // and so we need to play the set at the index it was set to.
+        this.repeatIndexFlag = false;
+        this.setSequenceIndex(this.#getCurrentIndex(), false);
+      }
 
       else { // we need to play the next set (move forward, do not repeat the last one)
         this.setSequenceIndex(this.#getNextIndex(), false);
