@@ -90,6 +90,7 @@
         :max="10"
         :step="0.1"
         :value="1"
+        :allowNaN="false"
         @input="onPlaybackSpeedChanged"
       />
     </div>
@@ -102,6 +103,7 @@
         :max="end + 1"
         :step="1"
         :value="start + 1"
+        :allowNaN="true"
         @input="onStartInput"
       />
     </div>
@@ -114,6 +116,7 @@
         :max="hasBounds ? end + 1 : end"
         :step="1"
         :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
+        :allowNaN="true"
         @input="onIndexInput"
       />
     </div>
@@ -126,6 +129,7 @@
         :max="Math.max(1, size)"
         :step="1"
         :value="end + 1"
+        :allowNaN="true"
         @input="onEndInput"
       />
     </div>

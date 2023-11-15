@@ -1,16 +1,18 @@
 <template>
-  <div class="input-label"> {{ label }} </div>
+  <div class="number-input-container">
+    <div class="input-label"> {{ label }} </div>
 
-  <div class="number-container">
-    <input
-      ref="input"
-      type="number"
-      :min="min"
-      :max="max"
-      :value="value"
-      :step="step"
-      @keydown="onKeyDown"
-      @input="onInput"/>
+    <div class="number-container">
+      <input
+        ref="input"
+        type="number"
+        :min="min"
+        :max="max"
+        :value="value"
+        :step="step"
+        @keydown="onKeyDown"
+        @input="onInput"/>
+    </div>
   </div>
 </template>
 
@@ -35,7 +37,7 @@ input::selection {
 
 <script>
 export default {
-  props: [ 'label', 'min', 'max', 'value', 'step' ],
+  props: [ 'label','allowNaN', 'min', 'max', 'value', 'step' ],
   emits: ['input'],
   computed: {
     isDecimal() {
@@ -121,8 +123,12 @@ export default {
       // This is not enforced by min and max.
       // It's MUCH better to do it here than on keydown (because we have the actual value of the input)
 
-      if(e.target.value < this.min) e.target.value = this.min
-      if(e.target.value > this.max) e.target.value = this.max
+      if(e.target.valueAsNumber < this.min) e.target.value = this.min
+      if(e.target.valueAsNumber > this.max) e.target.value = this.max
+
+      // If, after this, we have obtained a NaN and the input cannot support it, fall back to the min value.
+
+      if(isNaN(e.target.valueAsNumber) && !this.allowNaN) e.target.value = this.min
 
       this.$emit('input',e)
     },
