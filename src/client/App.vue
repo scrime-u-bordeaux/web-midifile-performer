@@ -36,7 +36,7 @@ export default {
   },
   computed: {
     ...mapState([
-      //'keyboardState'
+      // 'keyboardState'
       'sequenceLength',
       'sequenceStart',
       'sequenceEnd',
