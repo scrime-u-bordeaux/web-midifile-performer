@@ -5,12 +5,15 @@ import {
   createRouter,
 } from 'vue-router';
 import pages from './pages';
+import config from '../../config';
 
 const router = createRouter({
-  // base: '/',
-  base: '/midifile-performer-web/',
-  history: createWebHashHistory(),
-  // history: createWebHistory(),
+  history: createWebHashHistory(config.publicPath),
+  // history: createWebHashHistory('/'),
+  // history: createWebHashHistory('/midifile-performer-web/'),
+
+  // history: createWebHistory('/'),
+  // history: createWebHistory('/midifile-performer-web/'),
   routes: [
     {
       path: '/',
