@@ -203,7 +203,7 @@ import LoadingScreen from '../components/LoadingScreen.vue'
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
-  inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
+  inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
   components: { IOManager, Keyboard, ScrollBar, LoadingScreen },
   data() {
     return {
@@ -237,7 +237,7 @@ export default {
     },
     displayLoadingScreen() {
       return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
-        && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
+        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
     },
     currentMode: {
       // Instead of putting guards here, we could use v-show to hide the scroll bar and not v-if,

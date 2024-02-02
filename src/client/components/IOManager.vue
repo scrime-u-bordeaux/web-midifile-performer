@@ -43,7 +43,7 @@ button { display: block; font-size: 1em; height: fit-content;}
 import { mapState } from 'vuex';
 
 export default {
-  inject: [ 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
+  inject: [ 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
   computed: {
     ...mapState([
       'inputs',
@@ -61,7 +61,7 @@ export default {
   },
   methods: {
     preventUnloadedSynthSelect(output) {
-      return output.id === this.DEFAULT_IO_ID && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
+      return output.id === this.DEFAULT_IO_ID && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
     },
     selectedInputChanged(e) {
       const id = e.target.value;

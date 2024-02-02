@@ -70,7 +70,7 @@ import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue';
 
 export default {
-  inject: [ 'performer', 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS' ],
+  inject: [ 'performer', 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
   components: { BachPrelude, Keyboard, ScrollBar, LoadingScreen },
   computed: {
     ...mapState([
@@ -86,7 +86,7 @@ export default {
     ]),
     displayLoadingScreen() {
       return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
-        && this.synthNotesDecoded !== this.NUMBER_OF_KEYS
+        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
     }
   },
   data() {

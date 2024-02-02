@@ -1,7 +1,5 @@
 import EventEmitter from 'events';
 
-const NUMBER_OF_KEYS = 88
-
 class Synth extends EventEmitter {
   constructor() {
     //const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -11,7 +9,7 @@ class Synth extends EventEmitter {
     this.ctx = null;
     this.releaseTime = 0.15; // 150 ms
     //this.notes = [];
-    this.notes = new Map();
+    this.noteBuffers = new Map();
     this.playingMap = new Map()
     for(let i = 1; i<=16; i++) this.playingMap.set(i, new Map())
     // A0 is midi note 21 :
@@ -33,7 +31,7 @@ class Synth extends EventEmitter {
     let notesFetched = 0;
     let notesDecoded = 0;
 
-    notes.forEach((note, i) => {
+    noteFiles.forEach((note, i) => {
       promises.push(new Promise((resolve, reject) => {
         fetch(`samples/${note}.mp3`)
         .then(async res => {
@@ -52,8 +50,8 @@ class Synth extends EventEmitter {
       }));
     });
 
-    this.notes = await Promise.all(promises);
-    console.log(this.notes);
+    this.noteBuffers = await Promise.all(promises);
+    console.log(this.noteBuffers);
     return Promise.resolve();
   }
 
@@ -61,12 +59,14 @@ class Synth extends EventEmitter {
     const note = this.getNoteIfInRange(noteNumber);
 
     if (note !== null) {
-      const { buffer } = note;
+      const [ bufferIndex, playbackRate ] = note;
+      console.log(bufferIndex, playbackRate);
+      const { buffer } = this.noteBuffers[bufferIndex];
       let player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
       if (!!player) this.turnOffPlayer(player)
 
-      player = this.makePlayer(buffer)
+      player = this.makePlayer(buffer, playbackRate);
 
       // ------------------ Velocity-specific settings : -----------------------
 
@@ -92,7 +92,9 @@ class Synth extends EventEmitter {
     }
   }
 
-  noteOff({ noteNumber, velocity, channel }) { // TODO : use velocity to influence how fast the note turns off (what computation should be made ? logarithmic ?)
+  // TODO : use velocity to influence how fast the note turns off
+  // (what computation should be made ? logarithmic ?)
+  noteOff({ noteNumber, velocity, channel }) {
     const note = this.getNoteIfInRange(noteNumber, channel);
 
     if (note !== null) {
@@ -117,20 +119,22 @@ class Synth extends EventEmitter {
     if (
       noteNumber >= this.minNote &&
       noteNumber <= this.maxNote &&
-      this.notes.length > 0
+      this.noteBuffers.length > 0
     ) {
-      return this.notes[noteNumber - this.minNote];
+      //return this.noteBuffers[noteNumber - this.minNote];
+      return noteInfos[noteNumber - this.minNote];
     }
 
     return null;
   }
 
-  makePlayer(buffer) {
+  makePlayer(buffer, playbackRate = 1) {
     const source = this.ctx.createBufferSource();
     const biquad = this.ctx.createBiquadFilter();
     const volume = this.ctx.createGain();
 
     source.buffer = buffer;
+    source.playbackRate.value = playbackRate;
     source.connect(biquad);
 
     biquad.type = 'lowpass';
@@ -167,97 +171,116 @@ class Synth extends EventEmitter {
   }
 };
 
-const notes = [
-  'A0',
-  'Bb0',
-  'B0',
-  'C1',
-  'Db1',
-  'D1',
-  'Eb1',
-  'E1',
-  'F1',
-  'Gb1',
-  'G1',
-  'Ab1',
-  'A1',
-  'Bb1',
-  'B1',
-  'C2',
-  'Db2',
-  'D2',
-  'Eb2',
-  'E2',
-  'F2',
-  'Gb2',
-  'G2',
-  'Ab2',
-  'A2',
-  'Bb2',
-  'B2',
-  'C3',
-  'Db3',
-  'D3',
-  'Eb3',
-  'E3',
-  'F3',
-  'Gb3',
-  'G3',
-  'Ab3',
-  'A3',
-  'Bb3',
-  'B3',
-  'C4',
-  'Db4',
-  'D4',
-  'Eb4',
-  'E4',
-  'F4',
-  'Gb4',
-  'G4',
-  'Ab4',
-  'A4',
-  'Bb4',
-  'B4',
-  'C5',
-  'Db5',
-  'D5',
-  'Eb5',
-  'E5',
-  'F5',
-  'Gb5',
-  'G5',
-  'Ab5',
-  'A5',
-  'Bb5',
-  'B5',
-  'C6',
-  'Db6',
-  'D6',
-  'Eb6',
-  'E6',
-  'F6',
-  'Gb6',
-  'G6',
-  'Ab6',
-  'A6',
-  'Bb6',
-  'B6',
-  'C7',
-  'Db7',
-  'D7',
-  'Eb7',
-  'E7',
-  'F7',
-  'Gb7',
-  'G7',
-  'Ab7',
-  'A7',
-  'Bb7',
-  'B7',
-  'C8',
+
+// notes must be specified in increasing order :
+
+const notesLayout = [
+  { name: 'A0',   file: 'A0',   transpose: 0  },
+  { name: 'Bb0',  file: 'A0',   transpose: 1  },
+  { name: 'B0',   file: 'C1',   transpose: -1 },
+  { name: 'C1',   file: 'C1',   transpose: 0  },
+  { name: 'Db1',  file: 'C1',   transpose: 1  },
+  { name: 'D1',   file: 'Eb1',  transpose: -1 },
+  { name: 'Eb1',  file: 'Eb1',  transpose: 0  },
+  { name: 'E1',   file: 'Eb1',  transpose: 1  },
+  { name: 'F1',   file: 'Gb1',  transpose: -1 },
+  { name: 'Gb1',  file: 'Gb1',  transpose: 0  },
+  { name: 'G1',   file: 'Gb1',  transpose: 1  },
+  { name: 'Ab1',  file: 'A1',   transpose: -1 },
+  { name: 'A1',   file: 'A1',   transpose: 0  },
+  { name: 'Bb1',  file: 'A1',   transpose: 1  },
+  { name: 'B1',   file: 'C2',   transpose: -1 },
+  { name: 'C2',   file: 'C2',   transpose: 0  },
+  { name: 'Db2',  file: 'C2',   transpose: 1  },
+  { name: 'D2',   file: 'Eb2',  transpose: -1 },
+  { name: 'Eb2',  file: 'Eb2',  transpose: 0  },
+  { name: 'E2',   file: 'Eb2',  transpose: 1  },
+  { name: 'F2',   file: 'Gb2',  transpose: -1 },
+  { name: 'Gb2',  file: 'Gb2',  transpose: 0  },
+  { name: 'G2',   file: 'Gb2',  transpose: 1  },
+  { name: 'Ab2',  file: 'A2',   transpose: -1 },
+  { name: 'A2',   file: 'A2',   transpose: 0  },
+  { name: 'Bb2',  file: 'A2',   transpose: 1  },
+  { name: 'B2',   file: 'C3',   transpose: -1 },
+  { name: 'C3',   file: 'C3',   transpose: 0  },
+  { name: 'Db3',  file: 'C3',   transpose: 1  },
+  { name: 'D3',   file: 'Eb3',  transpose: -1 },
+  { name: 'Eb3',  file: 'Eb3',  transpose: 0  },
+  { name: 'E3',   file: 'Eb3',  transpose: 1  },
+  { name: 'F3',   file: 'Gb3',  transpose: -1 },
+  { name: 'Gb3',  file: 'Gb3',  transpose: 0  },
+  { name: 'G3',   file: 'Gb3',  transpose: 1  },
+  { name: 'Ab3',  file: 'A3',   transpose: -1 },
+  { name: 'A3',   file: 'A3',   transpose: 0  },
+  { name: 'Bb3',  file: 'A3',   transpose: 1  },
+  { name: 'B3',   file: 'C4',   transpose: -1 },
+  { name: 'C4',   file: 'C4',   transpose: 0  },
+  { name: 'Db4',  file: 'C4',   transpose: 1  },
+  { name: 'D4',   file: 'Eb4',  transpose: -1 },
+  { name: 'Eb4',  file: 'Eb4',  transpose: 0  },
+  { name: 'E4',   file: 'Eb4',  transpose: 1  },
+  { name: 'F4',   file: 'Gb4',  transpose: -1 },
+  { name: 'Gb4',  file: 'Gb4',  transpose: 0  },
+  { name: 'G4',   file: 'Gb4',  transpose: 1  },
+  { name: 'Ab4',  file: 'A4',   transpose: -1 },
+  { name: 'A4',   file: 'A4',   transpose: 0  },
+  { name: 'Bb4',  file: 'A4',   transpose: 1  },
+  { name: 'B4',   file: 'C5',   transpose: -1 },
+  { name: 'C5',   file: 'C5',   transpose: 0  },
+  { name: 'Db5',  file: 'C5',   transpose: 1  },
+  { name: 'D5',   file: 'Eb5',  transpose: -1 },
+  { name: 'Eb5',  file: 'Eb5',  transpose: 0  },
+  { name: 'E5',   file: 'Eb5',  transpose: 1  },
+  { name: 'F5',   file: 'Gb5',  transpose: -1 },
+  { name: 'Gb5',  file: 'Gb5',  transpose: 0  },
+  { name: 'G5',   file: 'Gb5',  transpose: 1  },
+  { name: 'Ab5',  file: 'A5',   transpose: -1 },
+  { name: 'A5',   file: 'A5',   transpose: 0  },
+  { name: 'Bb5',  file: 'A5',   transpose: 1  },
+  { name: 'B5',   file: 'C6',   transpose: -1 },
+  { name: 'C6',   file: 'C6',   transpose: 0  },
+  { name: 'Db6',  file: 'C6',   transpose: 1  },
+  { name: 'D6',   file: 'Eb6',  transpose: -1 },
+  { name: 'Eb6',  file: 'Eb6',  transpose: 0  },
+  { name: 'E6',   file: 'Eb6',  transpose: 1  },
+  { name: 'F6',   file: 'Gb6',  transpose: -1 },
+  { name: 'Gb6',  file: 'Gb6',  transpose: 0  },
+  { name: 'G6',   file: 'Gb6',  transpose: 1  },
+  { name: 'Ab6',  file: 'A6',   transpose: -1 },
+  { name: 'A6',   file: 'A6',   transpose: 0  },
+  { name: 'Bb6',  file: 'A6',   transpose: 1  },
+  { name: 'B6',   file: 'C7',   transpose: -1 },
+  { name: 'C7',   file: 'C7',   transpose: 0  },
+  { name: 'Db7',  file: 'C7',   transpose: 1  },
+  { name: 'D7',   file: 'Eb7',  transpose: -1 },
+  { name: 'Eb7',  file: 'Eb7',  transpose: 0  },
+  { name: 'E7',   file: 'Eb7',  transpose: 1  },
+  { name: 'F7',   file: 'Gb7',  transpose: -1 },
+  { name: 'Gb7',  file: 'Gb7',  transpose: 0  },
+  { name: 'G7',   file: 'Gb7',  transpose: 1  },
+  { name: 'Ab7',  file: 'A7',   transpose: -1 },
+  { name: 'A7',   file: 'A7',   transpose: 0  },
+  { name: 'Bb7',  file: 'A7',   transpose: 1  },
+  { name: 'B7',   file: 'C8',   transpose: -1 },
+  { name: 'C8',   file: 'C8',   transpose: 0  },
 ];
+
+const noteFiles = Array.from(
+  notesLayout.reduce((accumulator, { file }) => {
+    accumulator.add(file);
+    return accumulator;
+  }, new Set())
+);
+
+const noteInfos = notesLayout.map(({ file, transpose }) => {
+  const bufferIndex = noteFiles.indexOf(file);
+  const playbackRate = 2 ** (transpose / 12);
+  return [ bufferIndex, playbackRate ];
+});
+
+const NUMBER_OF_KEYS = notesLayout.length;
+const NUMBER_OF_SOUNDFILES = noteFiles.length;
 
 const synth = new Synth()
 
-export { synth as default, NUMBER_OF_KEYS }
+export { synth as default, NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }
