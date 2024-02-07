@@ -8,7 +8,6 @@ class Synth extends EventEmitter {
 
     this.ctx = null;
     this.releaseTime = 0.15; // 150 ms
-    //this.notes = [];
     this.noteBuffers = new Map();
     this.playingMap = new Map()
     for(let i = 1; i<=16; i++) this.playingMap.set(i, new Map())
@@ -60,8 +59,9 @@ class Synth extends EventEmitter {
 
     if (note !== null) {
       const [ bufferIndex, playbackRate ] = note;
-      console.log(bufferIndex, playbackRate);
       const { buffer } = this.noteBuffers[bufferIndex];
+      const pan = (this.getNoteIndexIfInRange(noteNumber) / (notesLayout.length - 1)) * 2 - 1;
+
       let player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
       if (!!player) this.turnOffPlayer(player)
@@ -81,6 +81,9 @@ class Synth extends EventEmitter {
       player.volume.gain.value = normVelocity;
       //const ramp = (1 - normVelocity) * 0.01; // 10ms max
       //note.player.volume.gain.setValueAtTime(normVelocity, this.ctx.currentTime + ramp);
+
+      // - NoteNumber-defined panning :
+      player.panner.pan.value = pan * 0.9; // don't go fully left or right
 
       // - Velocity-driven start time :
       const offset = (1 - normVelocity) * 0.005; // 5ms max
@@ -115,23 +118,34 @@ class Synth extends EventEmitter {
     }
   }
 
-  getNoteIfInRange(noteNumber) {
+  getNoteIndexIfInRange(noteNumber) {
     if (
       noteNumber >= this.minNote &&
       noteNumber <= this.maxNote &&
       this.noteBuffers.length > 0
     ) {
       //return this.noteBuffers[noteNumber - this.minNote];
-      return noteInfos[noteNumber - this.minNote];
+      return noteNumber - this.minNote;
+    }
+
+    return null;
+  }
+
+  getNoteIfInRange(noteNumber) {
+    const noteIndex = this.getNoteIndexIfInRange(noteNumber);
+    if (noteIndex !== null) {
+      return noteInfos[noteIndex];
     }
 
     return null;
   }
 
   makePlayer(buffer, playbackRate = 1) {
+    // todo : try other filters (e.g. IIR to get less resonance at the cutoff)
     const source = this.ctx.createBufferSource();
     const biquad = this.ctx.createBiquadFilter();
     const volume = this.ctx.createGain();
+    const panner = this.ctx.createStereoPanner();
 
     source.buffer = buffer;
     source.playbackRate.value = playbackRate;
@@ -143,9 +157,11 @@ class Synth extends EventEmitter {
     biquad.connect(volume);
 
     volume.gain.value = 1;
-    volume.connect(this.ctx.destination);
+    volume.connect(panner);
 
-    return { source, biquad, volume };
+    panner.connect(this.ctx.destination);
+
+    return { source, biquad, volume, panner };
   }
 
   getPlayerForNoteOnChannel(noteNumber, channel) {
