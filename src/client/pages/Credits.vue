@@ -23,7 +23,7 @@
       </p>
       <p>
         {{ $t('credits.samples') }} <br/>
-        <strong>Pianoteq, <a href="https://musical-artifacts.com/artifacts?apps=ableton&formats=sf2&tags=piano">GD Craft</a></strong>
+        <strong>Joseph Larralde</strong>
       </p>
     </div>
   </div>
