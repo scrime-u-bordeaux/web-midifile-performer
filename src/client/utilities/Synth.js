@@ -4,7 +4,7 @@ class Synth extends EventEmitter {
   constructor() {
     //const AudioContext = window.AudioContext || window.webkitAudioContext;
     //this.ctx = new AudioContext();
-    super()
+    super();
 
     this.ctx = null;
     this.releaseTime = 0.15; // 150 ms
@@ -60,35 +60,37 @@ class Synth extends EventEmitter {
     if (note !== null) {
       const [ bufferIndex, playbackRate ] = note;
       const { buffer } = this.noteBuffers[bufferIndex];
-      const pan = (this.getNoteIndexIfInRange(noteNumber) / (notesLayout.length - 1)) * 2 - 1;
+      const noteIndex = this.getNoteIndexIfInRange(noteNumber);
+      const notePosition = ((noteIndex / (notesLayout.length - 1)) * 2 - 1);
+      const normVelocity = velocity / 127;
+      const cutoff = Math.pow(normVelocity, 4) * 20000 + 500;
 
       let player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
       if (!!player) this.turnOffPlayer(player)
 
-      player = this.makePlayer(buffer, playbackRate);
+      // we must pass cutoff here because IIRFilterNode needs its coefficients
+      // at instantiation time :
+      player = this.makePlayer(buffer, cutoff, playbackRate);
 
       // ------------------ Velocity-specific settings : -----------------------
-
-      const normVelocity = velocity / 127;
 
       // - Velocity-driven lowpass filter :
       // TODO : compute this value from a note ratio (nth harmonic) perspective
       // instead of using a fixed frequency
-      player.biquad.frequency.value = Math.pow(normVelocity, 3) * 20000 + 1000;
+      // player.biquad.frequency.value = Math.pow(normVelocity, 2.5) * 20000 + 1500;
 
       // - Velocity-driven gain :
       player.volume.gain.value = normVelocity;
-      //const ramp = (1 - normVelocity) * 0.01; // 10ms max
-      //note.player.volume.gain.setValueAtTime(normVelocity, this.ctx.currentTime + ramp);
 
       // - NoteNumber-defined panning :
-      player.panner.pan.value = pan * 0.9; // don't go fully left or right
+      // don't pan fully left or right
+      player.panner.pan.value = notePosition * 0.9;
 
       // - Velocity-driven start time :
+      // TODO : try to make a ramp to avoid clicks -> still doesn't improve anything
       const offset = (1 - normVelocity) * 0.005; // 5ms max
       player.source.start(this.ctx.currentTime, offset);
-
       // -----------------------------------------------------------------------
 
       this.setPlayerForNoteOnChannel(noteNumber, channel, player);
@@ -140,28 +142,37 @@ class Synth extends EventEmitter {
     return null;
   }
 
-  makePlayer(buffer, playbackRate = 1) {
-    // todo : try other filters (e.g. IIR to get less resonance at the cutoff)
+  makePlayer(buffer, cutoff, playbackRate = 1) {
     const source = this.ctx.createBufferSource();
-    const biquad = this.ctx.createBiquadFilter();
+    
+    let b1 = Math.exp(-2 * Math.PI * cutoff / this.ctx.sampleRate);
+    let a0 = (1 - b1);
+    let feedForward = [ -a0, 0 ];
+    let feedBack = [ 1, -b1 ];
+    const onepole = this.ctx.createIIRFilter(feedForward, feedBack);
+    // const biquad = this.ctx.createBiquadFilter();
+ 
     const volume = this.ctx.createGain();
     const panner = this.ctx.createStereoPanner();
 
     source.buffer = buffer;
     source.playbackRate.value = playbackRate;
-    source.connect(biquad);
-
-    biquad.type = 'lowpass';
-    biquad.Q.value = 0;
-    biquad.frequency.value = 20000;
-    biquad.connect(volume);
+    source.connect(onepole);
+    // source.connect(biquad);
+    
+    onepole.connect(volume);
+    // biquad.type = 'lowpass';
+    // biquad.Q.value = 0.001;
+    // biquad.frequency.value = 20000;
+    // biquad.connect(volume);
 
     volume.gain.value = 1;
     volume.connect(panner);
 
     panner.connect(this.ctx.destination);
 
-    return { source, biquad, volume, panner };
+    // return { source, biquad, volume, panner };
+    return { source, onepole, volume, panner };
   }
 
   getPlayerForNoteOnChannel(noteNumber, channel) {
