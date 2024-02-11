@@ -1,5 +1,5 @@
 {
-  "name": "midifile-performer-web",
+  "name": "web-midifile-performer",
   "version": "2.0.0",
   "description": "project website with online web version of the midifile performer",
   "main": "src/server/index.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scrime-u-bordeaux/midifile-performer-web.git"
+    "url": "git+https://github.com/scrime-u-bordeaux/web-midifile-performer.git"
   },
   "author": "joseph larralde",
   "license": "BSD-3-Clause",

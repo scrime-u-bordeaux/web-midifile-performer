@@ -10,10 +10,10 @@ import config from '../../config';
 const router = createRouter({
   history: createWebHashHistory(config.publicPath),
   // history: createWebHashHistory('/'),
-  // history: createWebHashHistory('/midifile-performer-web/'),
+  // history: createWebHashHistory('/web-midifile-performer/'),
 
   // history: createWebHistory('/'),
-  // history: createWebHistory('/midifile-performer-web/'),
+  // history: createWebHistory('/web-midifile-performer/'),
   routes: [
     {
       path: '/',
