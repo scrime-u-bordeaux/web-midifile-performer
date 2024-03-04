@@ -59,14 +59,17 @@ export default {
       'setSequenceEnd',
       'setSequenceIndex',
       'setPerformModeStartedAt',
+      'setMidiAccessRequested',
       'setUserClickOccurred',
       'setSynthNotesFetched',
       'setSynthNotesDecoded'
     ]),
     onInputsChanged(inputs) {
+      this.setMidiAccessRequested()
       this.setInputs(inputs);
     },
     onOutputsChanged(outputs) {
+      this.setMidiAccessRequested()
       this.setOutputs(outputs);
     },
     onCurrentInputIdChanged(id) {
@@ -143,7 +146,6 @@ export default {
     // await this.$store.dispatch('loadMidiBuffers');
     // await this.performer.initialize();
 
-    document.addEventListener('click', this.onUserClick);
     this.performer.addListener('notes', this.onNotes);
     this.performer.addListener('allnotesoff', () => {
       this.ioctl.allNotesOff();
@@ -163,7 +165,10 @@ export default {
     this.ioctl.addListener('noteOn', this.onNoteOn);
     this.ioctl.addListener('noteOff', this.onNoteOff);
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
-    this.ioctl.updateInputsAndOutputs();
+    await this.ioctl.updateInputsAndOutputs();
+
+    // We can only load the audio context after MIDI access has been requested. 
+    document.addEventListener('click', this.onUserClick);
 
     const savedVelocities = JSON.parse(localStorage.getItem("velocities"))
     const startingVelocities = !!savedVelocities ? savedVelocities : this.defaultKeyboardVelocities
