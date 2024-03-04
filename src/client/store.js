@@ -43,6 +43,7 @@ const store = createStore({
       sequenceEnd: 0,
       sequenceIndex: 0,
       performModeStartedAt: 0,
+      midiAccessRequested: false,
       userClickOccurred: false,
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
@@ -123,6 +124,9 @@ const store = createStore({
     },
     setPerformModeStartedAt(state, time) {
       state.performModeStartedAt = time;
+    },
+    setMidiAccessRequested(state) {
+      state.midiAccessRequested = true;
     },
     setUserClickOccurred(state) {
       state.userClickOccurred = true;

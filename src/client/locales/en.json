@@ -117,7 +117,8 @@
     "afterClick": "Loading synth samples...",
     "beforeClick": "Please click anywhere to load the synth.",
     "fetched": "Samples fetched:",
-    "decoded": "Samples decoded:"
+    "decoded": "Samples decoded:",
+    "midiAccess": "Requesting MIDI access from browser..."
   },
   "notFound": "This page doesn't exist :("
 }

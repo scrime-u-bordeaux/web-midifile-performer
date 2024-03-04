@@ -117,7 +117,8 @@
     "afterClick": "Chargement des samples...",
     "beforeClick": "Veuillez cliquer sur la page pour charger le synthétiseur.",
     "fetched": "Samples récupérés :",
-    "decoded": "Samples décodés :"
+    "decoded": "Samples décodés :",
+    "midiAccess": "Demande d'accès MIDI au navigateur..."
   },
   "notFound": "Cette page n'existe pas :("
 }

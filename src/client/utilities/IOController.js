@@ -46,7 +46,6 @@ class IOController extends EventEmitter {
 
     this.currentInputId = DEFAULT_IO_ID;
     this.currentOutputId = DEFAULT_IO_ID;
-    this.updateInputsAndOutputs();
 
     document.addEventListener('keydown', this.onKeyDown.bind(this));
     document.addEventListener('keyup', this.onKeyUp.bind(this));
@@ -57,6 +56,8 @@ class IOController extends EventEmitter {
     // Otherwise, calling bind() on the fly creates a new function reference, and removal is never applied...
     // I would say there has to be a smarter way to do this, but hey, it's JavaScript
     this.boundOnMidiListener = this.onMIDIMessage.bind(this)
+    // List of input IDs whose event listeners cannot be removed.
+    this.inputsAwaitingUnplug = new Set()
 
     this.refreshVelocities(defaultVelocities)
   }
@@ -105,16 +106,27 @@ class IOController extends EventEmitter {
     }
   }
 
-  updateInputsAndOutputs() {
+  async updateInputsAndOutputs() {
     // see https://developer.mozilla.org/en-US/docs/Web/API/Web_MIDI_API
     try {
-      navigator.requestMIDIAccess().then(
-        this.onMIDISuccess.bind(this),
-        this.onMIDIFailure.bind(this)
-      );
+      const midiAccess = await navigator.requestMIDIAccess()
+      this.onMIDISuccess(midiAccess)
     } catch (err) {
-      // console.error(err);
       this.onMIDIFailure();
+    } finally {
+
+      if(!!this.inputs) this.inputsAwaitingUnplug.forEach(inputID => {
+        if(this.inputs[inputID] !== undefined)
+          this.inputs[inputID].removeEventListener(
+            'midimessage',
+            this.boundOnMidiListener
+          )
+      })
+
+      if(!!this.inputs && this.inputs[this.currentInputId] === undefined)
+        this.currentInputId = DEFAULT_IO_ID
+      if(!!this.outputs && this.outputs[this.currentOutputId] === undefined)
+        this.currentOutputId = DEFAULT_IO_ID
     }
   }
 
@@ -145,23 +157,22 @@ class IOController extends EventEmitter {
   }
 
   setInput(inputId) {
-    // this.allNotesOff();
-    // inputId = `${inputId}`;
-    console.log(inputId);
-    console.log(this.currentInputId);
+    if(this.inputs[inputId] === undefined) return;
+
     if (this.currentInputId !== DEFAULT_IO_ID) {
-      this.inputs[this.currentInputId].removeEventListener(
-        'midimessage',
-        this.boundOnMidiListener,
-      );
+      if(this.inputs[this.currentInputId] !== undefined)
+        this.inputs[this.currentInputId].removeEventListener(
+          'midimessage',
+          this.boundOnMidiListener,
+        );
+
+      else this.inputsAwaitingUnplug.add(this.currentInputId)
     }
 
     this.currentInputId = inputId;
     localStorage.setItem('input', inputId)
 
     if (this.currentInputId !== DEFAULT_IO_ID) {
-      console.log(this.currentInputId);
-      console.log(this.inputs[this.currentInputId]);
       this.inputs[this.currentInputId].addEventListener(
         'midimessage',
         this.boundOnMidiListener,
@@ -175,6 +186,9 @@ class IOController extends EventEmitter {
     // this.allNotesOff();
     // outputId = `${outputId}`;
     // send all notes off before clearing ?
+
+    if(this.inputs[outputId] === undefined) return;
+
     if (this.currentOutputId !== DEFAULT_IO_ID) {
       console.log(this.currentOutputId);
       console.log(this.outputs[this.currentOutputId]);
