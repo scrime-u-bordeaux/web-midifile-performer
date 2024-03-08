@@ -26,22 +26,23 @@ module.exports = {
     rules: [
       {
         test: /\.vue$/,
-        use: 'vue-loader',
-        /*
-        options: {
-          compilerOptions: {
-            isCustomElement: (tag) => {
-              //console.log(`${tag} is a custom element`);
-              return [
-                'font',
-                'font-face',
-                'glyph',
-                'missing-glyph',
-              ].indexOf(tag) !== -1;
+        use: {
+          loader: 'vue-loader',
+          options: {
+            compilerOptions: {
+              isCustomElement: (tag) => {
+                //console.log(`${tag} is a custom element`);
+                // 'font',
+                // 'font-face',
+                // 'glyph',
+                // 'missing-glyph',
+                return [
+                  'midi-visualizer'
+                ].indexOf(tag) !== -1;
+              },
             },
           },
-        },
-        //*/
+        }
       },
       {
         test: /\.js$/,
@@ -77,7 +78,8 @@ module.exports = {
     fallback: {
       crypto: false,
       fs: false,
-      path: false
+      path: false,
+      buffer: require.resolve("buffer/")
     }
   },
   experiments: {

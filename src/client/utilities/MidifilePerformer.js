@@ -144,6 +144,8 @@ function mergeTracks({ division, format, tracks }) {
   });
 
   const allNoteEvents = [];
+  const allVisualizerNotes = []
+  const visualizerNoteMap = new Map()
 
   // in case there is no tempo definition in the file
   let tickDuration = defaultTickDuration;
@@ -154,12 +156,39 @@ function mergeTracks({ division, format, tracks }) {
   allEvents.forEach((e, i) => {
     // reconstruct delta times in ticks and convert them to milliseconds :
     // (tick dates and tickDuration are guaranteed to be integers)
+    const usDate = e.tickDate * tickDuration
     const msDelta = (e.tickDate - prevTickDate) * tickDuration * 0.001;
     msDate += msDelta;
 
     switch (e.type) {
       case 'note':
         const { type, tickDate, ...allOthers } = e;
+
+        const mapID =
+          JSON.stringify(
+            {
+              channel: e.channel,
+              pitch: e.noteNumber
+            }
+          )
+
+        if(e.on && e.velocity > 0) {
+          visualizerNoteMap.set(mapID, usDate)
+        } else {
+          const startTime = visualizerNoteMap.get(mapID)
+
+          // We also need to store the channel.
+          // This is because even if two identical simultaneous pitches should start highlight at the same time,
+          // One might end before another.
+
+          allVisualizerNotes.push({
+            pitch: e.noteNumber,
+            channel: e.channel,
+            startTime: startTime / 1000000,
+            endTime: usDate / 1000000
+          })
+        }
+
         allNoteEvents.push({ delta: msDate - prevMsDate, ...allOthers });
         prevMsDate = msDate;
         break;
@@ -175,7 +204,7 @@ function mergeTracks({ division, format, tracks }) {
     prevTickDate = e.tickDate;
   });
 
-  return allNoteEvents;
+  return { allNoteEvents, allVisualizerNotes };
 }
 
 /**
@@ -227,6 +256,11 @@ class MidifilePerformer extends EventEmitter {
     this.performVelocitySaved = false;
     this.maxVelocities = [];
     this.velocityProfile = [];
+
+    // TEMPORARY : this is to work with the Magenta visualizers
+    // this should be handled by modifying/expanding the lib, once we have our own visualizer ready
+
+    this.visualizerNotes = [] //
   }
 
   async initialize() {
@@ -249,7 +283,7 @@ class MidifilePerformer extends EventEmitter {
   async loadArrayBuffer(buffer) {
     // this.emit('allnotesoff');
     const midiJson = await parseMidiArrayBuffer(buffer);
-    const allNoteEvents = mergeTracks(midiJson);
+    const { allNoteEvents, allVisualizerNotes } = mergeTracks(midiJson);
     this.analyzer.analyze(allNoteEvents);
 
     // FEED THE PERFORMER //////////////////////////////////////////////////////
@@ -273,15 +307,66 @@ class MidifilePerformer extends EventEmitter {
 
     this.performer.finalize();
 
+    // FORMAT VISUALIZER DATA //////////////////////////////////////////////////
+
+    const noteLastDateMap = new Map()
+
+    // For each note and channel, register each occurrence by start and end times
+
+    allVisualizerNotes.forEach(note => {
+      if(!noteLastDateMap.has(note.pitch))
+        noteLastDateMap.set(note.pitch, new Map())
+
+      const pitchMap = noteLastDateMap.get(note.pitch)
+
+      if(!pitchMap.has(note.channel))
+        pitchMap.set(note.channel, { index: 0, dates: [] })
+
+      const channelDates = pitchMap.get(note.channel)
+      channelDates.dates.push(
+        {
+          startTime : note.startTime,
+          endTime: note.endTime
+        }
+      )
+    })
+
+    // Use the previously constructed map to extract the start and end times of
+    // a select note on for each starting set.
+    // This note on will then be used to trigger the visualizer redraw callback.
+
+    this.visualizerNotes = this.#startingSetsAsObjects()
+      .map(set => set.filter(note => note.on))
+      .map(set => set.map(note => {
+        const dateList = noteLastDateMap.get(note.pitch).get(note.channel-1)
+        const dates = dateList.dates[dateList.index]
+        dateList.index++;
+        return { pitch: note.pitch, ...dates }
+      }))
+      .map(set => set[0])
+
+    // GENERATE VELOCITY PROFILE ///////////////////////////////////////////////
+
     const { maxVelocities, velocityProfile } = this.#createVelocityProfile();
 
     this.maxVelocities = maxVelocities
     this.velocityProfile = velocityProfile
 
+    // DEFINE CALLBACK TO RENDER METHOD ////////////////////////////////////////
+    // TODO : why is this done every time we load and not at construction time ?
+    // is this because the lib binds the events callback to the chronology ?
+
     this.performer.setNoteEventsCallback(notes => {
       const receivedNotes = noteEventsFromNoteDataVector(notes)
+
       const notesToEmit = this.mode === 'perform' ? [...this.pendingEndSet, ...receivedNotes] : receivedNotes
       this.emit('notes', notesToEmit)
+
+      const isStartingSet =
+        notesToEmit.filter(note => note.on).length > 0
+      // The Magenta visualizer redraw only requires one activeNote
+      // This is really silly, but it's how it is
+      if(isStartingSet) this.emit('visualizerNote', this.visualizerNotes[this.#getCurrentIndex()])
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :
@@ -300,6 +385,8 @@ class MidifilePerformer extends EventEmitter {
         }
       }
     });
+
+    // SET FLAGS ///////////////////////////////////////////////////////////////
 
     this.performer.setLoopIndices(0, this.performer.size() - 1);
     this.setSequenceIndex(0);
@@ -464,12 +551,10 @@ class MidifilePerformer extends EventEmitter {
     return this.performer.getLoopEndIndex()
   }
 
-  /**
-   * Read the chronology from the performer and keep track of the ratio between each set's velocity and the max velocity of the piece.
-   * This is used to conserve velocity variations when using passive playback with a non-null chord velocity mapping
-  **/
+  // Util method to process the C++ Performer's Chronology
+  // Could be more atomic, but as of now, we only ever need this use case.
 
-  #createVelocityProfile() {
+  #startingSetsAsObjects() {
     const chronology = this.performer.getChronology().getContainer()
     const startingSets = []
 
@@ -478,8 +563,16 @@ class MidifilePerformer extends EventEmitter {
       startingSets.push(start)
     }
 
-    const startingSetsAsObjects = startingSets.map(v => noteEventsFromNoteDataVector(v))
-    const localMaximums = startingSetsAsObjects.map(set =>
+    return startingSets.map(v => noteEventsFromNoteDataVector(v))
+  }
+
+  /**
+   * Read the chronology from the performer and keep track of the ratio between each set's velocity and the max velocity of the piece.
+   * This is used to conserve velocity variations when using passive playback with a non-null chord velocity mapping
+  **/
+
+  #createVelocityProfile() {
+    const localMaximums = this.#startingSetsAsObjects().map(set =>
       Math.max(...set.filter(event => event.on).map(event => event.velocity))
     )
     const maxVelocity = Math.max(...localMaximums)

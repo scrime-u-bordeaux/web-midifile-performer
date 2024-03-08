@@ -37,6 +37,8 @@
       </div>
     </div>
 
+    <PianoRoll ref="pianoRoll" v-show="mfpMidiFile.buffer"/>
+
     <Keyboard
       class="keyboard"
       :minNote="minKeyboardNote"
@@ -199,12 +201,13 @@ import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
+import PianoRoll from '../components/PianoRoll.vue'
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { IOManager, Keyboard, ScrollBar, LoadingScreen },
+  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll },
   data() {
     return {
       fileName: noInputFileMsg,
@@ -269,6 +272,7 @@ export default {
       console.log('wtf ? no buffer ?');
     }
 
+    this.performer.addListener("visualizerNote", this.onVisualizerNote)
   },
   beforeUnmount() {
     console.log("MFP unmount")
@@ -332,6 +336,10 @@ export default {
     },
     onModeChange(mode) {
       this.performer.setMode(mode);
+      if(mode === 'silent') this.$refs.pianoRoll.stop()
+    },
+    onVisualizerNote(note) {
+      this.$refs.pianoRoll.note(note)
     },
     onInputChange(input) {
       this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
@@ -344,6 +352,7 @@ export default {
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
+      this.$refs.pianoRoll.stop()
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
@@ -354,6 +363,7 @@ export default {
     onSilence() {
       if(this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
       else this.performer.setMode('silent') // simply silence if perform mode
+      this.$refs.pianoRoll.stop()
     },
     setRowVelocity(i, category) {
       this.currentKeyboardVelocities[category] = i

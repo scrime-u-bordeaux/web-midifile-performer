@@ -167,7 +167,7 @@ export default {
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
     await this.ioctl.updateInputsAndOutputs();
 
-    // We can only load the audio context after MIDI access has been requested. 
+    // We can only load the audio context after MIDI access has been requested.
     document.addEventListener('click', this.onUserClick);
 
     const savedVelocities = JSON.parse(localStorage.getItem("velocities"))
