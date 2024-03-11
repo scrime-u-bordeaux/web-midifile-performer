@@ -156,39 +156,12 @@ function mergeTracks({ division, format, tracks }) {
   allEvents.forEach((e, i) => {
     // reconstruct delta times in ticks and convert them to milliseconds :
     // (tick dates and tickDuration are guaranteed to be integers)
-    const usDate = e.tickDate * tickDuration
     const msDelta = (e.tickDate - prevTickDate) * tickDuration * 0.001;
     msDate += msDelta;
 
     switch (e.type) {
       case 'note':
         const { type, tickDate, ...allOthers } = e;
-
-        const mapID =
-          JSON.stringify(
-            {
-              channel: e.channel,
-              pitch: e.noteNumber
-            }
-          )
-
-        if(e.on && e.velocity > 0) {
-          visualizerNoteMap.set(mapID, usDate)
-        } else {
-          const startTime = visualizerNoteMap.get(mapID)
-
-          // We also need to store the channel.
-          // This is because even if two identical simultaneous pitches should start highlight at the same time,
-          // One might end before another.
-
-          allVisualizerNotes.push({
-            pitch: e.noteNumber,
-            channel: e.channel,
-            startTime: startTime / 1000000,
-            endTime: usDate / 1000000
-          })
-        }
-
         allNoteEvents.push({ delta: msDate - prevMsDate, ...allOthers });
         prevMsDate = msDate;
         break;
@@ -204,7 +177,7 @@ function mergeTracks({ division, format, tracks }) {
     prevTickDate = e.tickDate;
   });
 
-  return { allNoteEvents, allVisualizerNotes };
+  return allNoteEvents
 }
 
 /**
@@ -257,10 +230,7 @@ class MidifilePerformer extends EventEmitter {
     this.maxVelocities = [];
     this.velocityProfile = [];
 
-    // TEMPORARY : this is to work with the Magenta visualizers
-    // this should be handled by modifying/expanding the lib, once we have our own visualizer ready
-
-    this.visualizerNotes = [] //
+    this.visualizerTriggers = []
   }
 
   async initialize() {
@@ -283,7 +253,7 @@ class MidifilePerformer extends EventEmitter {
   async loadArrayBuffer(buffer) {
     // this.emit('allnotesoff');
     const midiJson = await parseMidiArrayBuffer(buffer);
-    const { allNoteEvents, allVisualizerNotes } = mergeTracks(midiJson);
+    const allNoteEvents = mergeTracks(midiJson);
     this.analyzer.analyze(allNoteEvents);
 
     // FEED THE PERFORMER //////////////////////////////////////////////////////
@@ -309,41 +279,23 @@ class MidifilePerformer extends EventEmitter {
 
     // FORMAT VISUALIZER DATA //////////////////////////////////////////////////
 
-    const noteLastDateMap = new Map()
+    this.visualizerTriggers = []
+    const pitchVisualizerIndexMap = new Map()
 
-    // For each note and channel, register each occurrence by start and end times
+    this.#startingSetsAsObjects().forEach(startingSet => {
+      startingSet.filter(note => note.on).forEach(note => {
+        if(!pitchVisualizerIndexMap.has(note.pitch))
+          pitchVisualizerIndexMap.set(note.pitch, -1)
 
-    allVisualizerNotes.forEach(note => {
-      if(!noteLastDateMap.has(note.pitch))
-        noteLastDateMap.set(note.pitch, new Map())
-
-      const pitchMap = noteLastDateMap.get(note.pitch)
-
-      if(!pitchMap.has(note.channel))
-        pitchMap.set(note.channel, { index: 0, dates: [] })
-
-      const channelDates = pitchMap.get(note.channel)
-      channelDates.dates.push(
-        {
-          startTime : note.startTime,
-          endTime: note.endTime
-        }
-      )
+          const currentVisualizerIndexForPitch = pitchVisualizerIndexMap.get(note.pitch)
+          pitchVisualizerIndexMap.set(note.pitch, currentVisualizerIndexForPitch + 1)
+      })
+      const referencePitch = startingSet[startingSet.length - 1].pitch
+      this.visualizerTriggers.push({
+        pitch : referencePitch,
+        index: pitchVisualizerIndexMap.get(referencePitch)
+      })
     })
-
-    // Use the previously constructed map to extract the start and end times of
-    // a select note on for each starting set.
-    // This note on will then be used to trigger the visualizer redraw callback.
-
-    this.visualizerNotes = this.#startingSetsAsObjects()
-      .map(set => set.filter(note => note.on))
-      .map(set => set.map(note => {
-        const dateList = noteLastDateMap.get(note.pitch).get(note.channel-1)
-        const dates = dateList.dates[dateList.index]
-        dateList.index++;
-        return { pitch: note.pitch, ...dates }
-      }))
-      .map(set => set[0])
 
     // GENERATE VELOCITY PROFILE ///////////////////////////////////////////////
 
@@ -362,11 +314,12 @@ class MidifilePerformer extends EventEmitter {
       const notesToEmit = this.mode === 'perform' ? [...this.pendingEndSet, ...receivedNotes] : receivedNotes
       this.emit('notes', notesToEmit)
 
-      const isStartingSet =
-        notesToEmit.filter(note => note.on).length > 0
+      const isStartingSet = notesToEmit.filter(note => note.on).length > 0
+
       // The Magenta visualizer redraw only requires one activeNote
       // This is really silly, but it's how it is
-      if(isStartingSet) this.emit('visualizerNote', this.visualizerNotes[this.#getCurrentIndex()])
+      if(isStartingSet)
+        this.emit('visualizerNote', this.visualizerTriggers[this.#getCurrentIndex()])
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :
