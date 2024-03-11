@@ -52,42 +52,34 @@ export default {
       // Let's just hope this has no ill effects on the NoteSequence :))
       this.$refs.visualizer.noteSequence.notes.sort(
         (noteA, noteB) => noteA.startTime - noteB.startTime
-      )
-
-      // Do the same thing MFP.js does, but with the NoteSequence's data.
-      // This avoids filtering on each note callback.
-
-      this.noteSequenceCopy.clear()
-      this.$refs.visualizer.noteSequence.notes.forEach(note => {
-        if(!this.noteSequenceCopy.has(note.pitch))
-          this.noteSequenceCopy.set(note.pitch, [])
-
-        this.noteSequenceCopy.get(note.pitch).push(note)
-      })
+      );
+      //
+      // // Do the same thing MFP.js does, but with the NoteSequence's data.
+      // // This avoids filtering on each note callback.
+      //
+      // this.noteSequenceCopy.clear();
+      // const allPitches = new Set(
+      //   this.$refs.visualizer.noteSequence.notes.map(
+      //     note => note.pitch
+      //   )
+      // );
+      //
+      // allPitches.forEach(pitch => {
+      //   this.noteSequenceCopy.set(pitch, this.$refs.visualizer.noteSequence.notes.filter(
+      //     note => note.pitch === pitch
+      //   ))
+      // });
     },
     note(note) {
 
-      // In a smart world, this would be enough.
+      const referenceNote =
+        this.$refs.visualizer.noteSequence.notes.filter(magentaNote =>
+          magentaNote.pitch === note.pitch
+        )[note.index]
 
-      const referenceNote = this.noteSequenceCopy.get(note.pitch)[note.index]
+      // const referenceNote = this.noteSequenceCopy.get(note.pitch)[note.index];
 
-      // ... but this is JavaScript.
-      // The sort operation unavoidably copies all objects in the array.
-      // (Regardless of whether it's sorted in place or by copy)
-      // And because Magenta uses === to scroll, we need the original object.
-      // Therefore, a *second* lookup is necessary.
-      // Obviously, the bigger the file (= the more notes there are to compare against)
-      // The more this induces lag.
-      // This is bad.
-
-      const trueReferenceNote =
-        this.$refs.visualizer.noteSequence.notes.find(unsortedNote =>
-          // No need for a pitch check anymore
-          unsortedNote.startTime === referenceNote.startTime &&
-          unsortedNote.endTime === referenceNote.endTime
-        )
-
-      this.$refs.visualizer.redraw(!!trueReferenceNote ? trueReferenceNote : note);
+      this.$refs.visualizer.redraw(!!referenceNote ? referenceNote : note);
     },
     stop() {
       this.$refs.visualizer.clearActiveNotes();
