@@ -30,9 +30,9 @@ export default {
     return {
       visualizerConfig: {
         noteRGB: '102, 102, 102',
-        activeNoteRGB: '88, 226, 142'
-      },
-      noteSequenceCopy: new Map()
+        activeNoteRGB: '88, 226, 142',
+        pixelsPerTimeStep: 60
+      }
     }
   },
   computed: {
@@ -53,22 +53,6 @@ export default {
       this.$refs.visualizer.noteSequence.notes.sort(
         (noteA, noteB) => noteA.startTime - noteB.startTime
       );
-      //
-      // // Do the same thing MFP.js does, but with the NoteSequence's data.
-      // // This avoids filtering on each note callback.
-      //
-      // this.noteSequenceCopy.clear();
-      // const allPitches = new Set(
-      //   this.$refs.visualizer.noteSequence.notes.map(
-      //     note => note.pitch
-      //   )
-      // );
-      //
-      // allPitches.forEach(pitch => {
-      //   this.noteSequenceCopy.set(pitch, this.$refs.visualizer.noteSequence.notes.filter(
-      //     note => note.pitch === pitch
-      //   ))
-      // });
     },
     note(note) {
 
@@ -76,8 +60,6 @@ export default {
         this.$refs.visualizer.noteSequence.notes.filter(magentaNote =>
           magentaNote.pitch === note.pitch
         )[note.index]
-
-      // const referenceNote = this.noteSequenceCopy.get(note.pitch)[note.index];
 
       this.$refs.visualizer.redraw(!!referenceNote ? referenceNote : note);
     },

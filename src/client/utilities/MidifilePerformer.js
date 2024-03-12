@@ -282,19 +282,21 @@ class MidifilePerformer extends EventEmitter {
     this.visualizerTriggers = []
     const pitchVisualizerIndexMap = new Map()
 
-    this.#startingSetsAsObjects().forEach(startingSet => {
-      startingSet.filter(note => note.on).forEach(note => {
-        if(!pitchVisualizerIndexMap.has(note.pitch))
-          pitchVisualizerIndexMap.set(note.pitch, -1)
+    this.#startingSetsAsObjects()
+      .map(set => set.filter(note => note.on))
+      .forEach((startingSet, index) => {
+        startingSet.forEach(note => {
+          if(!pitchVisualizerIndexMap.has(note.pitch))
+            pitchVisualizerIndexMap.set(note.pitch, -1)
 
-          const currentVisualizerIndexForPitch = pitchVisualizerIndexMap.get(note.pitch)
-          pitchVisualizerIndexMap.set(note.pitch, currentVisualizerIndexForPitch + 1)
-      })
-      const referencePitch = startingSet[startingSet.length - 1].pitch
-      this.visualizerTriggers.push({
-        pitch : referencePitch,
-        index: pitchVisualizerIndexMap.get(referencePitch)
-      })
+            const currentVisualizerIndexForPitch = pitchVisualizerIndexMap.get(note.pitch)
+            pitchVisualizerIndexMap.set(note.pitch, currentVisualizerIndexForPitch + 1)
+        })
+        const referencePitch = startingSet[startingSet.length - 1].pitch
+        this.visualizerTriggers.push({
+          pitch : referencePitch,
+          index: pitchVisualizerIndexMap.get(referencePitch)
+        })
     })
 
     // GENERATE VELOCITY PROFILE ///////////////////////////////////////////////
