@@ -259,6 +259,8 @@ export default {
   created() {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
+    this.performer.addListener('chronology', this.onChronology)
+    this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
   },
   async mounted() {
     console.log(this)
@@ -271,8 +273,6 @@ export default {
     } else {
       console.log('wtf ? no buffer ?');
     }
-
-    this.performer.addListener("visualizerNote", this.onVisualizerNote)
   },
   beforeUnmount() {
     console.log("MFP unmount")
@@ -338,8 +338,11 @@ export default {
       this.performer.setMode(mode);
       if(mode === 'silent') this.$refs.pianoRoll.stop()
     },
-    onVisualizerNote(note) {
-      this.$refs.pianoRoll.note(note)
+    onChronology(chronology) {
+      this.$refs.pianoRoll.updateNoteSequence(chronology)
+    },
+    onPianoRollRedraw(referenceSetIndex) {
+      this.$refs.pianoRoll.redraw(referenceSetIndex)
     },
     onInputChange(input) {
       this.isInputKeyboard = (input === this.DEFAULT_IO_ID)

@@ -229,8 +229,6 @@ class MidifilePerformer extends EventEmitter {
     this.performVelocitySaved = false;
     this.maxVelocities = [];
     this.velocityProfile = [];
-
-    this.visualizerTriggers = []
   }
 
   async initialize() {
@@ -277,31 +275,13 @@ class MidifilePerformer extends EventEmitter {
 
     this.performer.finalize();
 
-    // FORMAT VISUALIZER DATA //////////////////////////////////////////////////
+    const translatedChronology = this.#getChronology()
 
-    this.visualizerTriggers = []
-    const pitchVisualizerIndexMap = new Map()
-
-    this.#startingSetsAsObjects()
-      .map(set => set.filter(note => note.on))
-      .forEach((startingSet, index) => {
-        startingSet.forEach(note => {
-          if(!pitchVisualizerIndexMap.has(note.pitch))
-            pitchVisualizerIndexMap.set(note.pitch, -1)
-
-            const currentVisualizerIndexForPitch = pitchVisualizerIndexMap.get(note.pitch)
-            pitchVisualizerIndexMap.set(note.pitch, currentVisualizerIndexForPitch + 1)
-        })
-        const referencePitch = startingSet[startingSet.length - 1].pitch
-        this.visualizerTriggers.push({
-          pitch : referencePitch,
-          index: pitchVisualizerIndexMap.get(referencePitch)
-        })
-    })
+    this.emit('chronology', translatedChronology)
 
     // GENERATE VELOCITY PROFILE ///////////////////////////////////////////////
 
-    const { maxVelocities, velocityProfile } = this.#createVelocityProfile();
+    const { maxVelocities, velocityProfile } = this.#createVelocityProfile(translatedChronology);
 
     this.maxVelocities = maxVelocities
     this.velocityProfile = velocityProfile
@@ -321,7 +301,7 @@ class MidifilePerformer extends EventEmitter {
       // The Magenta visualizer redraw only requires one activeNote
       // This is really silly, but it's how it is
       if(isStartingSet)
-        this.emit('visualizerNote', this.visualizerTriggers[this.#getCurrentIndex()])
+        this.emit('visualizerRedraw', this.#getCurrentIndex())
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :
@@ -506,19 +486,27 @@ class MidifilePerformer extends EventEmitter {
     return this.performer.getLoopEndIndex()
   }
 
-  // Util method to process the C++ Performer's Chronology
-  // Could be more atomic, but as of now, we only ever need this use case.
+  // Translate the C++ Chronology into an array of sets,
+  // With each set having its inner vector translated into a JS object.
+  // Also dissassociate the pairs, leaving sets equal.
 
-  #startingSetsAsObjects() {
+  #getChronology() {
     const chronology = this.performer.getChronology().getContainer()
-    const startingSets = []
+    const translatedChronology = []
 
     for(let i = 0; i < chronology.size(); i++) {
-      const start = chronology.get(i).start.events
-      startingSets.push(start)
+      const pair = chronology.get(i)
+      const start = pair.start
+      const end = pair.end
+
+      const translatedStart = {type: "start", dt: start.dt, events: noteEventsFromNoteDataVector(start.events)}
+      const translatedEnd = {type: "end", dt: end.dt, events: noteEventsFromNoteDataVector(end.events)}
+
+      translatedChronology.push(translatedStart)
+      translatedChronology.push(translatedEnd)
     }
 
-    return startingSets.map(v => noteEventsFromNoteDataVector(v))
+    return translatedChronology
   }
 
   /**
@@ -526,10 +514,13 @@ class MidifilePerformer extends EventEmitter {
    * This is used to conserve velocity variations when using passive playback with a non-null chord velocity mapping
   **/
 
-  #createVelocityProfile() {
-    const localMaximums = this.#startingSetsAsObjects().map(set =>
-      Math.max(...set.filter(event => event.on).map(event => event.velocity))
-    )
+  #createVelocityProfile(chronology) {
+    const localMaximums =
+      chronology.filter(set => set.type === "start")
+        .map(startingSet => startingSet.events)
+        .map(set =>
+          Math.max(...set.filter(event => event.on).map(event => event.velocity))
+        )
     const maxVelocity = Math.max(...localMaximums)
 
     return {
