@@ -192,7 +192,6 @@ export default {
       })
 
       this.noteSequence.sort((noteA, noteB) => noteA.startTime - noteB.startTime)
-      console.log(this.noteSequence, this.setBoundaries)
     },
 
     // The rest of the utils are all taken from the Magenta component.
@@ -255,7 +254,8 @@ export default {
         note.startTime === referenceNote.startTime
       const overlapsReference =
         note.startTime <= referenceNote.startTime &&
-        note.endTime >= referenceNote.endTime
+        note.endTime > referenceNote.startTime // correct Magenta not displaying some overlaps
+        // (if the overlapping note ends before the ref note, but is still playing when it starts)
 
       return isSyncedToReference || overlapsReference
     },
