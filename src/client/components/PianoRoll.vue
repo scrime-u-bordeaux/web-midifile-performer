@@ -106,11 +106,11 @@ export default {
     // This won't work by itself while we still have a noteSequence.
     // We need to convert the index in the MFP util.
 
-    redraw(referenceSetIndex) {
+    redraw(referenceIndex, fromSet = true) {
       if(!this.drawn) this.draw()
 
-      const referenceNoteIndex = this.setBoundaries[referenceSetIndex]
-      const referenceNote = this.noteSequence[referenceNoteIndex]
+      const referenceNote =
+        this.noteSequence[fromSet ? this.setBoundaries[referenceIndex] : referenceIndex]
 
       if(!referenceNote) return;
 
@@ -294,6 +294,9 @@ export default {
         rect.style.setProperty(attribute.key, attribute.value);
       });
 
+      rect.addEventListener("mouseover", this.onNoteHighlight)
+      rect.addEventListener("mouseleave", this.onNoteUnHighlight)
+
       this.$refs.svg.appendChild(rect);
     },
 
@@ -307,6 +310,15 @@ export default {
         rect.setAttribute('fill', fill)
         rect.classList.remove('active')
       })
+    },
+
+    onNoteHighlight(event) {
+      const rect = event.target
+      this.redraw(parseInt(rect.getAttribute('data-index'), 10), false)
+    },
+
+    onNoteUnHighlight(event) {
+      this.unfillActiveRects()
     }
   }
 }
