@@ -37,7 +37,7 @@
       </div>
     </div>
 
-    <PianoRoll ref="pianoRoll" v-show="mfpMidiFile.buffer"/>
+    <PianoRoll ref="pianoRoll" v-show="visualizerReady" @ready="visualizerReady = true"/>
 
     <Keyboard
       class="keyboard"
@@ -217,6 +217,7 @@ export default {
       displayKeyboardSettings: false,
       spacePressed: false,
       pauseWithRelease: false,
+      visualizerReady: false,
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
@@ -259,13 +260,13 @@ export default {
   created() {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
-    this.performer.addListener('chronology', this.onChronology)
-    this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
   },
   async mounted() {
     console.log(this)
     this.performer.clear();
     this.$emit("canPerform",true)
+    this.performer.addListener('chronology', this.onChronology)
+    this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
@@ -282,6 +283,9 @@ export default {
 
     document.removeEventListener('keydown',this.onKeyDown)
     document.removeEventListener('keyup',this.onKeyUp)
+    this.performer.removeListener('chronology', this.onChronology)
+    this.performer.removeListener('visualizerRedraw', this.onPianoRollRedraw)
+    this.visualizerReady = false
   },
   methods: {
     ...mapMutations([

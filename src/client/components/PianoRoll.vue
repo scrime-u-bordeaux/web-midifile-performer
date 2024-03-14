@@ -71,6 +71,7 @@ export default {
       this.draw()
 
       this.$refs.container.scrollLeft = 0
+      this.$emit('ready')
     },
 
     draw() {
