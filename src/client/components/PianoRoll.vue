@@ -63,11 +63,14 @@ export default {
       const size = this.getSize()
       this.height = size.height
       this.width = size.width
-      this.$refs.svg.style.width = `${this.width}px`;
-      this.$refs.svg.style.height = `${this.height}px`;
+
+      this.$refs.svg.style.width = `${this.width}px`
+      this.$refs.svg.style.height = `${this.height}px`
 
       this.clear()
       this.draw()
+
+      this.$refs.container.scrollLeft = 0
     },
 
     draw() {
@@ -244,7 +247,10 @@ export default {
 
       const containerWidth = this.$refs.container.getBoundingClientRect().width
 
-      if (activeNotePosition > (this.$refs.container.scrollLeft + containerWidth))
+      // Scroll in both directions (Magenta only scrolls forward)
+
+      if (activeNotePosition > (this.$refs.container.scrollLeft + containerWidth) ||
+          activeNotePosition < this.$refs.container.scrollLeft)
         this.$refs.container.scrollLeft = activeNotePosition - 20;
 
     },
