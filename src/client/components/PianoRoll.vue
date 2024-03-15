@@ -50,7 +50,11 @@ export default {
       maxPitch: 0,
 
       noteSequence: [],
-      setBoundaries: [] // index of the first note for each set, used to trigger redraw
+      setBoundaries: [], // index of the first note for each set, used to trigger redraw
+
+      // temporary !!
+      // TODO : Phase out with unification of mode state in store
+      allowHighlight: true
     }
   },
 
@@ -103,8 +107,8 @@ export default {
       this.drawn = true
     },
 
-    // This won't work by itself while we still have a noteSequence.
-    // We need to convert the index in the MFP util.
+    // While we still work with a noteSequence, the referenceIndex will most often be
+    // One of a set, and not of a note, requiring a lookup to know where that set begins.
 
     redraw(referenceIndex, fromSet = true) {
       if(!this.drawn) this.draw()
@@ -122,7 +126,10 @@ export default {
 
       this.noteSequence.forEach((note, index) => {
         // Remove redundant integrity check on referenceNote from Magenta
-        const isActive = this.isPaintingActiveNote(note, referenceNote)
+        // Also : only count note as active if the highlight comes from play or perform
+        // If it's a however highlight, show the user what will be effectively played
+        // Once they jump to this exact index.
+        const isActive = this.isPaintingActiveNote(note, referenceNote, fromSet)
 
         if(!isActive) return; // Redrawing is only relevant for the notes we need to highlight
 
@@ -256,7 +263,7 @@ export default {
 
     },
 
-    isPaintingActiveNote(note, referenceNote) {
+    isPaintingActiveNote(note, referenceNote, countOverlap = true) {
       const isSyncedToReference =
         note.startTime === referenceNote.startTime
       const overlapsReference =
@@ -264,7 +271,7 @@ export default {
         note.endTime > referenceNote.startTime // correct Magenta not displaying some overlaps
         // (if the overlapping note ends before the ref note, but is still playing when it starts)
 
-      return isSyncedToReference || overlapsReference
+      return isSyncedToReference || (countOverlap && overlapsReference)
     },
 
     getNoteFillColor(note, isActive) {
@@ -313,11 +320,15 @@ export default {
     },
 
     onNoteHighlight(event) {
+      if(!this.allowHighlight) return;
+
       const rect = event.target
       this.redraw(parseInt(rect.getAttribute('data-index'), 10), false)
     },
 
     onNoteUnHighlight(event) {
+      if(!this.allowHighlight) return;
+
       this.unfillActiveRects()
     }
   }

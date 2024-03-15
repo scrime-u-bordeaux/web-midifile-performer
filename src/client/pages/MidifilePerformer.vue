@@ -37,7 +37,10 @@
       </div>
     </div>
 
-    <PianoRoll ref="pianoRoll" v-show="visualizerReady" @ready="visualizerReady = true"/>
+    <PianoRoll
+      ref="pianoRoll"
+      v-show="visualizerReady"
+      @ready="visualizerReady = true"/>
 
     <Keyboard
       class="keyboard"
@@ -243,6 +246,7 @@ export default {
       return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
         && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
     },
+    // TODO : we should work towards deprecating mode state duplication.
     currentMode: {
       // Instead of putting guards here, we could use v-show to hide the scroll bar and not v-if,
       // But if we do that, we need the scroll-bar to get its bound rectangle after mounting
@@ -267,6 +271,9 @@ export default {
     this.$emit("canPerform",true)
     this.performer.addListener('chronology', this.onChronology)
     this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
+    // temporary !!
+    // TODO : phase out with unification of mode state into store
+    this.performer.addListener('allowHighlight', this.onAllowHighlight)
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
@@ -402,6 +409,9 @@ export default {
           if(this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen()
         }
       }
+    },
+    onAllowHighlight(allow) {
+      this.$refs.pianoRoll.allowHighlight = allow
     }
   }
 };
