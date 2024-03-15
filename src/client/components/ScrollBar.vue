@@ -250,6 +250,7 @@ import NumberInput from './NumberInput.vue';
 import { mapState } from 'vuex';
 
 export default {
+  // TODO : should we keep exposing start and end as props instead of through mapState ?
   props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'indexLabel' ],
   components: { NumberInput },
   data() {

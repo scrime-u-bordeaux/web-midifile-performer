@@ -25,6 +25,8 @@ svg {
  * https://www.apache.org/licenses/LICENSE-2.0
  */
 
+import { mapState } from 'vuex'
+
 export default {
 
   props: {
@@ -56,6 +58,10 @@ export default {
       // TODO : Phase out with unification of mode state in store
       allowHighlight: true
     }
+  },
+
+  computed: {
+    ...mapState(['sequenceStart', 'sequenceEnd'])
   },
 
   methods: {
@@ -127,7 +133,8 @@ export default {
       this.noteSequence.forEach((note, index) => {
         // Remove redundant integrity check on referenceNote from Magenta
         // Also : only count note as active if the highlight comes from play or perform
-        // If it's a however highlight, show the user what will be effectively played
+        // (=== if the referenceIndex is that of a set)
+        // If it's a hover highlight, show the user what will be effectively played
         // Once they jump to this exact index.
         const isActive = this.isPaintingActiveNote(note, referenceNote, fromSet)
 
@@ -137,12 +144,42 @@ export default {
         rect.setAttribute('fill', this.getNoteFillColor(note, true))
         rect.classList.add('active')
 
-        // change Magenta's referential check from the same check done in isPaintingActiveNote
+        // change Magenta's referential check to the same check done in isPaintingActiveNote
         if(note.startTime === referenceNote.startTime)
           activeNotePosition = parseFloat(rect.getAttribute('x'));
       })
 
       this.scrollIntoView(activeNotePosition)
+    },
+
+    onNoteClick(event) {
+      const rect = event.target
+      const noteIndex = this.getNoteIndexFromRect(rect)
+      const setIndex = this.setBoundaries.findIndex(index => index > noteIndex) - 1
+
+      if(setIndex < this.sequenceStart) this.$emit('start', setIndex)
+      if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
+
+      this.$emit('index', setIndex)
+      // We might run into an async issue here,
+      // Where the index event chain could end after this,
+      // Cancelling the redraw.
+      this.redraw(noteIndex, false)
+      setTimeout(this.unfillActiveRects, 100) // maybe we can do better than this ?
+      // mouseup within the visualizerr + a bool flag ?
+    },
+
+    onNoteHighlight(event) {
+      if(!this.allowHighlight) return;
+
+      const rect = event.target
+      this.redraw(this.getNoteIndexFromRect(rect), false)
+    },
+
+    onNoteUnHighlight(event) {
+      if(!this.allowHighlight) return;
+
+      this.unfillActiveRects()
     },
 
     stop() {
@@ -203,6 +240,10 @@ export default {
       })
 
       this.noteSequence.sort((noteA, noteB) => noteA.startTime - noteB.startTime)
+    },
+
+    getNoteIndexFromRect(rect) {
+      return parseInt(rect.getAttribute('data-index'), 10)
     },
 
     // The rest of the utils are all taken from the Magenta component.
@@ -301,6 +342,7 @@ export default {
         rect.style.setProperty(attribute.key, attribute.value);
       });
 
+      rect.addEventListener("click", this.onNoteClick)
       rect.addEventListener("mouseover", this.onNoteHighlight)
       rect.addEventListener("mouseleave", this.onNoteUnHighlight)
 
@@ -311,25 +353,12 @@ export default {
       const activeRects = this.$refs.svg.querySelectorAll('rect.active')
       activeRects.forEach(rect => {
         const fill = this.getNoteFillColor(
-          this.noteSequence[parseInt(rect.getAttribute('data-index'), 10)],
+          this.noteSequence[this.getNoteIndexFromRect(rect)],
           false
         )
         rect.setAttribute('fill', fill)
         rect.classList.remove('active')
       })
-    },
-
-    onNoteHighlight(event) {
-      if(!this.allowHighlight) return;
-
-      const rect = event.target
-      this.redraw(parseInt(rect.getAttribute('data-index'), 10), false)
-    },
-
-    onNoteUnHighlight(event) {
-      if(!this.allowHighlight) return;
-
-      this.unfillActiveRects()
     }
   }
 }

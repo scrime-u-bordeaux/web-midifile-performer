@@ -40,6 +40,9 @@
     <PianoRoll
       ref="pianoRoll"
       v-show="visualizerReady"
+      @index="onIndexChange"
+      @start="onStartChange"
+      @end="onEndChange"
       @ready="visualizerReady = true"/>
 
     <Keyboard
