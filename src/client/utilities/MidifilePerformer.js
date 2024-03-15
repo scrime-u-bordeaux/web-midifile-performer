@@ -465,13 +465,42 @@ class MidifilePerformer extends EventEmitter {
     }
   }
 
+  // Used to play the contents of a set outside of render logic
+
+  pseudoRender() {
+    this.emit('allnotesoff')
+
+    // starting sets will always be on even indexes
+    const noteOns = noteEventsFromNoteDataVector(this.#getCurrentSetPair().start.events)
+    // Problem : how do we adjust to the velocity profile ?
+    // That's the job of the render logic in the C++ lib.
+    // And if we render, we move indexes...
+    // For now, we just keep the original velocity when playing.
+
+    // of course, we can't just use the matching end set.
+    // it might not contain the corresponding note offs.
+    // since we disregard off velocity, we can end the triggered set by reversing it
+
+    // Also, isn't there a JS syntax to avoid having to re-specify every field..?
+    const noteOffs = noteOns.map(note => {
+      return { on: false, pitch: note.pitch, velocity: 0, channel: note.channel }
+    })
+
+    this.emit('notes', noteOns)
+    setTimeout(() => {this.emit('notes', noteOffs)}, 300)
+  }
+
   // ---------------------------------------------------------------------------
   // ---------------------------PRIVATE METHODS---------------------------------
   // ---------------------------------------------------------------------------
 
-  // Index wrapping methods
+  // Wrapping methods
   // Most of them are direct returns, but at any point we might want to wrap logic around it
   // (such as the #getNextIndex() method)
+
+  #getCurrentSetPair() {
+    return this.performer.getCurrentSetPair()
+  }
 
   #getCurrentIndex() {
     return this.performer.getCurrentIndex()

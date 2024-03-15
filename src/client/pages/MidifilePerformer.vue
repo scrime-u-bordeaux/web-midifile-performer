@@ -40,6 +40,7 @@
     <PianoRoll
       ref="pianoRoll"
       v-show="visualizerReady"
+      @play="onPianoRollPlay"
       @index="onIndexChange"
       @start="onStartChange"
       @end="onEndChange"
@@ -373,7 +374,7 @@ export default {
       this.$refs.pianoRoll.stop()
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
-      this.$refs.pianoRoll.setOverlapThreshold(i)
+      if(!!this.$refs.pianoRoll) this.$refs.pianoRoll.onIndexJump(i)
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
@@ -419,6 +420,9 @@ export default {
     },
     onAllowHighlight(allow) {
       this.$refs.pianoRoll.allowHighlight = allow
+    },
+    onPianoRollPlay() { // piano roll requests hearing the sound of the notes the user clicked
+      this.performer.pseudoRender()
     }
   }
 };

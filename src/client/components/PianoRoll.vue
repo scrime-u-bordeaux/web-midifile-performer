@@ -135,16 +135,15 @@ export default {
       this.noteSequence.forEach((note, index) => {
         // Remove redundant integrity check on referenceNote from Magenta
 
-        // Also : only count note as active if the highlight comes from play or perform
-        // (=== if the referenceIndex is that of a set)
-        // If it's a hover highlight, show the user what will be effectively played
-        // Once they jump to this exact index.
+        // Only count overlapping notes as active if they have actually started to play
+        // (=== if the user didn't move the index past them)
+        // If it's a hover highlight, this is never true.
         const countOverlap = fromSet && index >= this.setBoundaries[this.overlapThreshold]
         const isActive = this.isPaintingActiveNote(note, referenceNote, countOverlap)
 
         if(!isActive) return; // Redrawing is only relevant for the notes we need to highlight
 
-        const rect = this.$refs.svg.querySelector(`rect[data-index="${index}"]`)
+        const rect = this.getRectFromNoteIndex(index)
         rect.setAttribute('fill', this.getNoteFillColor(note, true))
         rect.classList.add('active')
 
@@ -153,6 +152,8 @@ export default {
           activeNotePosition = parseFloat(rect.getAttribute('x'));
       })
 
+      // TODO : once scroll boundary changes, only do this if fromSet is true
+      // (trust me, future me)
       this.scrollIntoView(activeNotePosition)
     },
 
@@ -163,14 +164,17 @@ export default {
 
       if(setIndex < this.sequenceStart) this.$emit('start', setIndex)
       if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
-
       this.$emit('index', setIndex)
+
       // We might run into an async issue here,
       // Where the index event chain could end after this,
       // Cancelling the redraw.
       this.redraw(noteIndex, false)
       setTimeout(this.unfillActiveRects, 100) // maybe we can do better than this ?
       // mouseup within the visualizerr + a bool flag ?
+
+      // Read : "if mode is silent". TODO : switch this when mode is unified into store.
+      if(this.allowHighlight) this.$emit('play')
     },
 
     onNoteHighlight(event) {
@@ -186,8 +190,13 @@ export default {
       this.unfillActiveRects()
     },
 
-    setOverlapThreshold(index) {
+    onIndexJump(index) {
       this.overlapThreshold = index
+
+      const referenceNoteIndex = this.setBoundaries[index]
+      const rect = this.getRectFromNoteIndex(referenceNoteIndex)
+      const activeNotePosition = parseFloat(rect.getAttribute('x'))
+      this.scrollIntoView(activeNotePosition)
     },
 
     stop() {
@@ -252,6 +261,10 @@ export default {
 
     getNoteIndexFromRect(rect) {
       return parseInt(rect.getAttribute('data-index'), 10)
+    },
+
+    getRectFromNoteIndex(index) {
+      return this.$refs.svg.querySelector(`rect[data-index="${index}"]`)
     },
 
     // The rest of the utils are all taken from the Magenta component.
