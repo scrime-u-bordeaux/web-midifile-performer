@@ -274,6 +274,7 @@ export default {
     this.$emit("canPerform",true)
     this.performer.addListener('chronology', this.onChronology)
     this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
+    this.performer.addListener('userChangedIndex', this.onIndexJump)
     // temporary !!
     // TODO : phase out with unification of mode state into store
     this.performer.addListener('allowHighlight', this.onAllowHighlight)
@@ -370,6 +371,9 @@ export default {
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
       this.$refs.pianoRoll.stop()
+    },
+    onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
+      this.$refs.pianoRoll.setOverlapThreshold(i)
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);

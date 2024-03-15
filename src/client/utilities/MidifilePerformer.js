@@ -346,6 +346,7 @@ class MidifilePerformer extends EventEmitter {
   setSequenceIndex(sequenceIndex, killSound = true) {
     this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
     this.emit('index', this.index);
+    this.emit('userChangedIndex', this.index)
   }
 
   setSequenceBounds(min, max) {

@@ -54,6 +54,8 @@ export default {
       noteSequence: [],
       setBoundaries: [], // index of the first note for each set, used to trigger redraw
 
+      overlapThreshold: 0,
+
       // temporary !!
       // TODO : Phase out with unification of mode state in store
       allowHighlight: true
@@ -132,11 +134,13 @@ export default {
 
       this.noteSequence.forEach((note, index) => {
         // Remove redundant integrity check on referenceNote from Magenta
+
         // Also : only count note as active if the highlight comes from play or perform
         // (=== if the referenceIndex is that of a set)
         // If it's a hover highlight, show the user what will be effectively played
         // Once they jump to this exact index.
-        const isActive = this.isPaintingActiveNote(note, referenceNote, fromSet)
+        const countOverlap = fromSet && index >= this.setBoundaries[this.overlapThreshold]
+        const isActive = this.isPaintingActiveNote(note, referenceNote, countOverlap)
 
         if(!isActive) return; // Redrawing is only relevant for the notes we need to highlight
 
@@ -180,6 +184,10 @@ export default {
       if(!this.allowHighlight) return;
 
       this.unfillActiveRects()
+    },
+
+    setOverlapThreshold(index) {
+      this.overlapThreshold = index
     },
 
     stop() {
