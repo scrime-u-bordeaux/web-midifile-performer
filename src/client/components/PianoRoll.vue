@@ -159,9 +159,7 @@ export default {
           activeNotePosition = parseFloat(rect.getAttribute('x'));
       })
 
-      // TODO : once scroll boundary changes, only do this if fromSet is true
-      // (trust me, future me)
-      this.scrollIntoView(activeNotePosition)
+      if(fromSet) this.scrollIntoView(activeNotePosition)
     },
 
     onNoteClick(event) {
@@ -332,7 +330,7 @@ export default {
 
       // Replaced by constant scrolling.
       // TODO : we should figure out a smoother, more uniform way to scroll :
-      // Say, scroll by the smallest increment of time found in the file every set ? 
+      // Say, scroll by the smallest increment of time found in the file every set ?
 
       this.$refs.container.scrollLeft = activeNotePosition - containerWidth / 2 // keep active notes in the middle of the window
       // - 20 originally, i.e. on the very left
