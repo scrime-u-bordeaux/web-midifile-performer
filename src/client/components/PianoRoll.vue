@@ -66,6 +66,13 @@ export default {
     ...mapState(['sequenceStart', 'sequenceEnd'])
   },
 
+  // TODO : add sync on scroll rather than just click ?
+  // Or would we prefer scroll to be a simple "peek" operation ?
+
+  // mounted() {
+  //   this.$refs.container.addEventListener('scroll', this.onContainerScroll)
+  // },
+
   methods: {
 
     updateNoteSequence(chronology) {
@@ -317,11 +324,18 @@ export default {
 
       const containerWidth = this.$refs.container.getBoundingClientRect().width
 
-      // Scroll in both directions (Magenta only scrolls forward)
+      // Original conditions:
 
-      if (activeNotePosition > (this.$refs.container.scrollLeft + containerWidth) ||
-          activeNotePosition < this.$refs.container.scrollLeft)
-        this.$refs.container.scrollLeft = activeNotePosition - 20;
+      // if (activeNotePosition > (this.$refs.container.scrollLeft + containerWidth) ||
+      //     activeNotePosition < this.$refs.container.scrollLeft)
+      // (scrolls in both direction, while Magenta only scrolled forward)
+
+      // Replaced by constant scrolling.
+      // TODO : we should figure out a smoother, more uniform way to scroll :
+      // Say, scroll by the smallest increment of time found in the file every set ? 
+
+      this.$refs.container.scrollLeft = activeNotePosition - containerWidth / 2 // keep active notes in the middle of the window
+      // - 20 originally, i.e. on the very left
 
     },
 
