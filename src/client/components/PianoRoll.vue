@@ -67,7 +67,7 @@ export default {
   },
 
   // TODO : add sync on scroll rather than just click ?
-  // Or would we prefer scroll to be a simple "peek" operation ?
+  // Or would we prefer scroll to stay a simple "peek" operation ?
 
   // mounted() {
   //   this.$refs.container.addEventListener('scroll', this.onContainerScroll)
@@ -88,8 +88,8 @@ export default {
 
       this.clear()
       this.draw()
+      // this.$refs.container.scrollLeft = 0 // onIndexJump now performs this by itself
 
-      this.$refs.container.scrollLeft = 0
       this.$emit('ready')
     },
 
@@ -195,13 +195,22 @@ export default {
       this.unfillActiveRects()
     },
 
-    onIndexJump(index) {
+    onIndexJump(index) { // don't forget, this is also called on file reset.
       this.overlapThreshold = index
 
       const referenceNoteIndex = this.setBoundaries[index]
       const rect = this.getRectFromNoteIndex(referenceNoteIndex)
       const activeNotePosition = parseFloat(rect.getAttribute('x'))
-      this.scrollIntoView(activeNotePosition)
+
+      const containerWidth = this.$refs.container.getBoundingClientRect().width
+
+      // If the index is off limits, we need to scroll to it,
+      // But with the corresponding notes on the left of the window, not the middle.
+
+      const noteBeyondReach =
+        Math.abs(activeNotePosition - this.$refs.container.scrollLeft) > containerWidth
+
+      if(noteBeyondReach) this.scrollIntoView(activeNotePosition, true)
     },
 
     stop() {
@@ -317,23 +326,30 @@ export default {
       return {x, y, w, h: this.noteHeight}
     },
 
-    scrollIntoView(activeNotePosition) {
+    scrollIntoView(activeNotePosition, toBoundary = false) {
+
       if(!this.$refs.container) return; // inherited from Magenta ; probably useless here
 
       const containerWidth = this.$refs.container.getBoundingClientRect().width
 
-      // Original conditions:
+      // Early special case : index jumped to a note off limits.
+      // Display the window with it at the left edge.
 
-      // if (activeNotePosition > (this.$refs.container.scrollLeft + containerWidth) ||
-      //     activeNotePosition < this.$refs.container.scrollLeft)
-      // (scrolls in both direction, while Magenta only scrolled forward)
+      if(toBoundary) {
+        this.$refs.container.scrollLeft = activeNotePosition
+        return
+      }
 
-      // Replaced by constant scrolling.
+      // Default scrolling behavior.
       // TODO : we should figure out a smoother, more uniform way to scroll :
       // Say, scroll by the smallest increment of time found in the file every set ?
 
-      this.$refs.container.scrollLeft = activeNotePosition - containerWidth / 2 // keep active notes in the middle of the window
-      // - 20 originally, i.e. on the very left
+      const activeNoteBeyondHalfPoint =
+        Math.abs(activeNotePosition - this.$refs.container.scrollLeft) > containerWidth / 2
+
+      if(activeNoteBeyondHalfPoint)
+        // keep active notes in the middle of the window
+        this.$refs.container.scrollLeft = activeNotePosition - containerWidth / 2
 
     },
 
