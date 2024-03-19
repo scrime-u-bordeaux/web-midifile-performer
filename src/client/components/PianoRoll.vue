@@ -159,7 +159,11 @@ export default {
           activeNotePosition = parseFloat(rect.getAttribute('x'));
       })
 
-      if(fromSet) this.scrollIntoView(activeNotePosition)
+      if(fromSet) {
+        const rewinding = referenceIndex === this.sequenceStart
+        const alignLeft = rewinding && this.isOutOfReach(activeNotePosition) // take advantage of short-circuit boolean evaluation
+        this.scrollIntoView(activeNotePosition, alignLeft)
+      }
     },
 
     onNoteClick(event) {
@@ -202,18 +206,11 @@ export default {
       const rect = this.getRectFromNoteIndex(referenceNoteIndex)
       const activeNotePosition = parseFloat(rect.getAttribute('x'))
 
-      const containerWidth = this.$refs.container.getBoundingClientRect().width
-
-      // If the index is off limits, that is to say
-
-      const noteBeyondReach =
-        activeNotePosition < this.$refs.container.scrollLeft || // hidden on the left
-        activeNotePosition > this.$refs.container.scrollLeft + containerWidth // or hidden on the right
-
-      // then we need to scroll to it,
+      // If the index is off limits, then we need to scroll to it,
       // But with the corresponding notes on the left of the window, not the middle.
 
-      if(noteBeyondReach) this.scrollIntoView(activeNotePosition, true)
+      if(this.isOutOfReach(activeNotePosition))
+        this.scrollIntoView(activeNotePosition, true)
     },
 
     stop() {
@@ -282,6 +279,13 @@ export default {
 
     getRectFromNoteIndex(index) {
       return this.$refs.svg.querySelector(`rect[data-index="${index}"]`)
+    },
+
+    isOutOfReach(activeNotePosition) {
+      const containerWidth = this.$refs.container.getBoundingClientRect().width
+      
+      return activeNotePosition < this.$refs.container.scrollLeft || // hidden on the left
+      activeNotePosition > this.$refs.container.scrollLeft + containerWidth // or hidden on the right
     },
 
     // The rest of the utils are all taken from the Magenta component.
