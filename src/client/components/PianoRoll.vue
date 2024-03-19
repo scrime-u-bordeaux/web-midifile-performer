@@ -204,11 +204,14 @@ export default {
 
       const containerWidth = this.$refs.container.getBoundingClientRect().width
 
-      // If the index is off limits, we need to scroll to it,
-      // But with the corresponding notes on the left of the window, not the middle.
+      // If the index is off limits, that is to say
 
       const noteBeyondReach =
-        Math.abs(activeNotePosition - this.$refs.container.scrollLeft) > containerWidth
+        activeNotePosition < this.$refs.container.scrollLeft || // hidden on the left
+        activeNotePosition > this.$refs.container.scrollLeft + containerWidth // or hidden on the right
+
+      // then we need to scroll to it,
+      // But with the corresponding notes on the left of the window, not the middle.
 
       if(noteBeyondReach) this.scrollIntoView(activeNotePosition, true)
     },

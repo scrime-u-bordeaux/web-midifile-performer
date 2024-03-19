@@ -350,6 +350,7 @@ class MidifilePerformer extends EventEmitter {
   }
 
   setSequenceBounds(min, max) {
+    const previousIndex = this.#getCurrentIndex()
     this.performer.setLoopIndices(min, max);
     this.index = this.#getCurrentIndex();
 
@@ -360,6 +361,7 @@ class MidifilePerformer extends EventEmitter {
     });
 
     this.emit('index', this.index);
+    if(this.index !== previousIndex) this.emit('userChangedIndex', this.index)
   }
 
   setLooping(l) {
