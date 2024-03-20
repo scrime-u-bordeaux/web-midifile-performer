@@ -8,6 +8,7 @@
 .piano-roll-container {
   width: var(--score-width);
   overflow: auto;
+  scroll-behavior: smooth;
 }
 
 svg {
@@ -348,8 +349,6 @@ export default {
       }
 
       // Default scrolling behavior.
-      // TODO : we should figure out a smoother, more uniform way to scroll :
-      // Say, scroll by the smallest increment of time found in the file every set ?
 
       const activeNoteBeyondHalfPoint =
         Math.abs(activeNotePosition - this.$refs.container.scrollLeft) > containerWidth / 2
