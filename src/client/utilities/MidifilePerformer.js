@@ -298,9 +298,9 @@ class MidifilePerformer extends EventEmitter {
 
       const isStartingSet = notesToEmit.filter(note => note.on).length > 0
 
-      // The Magenta visualizer redraw only requires one activeNote
-      // This is really silly, but it's how it is
-      if(isStartingSet)
+      if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet)
+        // in passive playback, only redraw on note on's
+        // in perform, note offs may dynamically cancel, so redraw on both
         this.emit('visualizerRedraw', this.#getCurrentIndex())
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
