@@ -358,7 +358,7 @@ export default {
       this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
     onPianoRollRedraw(referenceSetIndex) {
-      this.$refs.pianoRoll.redraw(referenceSetIndex)
+      this.$refs.pianoRoll.refresh(referenceSetIndex)
     },
     onInputChange(input) {
       this.isInputKeyboard = (input === this.DEFAULT_IO_ID)

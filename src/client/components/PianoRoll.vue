@@ -62,19 +62,9 @@ export default {
       setStarts: [], // index of the first note for each set
       setEnds:[], // index of the last note for each set
 
-      // Util to determine the redraw window.
-      // Stores the rightmost x coordinate of each rectangle,
-      // in reverse order (from end to start).
-      reverseRectX: [],
-
       // Keep track of notes for dynamic highlight,
       // When the user triggers a note off out of sync with the original file.
-      lastOccurrences: new Map(),
-
-      // The last index the user jumped to.
-      // No notes before that point are playing at any time,
-      // So they can't overlap any currently playing note.
-      overlapThreshold: 0,
+      activeNotes: new Map(),
 
       // temporary !!
       // TODO : Phase out with unification of mode state in store
@@ -147,107 +137,13 @@ export default {
         )
       })
 
-      this.reverseRectX =
-        Array.from(this.$refs.svg.querySelectorAll('rect'))
-          .map(rect => parseInt(rect.getAttribute('x'), 10) + parseInt(rect.getAttribute('width'), 10))
-          .sort((a, b) => a-b)
-          .reverse()
-
       this.drawn = true
     },
 
-    // While we still work with a noteSequence, the referenceIndex will most often be
-    // That of a set, and not of a note, requiring a lookup to know where that set begins.
-
-    redraw(referenceIndex, fromSet = true) {
-      if(!this.drawn) this.draw()
-
-      const referenceNoteIndex = fromSet ? this.setStarts[referenceIndex] : referenceIndex
-
-      const referenceNote = this.noteSequence[referenceNoteIndex]
-
-      if(!referenceNote) return;
-
-      // To limit the load of redraw operations, we limit the redraw scope :
-      // The right boundary of the scope is the reference note
-      // (FIXME : this removes higlighting from held notes after loop !),
-      // and the left boundary is the first invisible note on the left side of the current window.
-      // Therefore, at worst, we draw notes for the whole window width,
-      // and at best (and most often) only for the left half.
-
-      // (Curiously, Magenta's original implementation runs very fast
-      // despite running through the entire svg every single redraw)
-
-      const playOrPerform = fromSet
-
-      const tentativeRightBound = playOrPerform ?
-        this.setEnds[referenceIndex] : // this is the case taken in perform or play
-        this.setStarts.find(index => index > referenceNoteIndex) // this is for hover,
-        // and it will be undefined if it's the last set
-
-      const redrawRightBound = // so if it's the last set, set the right bound to the last note
-        tentativeRightBound !== undefined ? tentativeRightBound : this.noteSequence.length - 1
-
-      // For the left bound, there are two cases :
-
-      // 1. We are at the start of the loop. Then, align with it.
-      // 2. Else, work through a reversed array of the rectangle's X positions.
-      // This is because findLastIndex is *much* slower than findIndex : it has to flip the array every time.
-
-      const rewinding = playOrPerform && referenceIndex === this.sequenceStart
-
-      const tentativeLeftBound =
-        rewinding ?
-          this.setStarts[referenceIndex] : // Align with the start of the loop where relevant.
-          // Otherwise, beware : when the window hasn't scrolled, this findIndex will return -1
-          // So make it 0 instead...
-          Math.max(this.reverseRectX.findIndex(x => x < this.$refs.container.scrollLeft), 0)
-
-      const redrawLeftBound = // ...and keep it 0 then,
-        // (and of course, keep the special case for rewinding untouched too)
-        tentativeLeftBound === 0 || rewinding ?
-          tentativeLeftBound :
-          // else flip the index around (since it's from a reversed array)
-          this.noteSequence.length - (tentativeLeftBound + 1)
-
-      // Original comment :
-      // "Remove the current active note, if one exists.""
-      this.unfillActiveRects()
-
-      let activeNotePosition;
-
-      // Move in reverse to properly set the notes' last occurrence.
-      // This is crucial for proper highlight of notes manually kept on
-      // after their intended end time.
-
-      for (let index = redrawRightBound ; index >= redrawLeftBound ; index--) {
-
-        const note = this.noteSequence[index]
-
-        // Only count overlapping notes as active if they have actually started to play
-        // (=== if the user didn't move the index past them)
-        // If it's a hover highlight, this is never true.
-        const highlightSetOnly = !(playOrPerform && index >= this.setStarts[this.overlapThreshold])
-        const isActive = this.isPaintingActiveNote(note, referenceNote, highlightSetOnly)
-
-        if(!isActive) continue; // Redrawing is only relevant for the notes we need to highlight
-
-        if(playOrPerform)
-          this.lastOccurrences.set(`p${note.pitch}c${note.channel}`, note.startTime)
-
-        const rect = this.getRectFromNoteIndex(index)
-        rect.setAttribute('fill', this.getNoteFillColor(note, true))
-        rect.classList.add('active')
-
-        // change Magenta's referential check to the same check done in isPaintingActiveNote
-        if(note.startTime === referenceNote.startTime)
-          activeNotePosition = parseFloat(rect.getAttribute('x'));
-      }
-
-      if(playOrPerform) {
-        const alignLeft = rewinding && this.isOutOfReach(activeNotePosition) // take advantage of short-circuit boolean evaluation
-        this.scrollIntoView(activeNotePosition, alignLeft)
-      }
+    refresh(setIndex) {
+      const activeNotes = this.refreshActiveNotes(setIndex)
+      this.fillActiveRects(activeNotes)
+      this.scrollToSet(setIndex)
     },
 
     onNoteClick(event) {
@@ -262,9 +158,9 @@ export default {
 
       // We might run into an async issue here,
       // Where the index event chain could end after this,
-      // Cancelling the redraw.
-      this.redraw(noteIndex, false)
-      setTimeout(this.unfillActiveRects, 100) // maybe we can do better than this ?
+      // Cancelling the paint job.
+      this.paintNoteSet(setIndex, true)
+      setTimeout(this.unfillActiveRects, 200) // maybe we can do better than this ?
       // mouseup within the visualizerr + a bool flag ?
 
       // Read : "if mode is silent". TODO : switch this when mode is unified into store.
@@ -275,7 +171,7 @@ export default {
       if(!this.allowHighlight) return;
 
       const rect = event.target
-      this.redraw(this.getNoteIndexFromRect(rect), false)
+      this.paintNoteSet(this.getNoteIndexFromRect(rect))
     },
 
     onNoteUnHighlight(event) {
@@ -285,8 +181,7 @@ export default {
     },
 
     onIndexJump(index) { // don't forget, this is also called on file reset.
-      this.overlapThreshold = index
-      this.lastOccurrences.clear()
+      this.activeNotes.clear()
 
       const referenceNoteIndex = this.setStarts[index]
       const rect = this.getRectFromNoteIndex(referenceNoteIndex)
@@ -308,7 +203,7 @@ export default {
     clear() {
       this.drawn = false;
       this.$refs.svg.innerHTML = '';
-      this.lastOccurrences.clear()
+      this.activeNotes.clear()
     },
 
     // -------------------------------------------------------------------------
@@ -338,9 +233,15 @@ export default {
 
       chronology.forEach(set => {
         msDate += set.dt;
-        if(set.type === "start") this.setStarts.push(boundaryCounter)
 
-        set.events.forEach(note => {
+        const isStartingSet = set.type === "start"
+        if(isStartingSet) this.setStarts.push(boundaryCounter)
+
+        const setLength = set.events.length
+
+        set.events.forEach((note, index) => {
+
+          if(isStartingSet && index === setLength - 1) this.setEnds.push(boundaryCounter)
 
           const mapKey = JSON.stringify({pitch: note.pitch, channel: note.channel})
 
@@ -360,13 +261,56 @@ export default {
         })
       })
 
+      // TODO : Is the sort necessary ?
+      // The chronology should already be sorted. 
       this.noteSequence.sort((noteA, noteB) => noteA.startTime - noteB.startTime)
+      this.noteSequence.forEach((note, index) => note.index = index)
+    },
 
-      const setAmounts = this.setStarts.length
-      for(let i = 0 ; i < setAmounts - 1 ; i++) {
-        this.setEnds[i] = this.setStarts[i+1] - 1
+    paintNoteSet(index, isSetIndex = false) {
+      let setIndex
+
+      if(isSetIndex) setIndex = index
+      else {
+        const tentativeSetIndex = this.setStarts.findIndex(i => i > index)
+        setIndex = tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
       }
-      this.setEnds[setAmounts - 1] = this.noteSequence.length - 1
+
+      const set = this.getSet(setIndex)
+      this.fillActiveRects(set)
+    },
+
+    refreshActiveNotes(setIndex) {
+      Array.from(this.activeNotes.values()).forEach(note => {
+        const mapKey = `p${note.pitch}c${note.channel}`
+        const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
+        const isPlaying = pitchMask & 1 << note.channel
+
+        if(!isPlaying) this.activeNotes.delete(mapKey)
+      })
+
+      const set = this.getSet(setIndex)
+
+      set.forEach((note, index) => {
+        const mapKey = `p${note.pitch}c${note.channel}`
+        const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
+        const isPlaying = pitchMask & 1 << note.channel
+
+        if(isPlaying) this.activeNotes.set(mapKey, note)
+      })
+
+      return Array.from(this.activeNotes.values())
+    },
+
+    scrollToSet(setIndex) {
+      const activeNotePosition = parseFloat(this.getRectFromNoteIndex(this.setStarts[setIndex]).getAttribute('x'))
+      const rewinding = setIndex === this.sequenceStart
+      const alignLeft = this.isOutOfReach(activeNotePosition)
+      this.scrollIntoView(activeNotePosition, alignLeft)
+    },
+
+    getSet(setIndex) {
+      return this.noteSequence.slice(this.setStarts[setIndex], this.setEnds[setIndex]+1)
     },
 
     getNoteIndexFromRect(rect) {
@@ -382,7 +326,7 @@ export default {
       activeNotePosition > this.$refs.container.scrollLeft + this.containerWidth // or hidden on the right
     },
 
-    // The rest of the utils are all taken from the Magenta component.
+    // The rest of the utils are taken from the Magenta component.
     // Although they are only used once or twice and do not need to be functions,
     // Having them be improves the readability of the big methods above.
 
@@ -449,27 +393,6 @@ export default {
         this.$refs.container.scrollLeft = activeNotePosition - this.containerWidth / 2
     },
 
-    isPaintingActiveNote(note, referenceNote, referenceSetOnly = false) {
-
-      const isSyncedToReference =
-        note.startTime === referenceNote.startTime
-      const overlapsReference =
-        note.startTime <= referenceNote.startTime &&
-        note.endTime > referenceNote.startTime // correct Magenta not displaying some overlaps
-        // (if the overlapping note ends before the ref note, but is still playing when it starts)
-
-      const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
-      const isPlaying = pitchMask & 1 << note.channel
-
-      const lastOccurrenceStart = this.lastOccurrences.get(`p${note.pitch}c${note.channel}`)
-
-      const isPreviouslyHeldOccurence =
-        isPlaying && note.startTime === lastOccurrenceStart
-
-      return (referenceSetOnly && isSyncedToReference) || // on hover or click, simply highlight the set
-             (isPlaying && (isSyncedToReference || overlapsReference || isPreviouslyHeldOccurence))
-    },
-
     getNoteFillColor(note, isActive) {
       const opacityBaseline = 0.2;  // Original comment : "Shift all the opacities up a little."
       const opacity = note.velocity ? note.velocity / 100 + opacityBaseline : 1;
@@ -502,6 +425,20 @@ export default {
       rect.addEventListener("mouseleave", this.onNoteUnHighlight)
 
       this.$refs.svg.appendChild(rect);
+    },
+
+    // This one isn't from Magenta, it just doesn't make sense for it
+    // not to be with unfillActiveRects.
+
+    fillActiveRects(activeNotes) {
+      if(!this.drawn) this.draw()
+      this.unfillActiveRects()
+
+      activeNotes.forEach(note => {
+        const rect = this.getRectFromNoteIndex(note.index)
+        rect.setAttribute('fill', this.getNoteFillColor(note, true))
+        rect.classList.add('active')
+      })
     },
 
     unfillActiveRects() {
