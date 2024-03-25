@@ -149,8 +149,7 @@ export default {
     onNoteClick(event) {
       const rect = event.target
       const noteIndex = this.getNoteIndexFromRect(rect)
-      const tentativeSetIndex = this.setStarts.findIndex(index => index > noteIndex)
-      const setIndex = tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
+      const setIndex = this.getSetIndex(noteIndex)
 
       if(setIndex < this.sequenceStart) this.$emit('start', setIndex)
       if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
@@ -268,20 +267,17 @@ export default {
     },
 
     paintNoteSet(index, isSetIndex = false) {
-      let setIndex
-
-      if(isSetIndex) setIndex = index
-      else {
-        const tentativeSetIndex = this.setStarts.findIndex(i => i > index)
-        setIndex = tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
-      }
-
+      const setIndex = isSetIndex ? index : this.getSetIndex(index)
       const set = this.getSet(setIndex)
       this.fillActiveRects(set)
     },
 
     refreshActiveNotes(setIndex) {
       Array.from(this.activeNotes.values()).forEach(note => {
+        // TODO : is the overhead of creating a function for this worth
+        // the factorization ?
+        // Depending on how JS behaves, it could slow down the playback.
+
         const mapKey = `p${note.pitch}c${note.channel}`
         const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
         const isPlaying = pitchMask & 1 << note.channel
@@ -304,13 +300,17 @@ export default {
 
     scrollToSet(setIndex) {
       const activeNotePosition = parseFloat(this.getRectFromNoteIndex(this.setStarts[setIndex]).getAttribute('x'))
-      const rewinding = setIndex === this.sequenceStart
       const alignLeft = this.isOutOfReach(activeNotePosition)
       this.scrollIntoView(activeNotePosition, alignLeft)
     },
 
     getSet(setIndex) {
       return this.noteSequence.slice(this.setStarts[setIndex], this.setEnds[setIndex]+1)
+    },
+
+    getSetIndex(noteIndex) {
+      const tentativeSetIndex = this.setStarts.findIndex(i => i > noteIndex)
+      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
     },
 
     getNoteIndexFromRect(rect) {
