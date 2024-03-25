@@ -68,7 +68,14 @@ export default {
 
       // temporary !!
       // TODO : Phase out with unification of mode state in store
-      allowHighlight: true
+      allowHighlight: true,
+
+      // temporary !!
+      // FIXME (issue #57): this doesn't fix the overlaps of successive notes
+      // if the following note is calculated to start before the other ends
+      // setting fixed margins doesn't work either
+      // this is annoying
+      occupiedX: new Set()
     }
   },
 
@@ -112,6 +119,8 @@ export default {
     },
 
     draw() {
+      this.occupiedX.clear()
+
       this.noteSequence.forEach((note, index) => {
         const pos = this.getNotePosition(note)
         const fill = this.getNoteFillColor(note, false) // when first drawing, nothing is active
@@ -261,7 +270,7 @@ export default {
       })
 
       // TODO : Is the sort necessary ?
-      // The chronology should already be sorted. 
+      // The chronology should already be sorted.
       this.noteSequence.sort((noteA, noteB) => noteA.startTime - noteB.startTime)
       this.noteSequence.forEach((note, index) => note.index = index)
     },
@@ -356,11 +365,21 @@ export default {
     getNotePosition(note) {
       const duration = note.endTime - note.startTime
 
-      const x = note.startTime * this.pixelsPerTimeStep
+      // Premature round is necessary for the occupiedX set to work properly
+      const tentativeX = Math.round(note.startTime * this.pixelsPerTimeStep)
+
+      const x = this.occupiedX.has(tentativeX) ?
+        tentativeX + this.noteSpacing : // if we just add the noteSpacing everywhere, it cancels out.
+        tentativeX
+
       const w = Math.max(
         1, // make notes at least one pixel wide
         this.pixelsPerTimeStep * duration - this.noteSpacing
       )
+
+      // Here too, premature rounding is necessary.
+      // Note that Math.round() is not distributive.
+      this.occupiedX.add(Math.round(x) + Math.round(w))
 
       // Comment from original Magenta code :
       // "The svg' y=0 is at the top, but a smaller pitch is actually
