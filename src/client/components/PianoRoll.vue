@@ -32,7 +32,7 @@ export default {
 
   props: {
     noteHeight: { default: 6 },
-    noteSpacing: { default: 1 },
+    noteSpacing: { default: 5 },
     pixelsPerTimeStep: { default: 60 },
     noteRGB: { default: '102, 102, 102' },
     activeNoteRGB: { default: '88, 226, 142' }
@@ -47,6 +47,11 @@ export default {
       // Height and width of the SVG element, not the container.
       height: 0,
       width: 0,
+
+      sequenceBoundaryWidth: 3, // should we rather make it noteSpacing ?
+      // but that would incentivize larger spacing and thus smaller notes, with the way things are currently calculated
+      sequenceBoundarySpacing: 1,
+      sequenceBoundaryRGB: '2, 167, 240',
 
       // apparently, Vue can't handle defining data from computed properties,
       // so I can't rely on mapState for the starting values here.
@@ -75,7 +80,10 @@ export default {
       // if the following note is calculated to start before the other ends
       // setting fixed margins doesn't work either
       // this is annoying
-      occupiedX: new Set()
+      occupiedX: new Set(),
+
+      // for instant lookup when dragging boundary rectangles
+      setX: []
     }
   },
 
@@ -84,6 +92,16 @@ export default {
       'sequenceStart', 'sequenceEnd',
       'minKeyboardNote', 'keyboardState'
     ])
+  },
+
+  watch: {
+    sequenceStart(newStart, oldStart) {
+      this.redrawBoundary('start')
+    },
+
+    sequenceEnd(newEnd, oldEnd) {
+      this.redrawBoundary('end')
+    }
   },
 
   // TODO : add sync on scroll rather than just click ?
@@ -123,6 +141,8 @@ export default {
 
       this.noteSequence.forEach((note, index) => {
         const pos = this.getNotePosition(note)
+        if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
+
         const fill = this.getNoteFillColor(note, false) // when first drawing, nothing is active
 
         // Magenta being written in TS used custom types here,
@@ -145,6 +165,8 @@ export default {
           dataAttributes, cssProperties
         )
       })
+
+      this.drawBoundaries()
 
       this.drawn = true
     },
@@ -186,6 +208,33 @@ export default {
       if(!this.allowHighlight) return;
 
       this.unfillActiveRects()
+    },
+
+    onBoundaryDragStart(event) {
+      // Am I allowed to facepalm over inconsistencies as big as JS arrays having an "includes" method,
+      // But DOMTokenLists having a "contains" method instead ?
+      // Seriously.
+      const isStart = event.target.classList.contains("start")
+      this.dragging = isStart ? "start" : "end"
+    },
+
+    onBoundaryDrag(event) {
+      if(!!this.dragging && event.buttons > 0) {
+        const nextSetIndex = this.setX.findIndex(setX => setX > event.offsetX)
+
+        const closestSetIndex = this.dragging === "start" ?
+          nextSetIndex :
+          nextSetIndex > 0 ? // as usual, the last set won't be found this way, giving -1
+            nextSetIndex - 1 :
+            this.setX.length - 1
+
+        this.$emit(this.dragging, closestSetIndex)
+      }
+    },
+
+    onBoundaryDragEnd(event) {
+      if(!!this.dragging) this.redrawBoundary(this.dragging)
+      this.dragging = null
     },
 
     onIndexJump(index) { // don't forget, this is also called on file reset.
@@ -275,6 +324,35 @@ export default {
       this.noteSequence.forEach((note, index) => note.index = index)
     },
 
+    drawBoundaries() {
+      this.drawBoundary('start')
+      this.drawBoundary('end')
+      this.$refs.svg.addEventListener('mousemove', this.onBoundaryDrag)
+      this.$refs.svg.addEventListener('mouseup', this.onBoundaryDragEnd)
+    },
+
+    drawBoundary(type) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+
+      rect.classList.add('boundary')
+      rect.classList.add(type)
+      rect.setAttribute('fill', `rgba(${this.sequenceBoundaryRGB}, 0.6)`)
+
+      rect.setAttribute('x', `${this.getBoundaryPosition(type)}`)
+      rect.setAttribute('y', '0')
+      rect.setAttribute('width', this.sequenceBoundaryWidth)
+      rect.setAttribute('height', this.height)
+
+      rect.addEventListener('mousedown', this.onBoundaryDragStart)
+
+      this.$refs.svg.appendChild(rect);
+    },
+
+    redrawBoundary(type) {
+      const boundaryRect = this.$refs.svg.querySelector(`.${type}`)
+      boundaryRect.setAttribute('x', `${this.getBoundaryPosition(type)}`)
+    },
+
     paintNoteSet(index, isSetIndex = false) {
       const setIndex = isSetIndex ? index : this.getSetIndex(index)
       const set = this.getSet(setIndex)
@@ -330,6 +408,20 @@ export default {
       return this.$refs.svg.querySelector(`rect[data-index="${index}"]`)
     },
 
+    getBoundaryPosition(type) {
+      if(type !== "start" && type !== "end")
+        throw new Error("Invalid boundary type")
+
+      const boundSetIndex = type === "start" ? this.sequenceStart : this.sequenceEnd
+      const setStartIndex = this.setStarts[type === "start" ? boundSetIndex : boundSetIndex + 1]
+      const setStartX =
+        setStartIndex !== undefined ?
+          parseInt(this.getRectFromNoteIndex(setStartIndex).getAttribute('x'), 10) :
+          this.width
+
+      return setStartX - this.sequenceBoundaryWidth
+    },
+
     isOutOfReach(activeNotePosition) {
       return activeNotePosition < this.$refs.container.scrollLeft || // hidden on the left
       activeNotePosition > this.$refs.container.scrollLeft + this.containerWidth // or hidden on the right
@@ -357,7 +449,9 @@ export default {
       const height = (this.maxPitch - this.minPitch) * this.noteHeight
 
       const endTime = this.noteSequence[this.noteSequence.length - 1].endTime
-      const width = endTime * this.pixelsPerTimeStep
+      const width =
+        endTime * this.pixelsPerTimeStep +
+        2*(this.sequenceBoundaryWidth) + this.sequenceBoundarySpacing
 
       return {width, height}
     },
@@ -366,7 +460,8 @@ export default {
       const duration = note.endTime - note.startTime
 
       // Premature round is necessary for the occupiedX set to work properly
-      const tentativeX = Math.round(note.startTime * this.pixelsPerTimeStep)
+      const tentativeX =
+        Math.round(note.startTime * this.pixelsPerTimeStep + this.sequenceBoundaryWidth)
 
       const x = this.occupiedX.has(tentativeX) ?
         tentativeX + this.noteSpacing : // if we just add the noteSpacing everywhere, it cancels out.
@@ -374,7 +469,7 @@ export default {
 
       const w = Math.max(
         1, // make notes at least one pixel wide
-        this.pixelsPerTimeStep * duration - this.noteSpacing
+        this.pixelsPerTimeStep * duration - this.noteSpacing + 1
       )
 
       // Here too, premature rounding is necessary.
@@ -398,7 +493,8 @@ export default {
       // Display the window with it at the left edge.
 
       if(toBoundary) {
-        this.$refs.container.scrollLeft = activeNotePosition
+        this.$refs.container.scrollLeft =
+          activeNotePosition - this.sequenceBoundaryWidth
         return
       }
 

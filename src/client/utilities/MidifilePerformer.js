@@ -275,12 +275,9 @@ class MidifilePerformer extends EventEmitter {
 
     this.performer.finalize();
 
-    const translatedChronology = this.#getChronology()
-
-    this.emit('chronology', translatedChronology)
-
     // GENERATE VELOCITY PROFILE ///////////////////////////////////////////////
 
+    const translatedChronology = this.#getChronology()
     const { maxVelocities, velocityProfile } = this.#createVelocityProfile(translatedChronology);
 
     this.maxVelocities = maxVelocities
@@ -336,6 +333,8 @@ class MidifilePerformer extends EventEmitter {
       start: this.#getLoopStartIndex(),
       end: this.#getLoopEndIndex(),
     });
+
+    this.emit('chronology', translatedChronology)
   }
 
   clear() {
