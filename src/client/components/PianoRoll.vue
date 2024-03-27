@@ -120,6 +120,7 @@ export default {
 
     updateNoteSequence(chronology) {
 
+      this.clear()
       this.convertChronologyToNoteSequence(chronology)
 
       const size = this.getSize()
@@ -129,7 +130,6 @@ export default {
       this.$refs.svg.style.width = `${this.width}px`
       this.$refs.svg.style.height = `${this.height}px`
 
-      this.clear()
       this.draw()
       // this.$refs.container.scrollLeft = 0 // onIndexJump now performs this by itself
 
@@ -258,9 +258,15 @@ export default {
     },
 
     clear() {
-      this.drawn = false;
-      this.$refs.svg.innerHTML = '';
+      this.noteSequence = []
+      this.setStarts = []
+      this.setEnds = []
+
       this.activeNotes.clear()
+      this.setX = []
+
+      this.$refs.svg.innerHTML = '';
+      this.drawn = false;
     },
 
     // -------------------------------------------------------------------------
@@ -276,10 +282,6 @@ export default {
 
       // For now, we keep this, and we do it from the chronology and not the file,
       // So notes we have artificially synced through temporal resolution are also synced.
-
-      this.noteSequence = []
-      this.setStarts = []
-      this.setEnds = []
 
       let msDate = 0;
       let boundaryCounter = 0;
