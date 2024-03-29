@@ -277,17 +277,19 @@ export default {
 
       // Ideally, we would love to phase out the "note sequence",
       // and directly use the chronology as our working type.
-      // The issue with that is determining when notes overlap,
-      // with a better time cost than O(N) (for N held notes).
 
       // For now, we keep this, and we do it from the chronology and not the file,
       // So notes we have artificially synced through temporal resolution are also synced.
 
       let msDate = 0;
-      let boundaryCounter = 0;
+      let boundaryCounter = 0; // keep track of set starts and ends
       const noteMap = new Map()
+      // We use this map to keep a stack of note ons/off for a give note/pitch.
+      // We could instead store arrays of the notes and calculate their size,
+      // But this way is easier to read, so I favor it.
+      const noteCountMap = new Map()
 
-      // This code, by the way, will unavoidably be very similar to that
+      // Incidentally : this code will unavoidably be very similar to that
       // of the AllNoteEventsAnalyzer.
 
       chronology.forEach(set => {
@@ -302,9 +304,25 @@ export default {
 
           if(isStartingSet && index === setLength - 1) this.setEnds.push(boundaryCounter)
 
-          const mapKey = JSON.stringify({pitch: note.pitch, channel: note.channel})
+          const mapKey = `p${note.pitch}c${note.channel}`
+          const noteCounter = noteCountMap.get(mapKey) || 0
 
-          if(noteMap.has(mapKey)) {
+          // In a file with no duplicate note ons, when noteMap has the mapKey,
+          // it will always be because noteCounter === 1
+          // (<=> we're encountering the note off for the singular stacked note on).
+
+          // If the file *has* duplicate note ons,
+          // any new note on must still be pushed,
+          // regardless of how many have been stacked (or we lose notes).
+
+          // But in all cases, a note off can only trigger a push
+          // if it's the last one in a stack — i.e. : if noteCounter === 1.
+          // In other words : the final on in a stack of multiples
+          // will be terminated by as many offs as there were on's before it.
+
+          const shouldPushNote = noteMap.has(mapKey) && (note.on || noteCounter === 1)
+
+          if(shouldPushNote) {
             const timedNote = noteMap.get(mapKey)
             timedNote.endTime = msDate * 0.001
             this.noteSequence.push(timedNote)
@@ -314,9 +332,18 @@ export default {
             boundaryCounter++;
             const timedNote = { startTime: msDate * 0.001, ...note }
             noteMap.set(mapKey, timedNote)
+            noteCountMap.set(mapKey, noteCounter+1)
           }
 
-          else noteMap.delete(mapKey)
+          else {
+            if(noteCounter - 1 === 0 ) { // final note on in this stack
+              noteCountMap.delete(mapKey)
+              noteMap.delete(mapKey)
+            }
+            // Unstack note offs one by one. Every duplicate note on should have a matching amount of note offs.
+            // (Else we have notes that never end...)
+            else noteCountMap.set(mapKey, noteCounter - 1)
+          }
         })
       })
 
