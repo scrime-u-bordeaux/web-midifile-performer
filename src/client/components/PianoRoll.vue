@@ -83,7 +83,12 @@ export default {
       occupiedX: new Set(),
 
       // for instant lookup when dragging boundary rectangles
-      setX: []
+      setX: [],
+
+      // for switching between set and single-note highlight/play
+      ctrlKey: false,
+      // last note the mouse has been over
+      highlightedNote: null
     }
   },
 
@@ -104,16 +109,22 @@ export default {
     }
   },
 
-  // TODO : add sync on scroll rather than just click ?
-  // Or would we prefer scroll to stay a simple "peek" operation ?
-
-  // mounted() {
-  //   this.$refs.container.addEventListener('scroll', this.onContainerScroll)
-  // },
+  mounted() {
+    document.addEventListener('keydown', this.onKeyDown)
+    document.addEventListener('keyup', this.onKeyUp)
+    // TODO : add sync on scroll rather than just click ?
+    // Or would we prefer scroll to stay a simple "peek" operation ?
+    //this.$refs.container.addEventListener('scroll', this.onContainerScroll)
+  },
 
   updated() { // for some reason, the width of this component changes after mount
     // so this is the right hook to use.
     this.containerWidth = this.$refs.container.getBoundingClientRect().width
+  },
+
+  beforeUnmount() {
+    document.removeEventListener('keydown', this.onKeyDown)
+    document.removeEventListener('keyup', this.onKeyUp)
   },
 
   methods: {
@@ -177,6 +188,23 @@ export default {
       this.scrollToSet(setIndex)
     },
 
+    // TODO : Can we factorize these ?
+    // (By testing the type of the received event)
+
+    onKeyDown(event) {
+      if(event.key === 'Control') {
+        this.ctrlKey = true
+        this.highlightedNote?.dispatchEvent(new Event('mouseover'))
+      }
+    },
+
+    onKeyUp(event) {
+      if(event.key === 'Control') {
+        this.ctrlKey = false
+        this.highlightedNote?.dispatchEvent(new Event('mouseover'))
+      }
+    },
+
     onNoteClick(event) {
       const rect = event.target
       const noteIndex = this.getNoteIndexFromRect(rect)
@@ -189,24 +217,34 @@ export default {
       // We might run into an async issue here,
       // Where the index event chain could end after this,
       // Cancelling the paint job.
-      this.paintNoteSet(setIndex, true)
+      this.paintSetOrNote(rect)
       setTimeout(this.unfillActiveRects, 200) // maybe we can do better than this ?
       // mouseup within the visualizerr + a bool flag ?
 
-      // Read : "if mode is silent". TODO : switch this when mode is unified into store.
-      if(this.allowHighlight) this.$emit('play')
+      // "allowHighlight" means "if mode is silent".
+      // TODO : switch this when mode is unified into store.
+      if(this.allowHighlight)
+        this.$emit('play',
+          this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
+            [this.noteSequence[this.getNoteIndexFromRect(this.highlightedNote)]] :
+            this.getSet(setIndex) // otherwise send the sets
+            // Our notes are compatible with the rest of the app, so this works
+        )
     },
 
-    onNoteHighlight(event) {
+    onNoteHover(event) {
       if(!this.allowHighlight) return;
 
       const rect = event.target
-      this.paintNoteSet(this.getNoteIndexFromRect(rect))
+      this.highlightedNote = rect
+
+      this.paintSetOrNote(rect)
     },
 
-    onNoteUnHighlight(event) {
+    onNoteLeave(event) {
       if(!this.allowHighlight) return;
 
+      this.highlightedNote = null
       this.unfillActiveRects()
     },
 
@@ -382,8 +420,15 @@ export default {
       boundaryRect.setAttribute('x', `${this.getBoundaryPosition(type)}`)
     },
 
-    paintNoteSet(index, isSetIndex = false) {
-      const setIndex = isSetIndex ? index : this.getSetIndex(index)
+    paintSetOrNote(rect) {
+      if(!this.ctrlKey) this.paintNoteSet(this.getNoteIndexFromRect(rect))
+      // It's a bit silly, but it's easier for this to be the exception
+      // and fillActiveRects to keep taking notes as input.
+      else this.fillActiveRects([this.noteSequence[this.getNoteIndexFromRect(rect)]])
+    },
+
+    paintNoteSet(index) {
+      const setIndex = this.getSetIndex(index)
       const set = this.getSet(setIndex)
       this.fillActiveRects(set)
     },
@@ -565,8 +610,8 @@ export default {
       });
 
       rect.addEventListener("click", this.onNoteClick)
-      rect.addEventListener("mouseover", this.onNoteHighlight)
-      rect.addEventListener("mouseleave", this.onNoteUnHighlight)
+      rect.addEventListener("mouseover", this.onNoteHover)
+      rect.addEventListener("mouseleave", this.onNoteLeave)
 
       this.$refs.svg.appendChild(rect);
     },

@@ -421,8 +421,8 @@ export default {
     onAllowHighlight(allow) {
       this.$refs.pianoRoll.allowHighlight = allow
     },
-    onPianoRollPlay() { // piano roll requests hearing the sound of the notes the user clicked
-      this.performer.pseudoRender()
+    onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
+      this.performer.pseudoRender(notes)
     }
   }
 };
