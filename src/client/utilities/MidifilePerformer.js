@@ -466,16 +466,6 @@ class MidifilePerformer extends EventEmitter {
     }
   }
 
-  // Used to play the contents of a set outside of render logic
-
-  // TODO : move this out of here and interact with the IOCTl directly in higher parts of the app
-
-  pseudoRender(notes) {
-    this.emit('allnotesoff')
-    this.emit('notes', notes)
-    setTimeout(() => {this.emit('allnotesoff')}, 300)
-  }
-
   // ---------------------------------------------------------------------------
   // ---------------------------PRIVATE METHODS---------------------------------
   // ---------------------------------------------------------------------------

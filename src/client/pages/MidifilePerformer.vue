@@ -41,6 +41,7 @@
       ref="pianoRoll"
       v-show="visualizerReady"
       @play="onPianoRollPlay"
+      @stop="onPianoRollStop"
       @index="onIndexChange"
       @start="onStartChange"
       @end="onEndChange"
@@ -422,7 +423,10 @@ export default {
       this.$refs.pianoRoll.allowHighlight = allow
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
-      this.performer.pseudoRender(notes)
+      this.ioctl.playNoteEvents(notes)
+    },
+    onPianoRollStop() {
+      this.ioctl.allNotesOff()
     }
   }
 };

@@ -214,22 +214,21 @@ export default {
       if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
       this.$emit('index', setIndex)
 
-      // We might run into an async issue here,
-      // Where the index event chain could end after this,
-      // Cancelling the paint job.
-      this.paintSetOrNote(rect)
-      setTimeout(this.unfillActiveRects, 200) // maybe we can do better than this ?
-      // mouseup within the visualizerr + a bool flag ?
-
       // "allowHighlight" means "if mode is silent".
       // TODO : switch this when mode is unified into store.
-      if(this.allowHighlight)
+      if(this.allowHighlight) {
+        this.paintSetOrNote(rect)
         this.$emit('play',
           this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
-            [this.noteSequence[this.getNoteIndexFromRect(this.highlightedNote)]] :
+            [this.noteSequence[this.getNoteIndexFromRect(rect)]] :
             this.getSet(setIndex) // otherwise send the sets
             // Our notes are compatible with the rest of the app, so this works
         )
+      }
+    },
+
+    onNoteUnClick(event) {
+      this.onNoteLeave()
     },
 
     onNoteHover(event) {
@@ -244,8 +243,9 @@ export default {
     onNoteLeave(event) {
       if(!this.allowHighlight) return;
 
-      this.highlightedNote = null
+      if(!!event) this.highlightedNote = null
       this.unfillActiveRects()
+      this.$emit('stop')
     },
 
     onBoundaryDragStart(event) {
@@ -609,8 +609,9 @@ export default {
         rect.style.setProperty(attribute.key, attribute.value);
       });
 
-      rect.addEventListener("click", this.onNoteClick)
+      rect.addEventListener("mousedown", this.onNoteClick)
       rect.addEventListener("mouseover", this.onNoteHover)
+      rect.addEventListener("mouseup", this.onNoteUnClick)
       rect.addEventListener("mouseleave", this.onNoteLeave)
 
       this.$refs.svg.appendChild(rect);
