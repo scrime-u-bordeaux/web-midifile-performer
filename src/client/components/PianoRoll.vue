@@ -7,6 +7,7 @@
 <style scoped>
 .piano-roll-container {
   width: var(--score-width);
+  height: fit-content;
   overflow: auto;
   scroll-behavior: smooth;
 }
@@ -31,7 +32,7 @@ import { mapState } from 'vuex'
 export default {
 
   props: {
-    noteHeight: { default: 6 },
+    initialNoteHeight: { default: 4 },
     noteSpacing: { default: 5 },
     pixelsPerTimeStep: { default: 60 },
     noteRGB: { default: '102, 102, 102' },
@@ -47,6 +48,8 @@ export default {
       // Height and width of the SVG element, not the container.
       height: 0,
       width: 0,
+
+      noteHeight: this.initialNoteHeight,
 
       sequenceBoundaryWidth: 3, // should we rather make it noteSpacing ?
       // but that would incentivize larger spacing and thus smaller notes, with the way things are currently calculated
@@ -100,6 +103,19 @@ export default {
   },
 
   watch: {
+
+    noteHeight(newHeight, oldHeight) {
+      if(newHeight < 1) {
+        this.noteHeight = 1 // Vue doesn't allow setters on data()
+        // so this is my best equivalent to guard the value
+        return;
+      }
+
+      this.setSize()
+      this.clearGraphics()
+      this.draw()
+    },
+
     sequenceStart(newStart, oldStart) {
       this.redrawBoundary('start')
     },
@@ -112,6 +128,7 @@ export default {
   mounted() {
     document.addEventListener('keydown', this.onKeyDown)
     document.addEventListener('keyup', this.onKeyUp)
+    this.$refs.container.addEventListener('wheel', this.onWheel)
     // TODO : add sync on scroll rather than just click ?
     // Or would we prefer scroll to stay a simple "peek" operation ?
     //this.$refs.container.addEventListener('scroll', this.onContainerScroll)
@@ -125,6 +142,7 @@ export default {
   beforeUnmount() {
     document.removeEventListener('keydown', this.onKeyDown)
     document.removeEventListener('keyup', this.onKeyUp)
+    this.$refs.container.removeEventListener('wheel', this.onWheel)
   },
 
   methods: {
@@ -133,14 +151,7 @@ export default {
 
       this.clear()
       this.convertChronologyToNoteSequence(chronology)
-
-      const size = this.getSize()
-      this.height = size.height
-      this.width = size.width
-
-      this.$refs.svg.style.width = `${this.width}px`
-      this.$refs.svg.style.height = `${this.height}px`
-
+      this.setSize()
       this.draw()
       // this.$refs.container.scrollLeft = 0 // onIndexJump now performs this by itself
 
@@ -202,6 +213,16 @@ export default {
       if(event.key === 'Control') {
         this.ctrlKey = false
         this.highlightedNote?.dispatchEvent(new Event('mouseover'))
+      }
+    },
+
+    onWheel(event) {
+      if(event.ctrlKey) {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const growAmount = - Math.sign(event.deltaY)
+        this.noteHeight += growAmount
       }
     },
 
@@ -295,16 +316,26 @@ export default {
       this.unfillActiveRects()
     },
 
-    clear() {
+    clearNoteSequence() {
       this.noteSequence = []
       this.setStarts = []
       this.setEnds = []
+    },
 
+    clearActiveNotes() {
       this.activeNotes.clear()
-      this.setX = []
+    },
 
+    clearGraphics() {
+      this.setX = []
       this.$refs.svg.innerHTML = '';
       this.drawn = false;
+    },
+
+    clear() {
+      this.clearNoteSequence()
+      this.clearActiveNotes()
+      this.clearGraphics()
     },
 
     // -------------------------------------------------------------------------
@@ -505,7 +536,12 @@ export default {
     // Although they are only used once or twice and do not need to be functions,
     // Having them be improves the readability of the big methods above.
 
-    getSize() {
+    // Originally called getSize()
+    // Used to return the width and height instead of mutating them.
+
+    setSize() {
+
+      // TODO : we don't have to do this every time...
 
       this.minPitch = 127
       this.maxPitch = 0
@@ -515,19 +551,21 @@ export default {
         this.maxPitch = Math.max(this.maxPitch, note.pitch);
       })
 
-      // Keep padding norms from Magenta. Adjust as needed.
+      // Keep "padding" norms from Magenta. Adjust as needed.
+      // This means we have to deal with it in the parent element, though.
 
       this.minPitch -= 4;
       this.maxPitch += 4;
 
-      const height = (this.maxPitch - this.minPitch) * this.noteHeight
+      this.height = (this.maxPitch - this.minPitch) * this.noteHeight
 
       const endTime = this.noteSequence[this.noteSequence.length - 1].endTime
-      const width =
+      this.width =
         endTime * this.pixelsPerTimeStep +
         2*(this.sequenceBoundaryWidth) + this.sequenceBoundarySpacing
 
-      return {width, height}
+      this.$refs.svg.style.width = `${this.width}px`
+      this.$refs.svg.style.height = `${this.height}px`
     },
 
     getNotePosition(note) {

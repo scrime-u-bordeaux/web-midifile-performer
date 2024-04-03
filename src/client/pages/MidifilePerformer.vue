@@ -11,33 +11,8 @@
       <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
     </span>
 
-    <IOManager
-      class="manager"
-      v-if="mfpMidiFile.buffer"
-      @inputChange="onInputChange"/>
-
-    <div class="file-input-wrapper">
-      <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-        <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
-        <label for="file" class="file-label">
-          {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
-        </label>
-        <div class="file-name-container" v-if="mfpMidiFile.buffer">
-          <div class="file-name">{{ trimmedTitle }}</div>
-          <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
-            {{ $t('midiFilePerformer.noScores.standalone') }}
-          </span>
-        </div>
-        <div class="search-score-hint" v-else>
-          {{ $t('midiFilePerformer.noScores.message') }}
-          <span class="link" @click="$router.push('/look-for-scores')">
-            {{ $t('midiFilePerformer.noScores.link') }}
-          </span>
-        </div>
-      </div>
-    </div>
-
     <PianoRoll
+      class="piano-roll"
       ref="pianoRoll"
       v-show="visualizerReady"
       @play="onPianoRollPlay"
@@ -69,6 +44,32 @@
       @end="onEndChange"
       @speed="onSpeedChange"
       @silence="onSilence"/>
+
+    <div class="file-input-wrapper">
+      <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
+        <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+        <label for="file" class="file-label">
+          {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
+        </label>
+        <div class="file-name-container" v-if="mfpMidiFile.buffer">
+          <div class="file-name">{{ trimmedTitle }}</div>
+          <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
+            {{ $t('midiFilePerformer.noScores.standalone') }}
+          </span>
+        </div>
+        <div class="search-score-hint" v-else>
+          {{ $t('midiFilePerformer.noScores.message') }}
+          <span class="link" @click="$router.push('/look-for-scores')">
+            {{ $t('midiFilePerformer.noScores.link') }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <IOManager
+      class="manager"
+      v-if="mfpMidiFile.buffer"
+      @inputChange="onInputChange"/>
 
     <div v-if="mfpMidiFile.buffer">
       <div class="control-button-container">
@@ -179,6 +180,9 @@ span.link {
 .index-scroll, .keyboard {
   display: inline-block;
   width: 100%;
+}
+.piano-roll {
+  max-height: 70vh; /* Dev approximation, adjust with feedback */
 }
 .keyboard {
   max-width: var(--score-width);
