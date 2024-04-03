@@ -275,9 +275,8 @@ export default {
     document.addEventListener('keyup',this.onKeyUp)
   },
   async mounted() {
-    console.log(this)
     this.performer.clear();
-    this.$emit("canPerform",true)
+
     this.performer.addListener('chronology', this.onChronology)
     this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
@@ -289,19 +288,27 @@ export default {
       console.log('buffer already full');
       await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer);
     } else {
-      console.log('wtf ? no buffer ?');
+      console.log('no buffer yet');
     }
+
+    // FIXME : delegate speed to the store so it reacts...
+    this.$refs.mainScrollBar?.resetSpeedDisplay();
+
+    this.$emit("canPerform", true)
   },
   beforeUnmount() {
-    console.log("MFP unmount")
     this.$emit("canPerform",false)
     this.performer.setMode('silent');
     this.ioctl.allNotesOff()
 
     document.removeEventListener('keydown',this.onKeyDown)
     document.removeEventListener('keyup',this.onKeyUp)
+
     this.performer.removeListener('chronology', this.onChronology)
     this.performer.removeListener('visualizerRedraw', this.onPianoRollRedraw)
+    this.performer.removeListener('userChangedIndex', this.onIndexJump)
+    this.performer.removeListener('allowHighlight', this.onAllowHighlight)
+
     this.visualizerReady = false
   },
   methods: {
@@ -349,11 +356,13 @@ export default {
     },
     async loadMfpMidiBuffer(buffer) {
       this.currentMode = 'silent';
+      // FIXME : delegate mode to store
       this.performer.setMode(this.currentMode);
-      this.performer.setPlaybackSpeed(1)
+
       await this.performer.loadArrayBuffer(buffer);
+
+      this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
-      this.$refs.mainScrollBar.resetSpeedDisplay();
     },
     onModeChange(mode) {
       this.performer.setMode(mode);

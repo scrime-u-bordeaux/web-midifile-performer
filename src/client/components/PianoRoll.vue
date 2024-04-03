@@ -117,11 +117,11 @@ export default {
     },
 
     sequenceStart(newStart, oldStart) {
-      this.redrawBoundary('start')
+      if(newStart !== oldStart) this.redrawBoundary('start')
     },
 
     sequenceEnd(newEnd, oldEnd) {
-      this.redrawBoundary('end')
+      if(newEnd !== oldEnd) this.redrawBoundary('end')
     }
   },
 

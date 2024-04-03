@@ -339,7 +339,6 @@ class MidifilePerformer extends EventEmitter {
 
   clear() {
     this.performer.clear();
-    this.emit('sequence', { length: 0, start: 0, end: 0 });
   }
 
   setSequenceIndex(sequenceIndex, killSound = true) {

@@ -50,7 +50,6 @@ class Synth extends EventEmitter {
     });
 
     this.noteBuffers = await Promise.all(promises);
-    console.log(this.noteBuffers);
     return Promise.resolve();
   }
 
@@ -144,14 +143,14 @@ class Synth extends EventEmitter {
 
   makePlayer(buffer, cutoff, playbackRate = 1) {
     const source = this.ctx.createBufferSource();
-    
+
     let b1 = Math.exp(-2 * Math.PI * cutoff / this.ctx.sampleRate);
     let a0 = (1 - b1);
     let feedForward = [ -a0, 0 ];
     let feedBack = [ 1, -b1 ];
     const onepole = this.ctx.createIIRFilter(feedForward, feedBack);
     // const biquad = this.ctx.createBiquadFilter();
- 
+
     const volume = this.ctx.createGain();
     const panner = this.ctx.createStereoPanner();
 
@@ -159,7 +158,7 @@ class Synth extends EventEmitter {
     source.playbackRate.value = playbackRate;
     source.connect(onepole);
     // source.connect(biquad);
-    
+
     onepole.connect(volume);
     // biquad.type = 'lowpass';
     // biquad.Q.value = 0.001;
