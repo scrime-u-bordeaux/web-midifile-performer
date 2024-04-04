@@ -118,7 +118,8 @@
     "beforeClick": "Veuillez cliquer sur la page pour charger le synthétiseur.",
     "fetched": "Samples récupérés :",
     "decoded": "Samples décodés :",
-    "midiAccess": "Demande d'accès MIDI au navigateur..."
+    "midiAccess": "Demande d'accès MIDI au navigateur",
+    "generic": "Chargement"
   },
   "notFound": "Cette page n'existe pas :("
 }

@@ -2,10 +2,10 @@
   <div class="loading-screen-container">
 
     <div class="access-message" v-if='!midiAccessRequested'>
-      {{ !midiAccessRequested ? $t('loading.midiAccess') : '' }}
+      {{ !midiAccessRequested ? $t('loading.midiAccess') + dynamicEllipses : '' }}
     </div>
 
-    <div class="sample-message" v-if='midiAccessRequested'>
+    <div class="sample-message" v-if='midiAccessRequested && synthNotesDecoded !== NUMBER_OF_SOUNDFILES'>
       <div class="fixed-message">
         {{ $t(userClickOccurred ? 'loading.afterClick' : 'loading.beforeClick') }}
       </div>
@@ -18,7 +18,13 @@
         </div>
       </div>
     </div>
+
+    <div class="generic-message"
+         v-if="midiAccessRequested && synthNotesDecoded === NUMBER_OF_SOUNDFILES && genericCondition"
+    >
+      {{ $t('loading.generic') + '...' }}
     </div>
+  </div>
 </template>
 
 <style scoped>
@@ -29,7 +35,7 @@
   justify-content: center;
   align-content: center;
 }
-.fixed-message, .access-message {
+.fixed-message, .access-message, .generic-message {
   color: #555;
   padding-bottom: 0.5rem;
 }
@@ -48,6 +54,7 @@ import { mapState } from 'vuex';
 
 export default {
   inject: [ 'NUMBER_OF_SOUNDFILES' ],
+  props: [ 'genericCondition' ],
   computed: {
     ...mapState([
       'midiAccessRequested',
@@ -55,6 +62,28 @@ export default {
       'synthNotesFetched',
       'synthNotesDecoded'
     ])
+  },
+  data() {
+    return {
+      dynamicEllipses: '',
+      intervalID: null
+    }
+  },
+  mounted() {
+    // For some reason, this only works when the loading screen is first mounted
+    // Any later mount will set the interval, but the callback will never be invoked.
+    // In practice this means the generic message can't have dynamic ellipses.
+    const callback = this.updateDynamicEllipses
+    this.intervalID = setInterval(callback, 500)
+  },
+  unmounted() {
+    clearInterval(this.intervalID)
+  },
+  methods: {
+    updateDynamicEllipses() {
+      if(this.dynamicEllipses === '...') this.dynamicEllipses = ''
+      else this.dynamicEllipses += '.'
+    }
   }
 }
 </script>

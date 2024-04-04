@@ -1,108 +1,110 @@
 <template>
-  <LoadingScreen v-if="displayLoadingScreen"/>
+  <div class="mfp-and-loading-container">
+    <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
-  <div v-else class="mfp-container"
-    @drop="onDrop"
-    @dragover="onDragOver">
+    <div v-show="!displayLoadingScreen" class="mfp-container"
+      @drop="onDrop"
+      @dragover="onDragOver">
 
-    <span class="contextualization" v-if="!mfpMidiFile.buffer">
-      <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
-      <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
-      <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
-    </span>
+      <span class="contextualization" v-if="!mfpMidiFile.buffer">
+        <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
+        <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
+        <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
+      </span>
 
-    <PianoRoll
-      class="piano-roll"
-      ref="pianoRoll"
-      v-show="visualizerReady"
-      @play="onPianoRollPlay"
-      @stop="onPianoRollStop"
-      @index="onIndexChange"
-      @start="onStartChange"
-      @end="onEndChange"
-      @ready="visualizerReady = true"/>
+      <PianoRoll
+        class="piano-roll"
+        ref="pianoRoll"
+        v-show="visualizerReady"
+        @play="onPianoRollPlay"
+        @stop="onPianoRollStop"
+        @index="onIndexChange"
+        @start="onStartChange"
+        @end="onEndChange"
+        @ready="visualizerReady = true"/>
 
-    <Keyboard
-      class="keyboard"
-      :minNote="minKeyboardNote"
-      :maxNote="maxKeyboardNote"
-      :state="keyboardState"
-      :whiteNoteWidth="15"/>
+      <Keyboard
+        class="keyboard"
+        :minNote="minKeyboardNote"
+        :maxNote="maxKeyboardNote"
+        :state="keyboardState"
+        :whiteNoteWidth="15"/>
 
-    <scroll-bar
-      ref="mainScrollBar"
-      v-if="mfpMidiFile.buffer"
-      class="index-scroll"
-      :has-bounds="true"
-      :start="sequenceStart"
-      :end="sequenceEnd"
-      :index="sequenceIndex"
-      :size="sequenceLength"
-      @modeChange="onModeChange"
-      @index="onIndexChange"
-      @start="onStartChange"
-      @end="onEndChange"
-      @speed="onSpeedChange"
-      @silence="onSilence"/>
+      <scroll-bar
+        ref="mainScrollBar"
+        v-if="mfpMidiFile.buffer"
+        class="index-scroll"
+        :has-bounds="true"
+        :start="sequenceStart"
+        :end="sequenceEnd"
+        :index="sequenceIndex"
+        :size="sequenceLength"
+        @modeChange="onModeChange"
+        @index="onIndexChange"
+        @start="onStartChange"
+        @end="onEndChange"
+        @speed="onSpeedChange"
+        @silence="onSilence"/>
 
-    <div class="file-input-wrapper">
-      <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-        <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
-        <label for="file" class="file-label">
-          {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
-        </label>
-        <div class="file-name-container" v-if="mfpMidiFile.buffer">
-          <div class="file-name">{{ trimmedTitle }}</div>
-          <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
-            {{ $t('midiFilePerformer.noScores.standalone') }}
-          </span>
-        </div>
-        <div class="search-score-hint" v-else>
-          {{ $t('midiFilePerformer.noScores.message') }}
-          <span class="link" @click="$router.push('/look-for-scores')">
-            {{ $t('midiFilePerformer.noScores.link') }}
-          </span>
+      <div class="file-input-wrapper">
+        <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
+          <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+          <label for="file" class="file-label">
+            {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
+          </label>
+          <div class="file-name-container" v-if="mfpMidiFile.buffer">
+            <div class="file-name">{{ trimmedTitle }}</div>
+            <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
+              {{ $t('midiFilePerformer.noScores.standalone') }}
+            </span>
+          </div>
+          <div class="search-score-hint" v-else>
+            {{ $t('midiFilePerformer.noScores.message') }}
+            <span class="link" @click="$router.push('/look-for-scores')">
+              {{ $t('midiFilePerformer.noScores.link') }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <IOManager
-      class="manager"
-      v-if="mfpMidiFile.buffer"
-      @inputChange="onInputChange"/>
+      <IOManager
+        class="manager"
+        v-if="mfpMidiFile.buffer"
+        @inputChange="onInputChange"/>
 
-    <div v-if="mfpMidiFile.buffer">
-      <div class="control-button-container">
+      <div v-if="mfpMidiFile.buffer">
+        <div class="control-button-container">
 
-        <button
-          @click="$router.push('/guide')">
-          {{ $t("midiFilePerformer.help") }}
-        </button>
+          <button
+            @click="$router.push('/guide')">
+            {{ $t("midiFilePerformer.help") }}
+          </button>
 
-        <button
-          style="display: none;"
-          @click="onClickExport"
-          :disabled="currentMode !== 'silent'">
-          {{ $t('midiFilePerformer.export') }}
-        </button>
-      </div>
+          <button
+            style="display: none;"
+            @click="onClickExport"
+            :disabled="currentMode !== 'silent'">
+            {{ $t('midiFilePerformer.export') }}
+          </button>
+        </div>
 
-      <div v-if="isInputKeyboard">
-        <span class="settings-toggle pseudo-link" @click="displayKeyboardSettings = !displayKeyboardSettings">
-          {{ $t('midiFilePerformer.keyboardVelocity.' + (!displayKeyboardSettings ? 'display' : 'hide')) }}
-        </span>
-        <div v-if="displayKeyboardSettings">
-          <div v-for="(velocity, category) in currentKeyboardVelocities" class="velocity-slider">
-            <scroll-bar class="velocity-scroll"
-              :hasBounds="false"
-              :start="MIN_VELOCITY"
-              :end="MAX_VELOCITY"
-              :index="velocity"
-              :size="MAX_VELOCITY+1"
-              :indexLabel="$t('midiFilePerformer.velocitySliders.'+category)"
-              @index="setRowVelocity($event, category)"
-              @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
-              />
+        <div v-if="isInputKeyboard">
+          <span class="settings-toggle pseudo-link" @click="displayKeyboardSettings = !displayKeyboardSettings">
+            {{ $t('midiFilePerformer.keyboardVelocity.' + (!displayKeyboardSettings ? 'display' : 'hide')) }}
+          </span>
+          <div v-if="displayKeyboardSettings">
+            <div v-for="(velocity, category) in currentKeyboardVelocities" class="velocity-slider">
+              <scroll-bar class="velocity-scroll"
+                :hasBounds="false"
+                :start="MIN_VELOCITY"
+                :end="MAX_VELOCITY"
+                :index="velocity"
+                :size="MAX_VELOCITY+1"
+                :indexLabel="$t('midiFilePerformer.velocitySliders.'+category)"
+                @index="setRowVelocity($event, category)"
+                @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
+                />
+            </div>
           </div>
         </div>
       </div>
@@ -111,6 +113,11 @@
 </template>
 
 <style scoped>
+.mfp-and-loading-container {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+}
 .mfp-container {
   display: flex;
   flex-direction: column;
@@ -223,6 +230,7 @@ export default {
   data() {
     return {
       fileName: noInputFileMsg,
+      loadingFlag: false,
       fileArrayBuffer: null,
       currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
       isInputKeyboard: true,
@@ -252,8 +260,10 @@ export default {
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
     },
     displayLoadingScreen() {
-      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
-        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
+      return ((!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
+        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES)
+        ||
+        this.loadingFlag
     },
     // TODO : we should work towards deprecating mode state duplication.
     currentMode: {
@@ -355,6 +365,8 @@ export default {
       reader.readAsArrayBuffer(file);
     },
     async loadMfpMidiBuffer(buffer) {
+      this.loadingFlag = true
+
       this.currentMode = 'silent';
       // FIXME : delegate mode to store
       this.performer.setMode(this.currentMode);
@@ -363,6 +375,8 @@ export default {
 
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
+
+      this.loadingFlag = false
     },
     onModeChange(mode) {
       this.performer.setMode(mode);

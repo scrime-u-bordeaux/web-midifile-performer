@@ -118,7 +118,8 @@
     "beforeClick": "Please click anywhere to load the synth.",
     "fetched": "Samples fetched:",
     "decoded": "Samples decoded:",
-    "midiAccess": "Requesting MIDI access from browser..."
+    "midiAccess": "Requesting MIDI access from browser",
+    "generic": "Loading"
   },
   "notFound": "This page doesn't exist :("
 }
