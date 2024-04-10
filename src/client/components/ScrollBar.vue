@@ -257,7 +257,6 @@ export default {
     return {
       currentMode: 'silent',
       dragging: null,
-      boundingRect: null,
       position: 0,
       refreshKey: 0,
       // index: 1,
@@ -282,6 +281,9 @@ export default {
       // return this.end - this.start + 1;
       console.log(this.size);
       return this.size;
+    },
+    boundingRect() {
+      return this.$refs['scroll-bar'].getBoundingClientRect();
     },
     cursorRadius() {
       if (!this.boundingRect) { return 0; }
