@@ -153,7 +153,21 @@ export default {
       this.convertChronologyToNoteSequence(chronology)
       this.setSize()
       this.draw()
-      // this.$refs.container.scrollLeft = 0 // onIndexJump now performs this by itself
+
+      // Okay, so, hello to future me or anyone who might be wondering what this setTimeout is.
+      // Normally, this shouldn't be needed.
+      // On loading a new file, the sequence index is set to 0 and the autoscroll goes to 0 too.
+      // ...except, right *after* that, and for no explainable reason,
+      // the container receives a scrollEvent with isTrusted set to true
+      // that cannot be cancelled, and that resets the scroll value to whatever it previously was.
+      // All my efforts to track down the origin of this scroll event,
+      // or to prevent its effects through CSS or JS,
+      // have failed. So instead, I do this.
+      // The setTimeout is necessary because the event is received after this function ends.
+      // Of course, like any setTimeout hack, it might not actually work on other machines.
+      // When it doesn't, we can look at this issue again.
+      // For now I need to move on. 
+      setTimeout(() => {this.$refs.container.scrollLeft = 0}, 50)
 
       this.$emit('ready')
     },

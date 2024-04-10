@@ -3,8 +3,7 @@
     <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
     <div v-show="!displayLoadingScreen" class="mfp-container"
-      @drop="onDrop"
-      @dragover="onDragOver">
+      @drop="onDrop">
 
       <span class="contextualization" v-if="!mfpMidiFile.buffer">
         <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
