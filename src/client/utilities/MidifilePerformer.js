@@ -182,7 +182,7 @@ function mergeTracks({ division, format, tracks }) {
 
 /**
  * Convert a C++-WASM vector of noteData to an array of JS objects.
- * Used by MidifilePerformer.loadArrayBuffer when setting up the note events
+ * Used by MidifilePerformer.loadMidifile when setting up the note events
  * callback : this.performer.setNoteEventsCallback(() => { ... });
  */
 function noteEventsFromNoteDataVector(notes) {
@@ -248,9 +248,9 @@ class MidifilePerformer extends EventEmitter {
     this.performer.setLooping(true);
   }
 
-  async loadArrayBuffer(buffer) {
+  async loadMidifile(jsonOrBuffer, isBuffer = true) {
     // this.emit('allnotesoff');
-    const midiJson = await parseMidiArrayBuffer(buffer);
+    const midiJson = isBuffer ? await parseMidiArrayBuffer(jsonOrBuffer) : jsonOrBuffer;
     const allNoteEvents = mergeTracks(midiJson);
     this.analyzer.analyze(allNoteEvents);
 

@@ -215,6 +215,7 @@ span.link {
 </style>
 
 <script>
+import { nextTick } from 'vue';
 import { mapMutations, mapState } from 'vuex';
 import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
@@ -225,11 +226,12 @@ import PianoRoll from '../components/PianoRoll.vue'
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
-  inject: [ 'ioctl', 'performer', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
+  inject: [ 'ioctl', 'performer', 'parseMusicXml', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
   components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll },
   data() {
     return {
       fileName: noInputFileMsg,
+      fileType: ".mid",
       loadingFlag: false,
       fileArrayBuffer: null,
       currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
@@ -257,7 +259,9 @@ export default {
     ]),
     trimmedTitle() {
       return this.mfpMidiFile.title.length < 45 ?
-        this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)+"... .mid"
+        this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)
+        + "... "
+        + this.fileType
     },
     displayLoadingScreen() {
       return ((!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
@@ -296,7 +300,7 @@ export default {
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
-      await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer);
+      await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer, this.isTrueBuffer());
     } else {
       console.log('no buffer yet');
     }
@@ -325,6 +329,11 @@ export default {
     ...mapMutations([
       'setMfpMidiFile',
     ]),
+    // Necessary to use the proper loading path on component remount
+    // If the loaded file is a MusicXML.
+    isTrueBuffer() {
+      return Object.getPrototypeOf(this.mfpMidiFile.buffer) === Object.getPrototypeOf(new ArrayBuffer())
+    },
     async onFileInput(e) {
 
       // if e.target.files is defined, the user uploaded through the button
@@ -341,10 +350,30 @@ export default {
         return matchesMidiSignature(signatureSlice)
       }
 
+      // Sadly, there seems to be no signature for musicxml files.
+      // Even MuseScore relies on extension, and so I will too.
+
+      const testForMusicXml = (file) => {
+        const extension = file.name.split('.').pop().toLowerCase()
+        return extension === "musicxml" || extension === "xml"
+      }
+
       const isFileSignatureMidi = await testForMidiSignature(file);
-      if(!isFileSignatureMidi) return;
+      const isFileMusicXml = testForMusicXml(file);
+      if(!(isFileSignatureMidi || isFileMusicXml)) return;
 
       this.fileName = file.name;
+      this.fileType = isFileSignatureMidi ? ".mid" : ".musicxml";
+
+      // TODO : change from fileReader to the Promise-based Blob API
+      // (so the operations are written in chronological order)
+
+      // Begin displaying loading screen immediately, not on loadMfpMidiFile.
+      // MusicXML file parsing also needs to be covered by the loading screen.
+      // Doing this inside the callback will not work, so this is the earliest possible point
+      // (until we use Blob instead)
+      this.loadingFlag = true;
+      await nextTick();
 
       const reader = new FileReader();
       reader.addEventListener('loadend', async readerEvent => {
@@ -354,24 +383,23 @@ export default {
             id: 'mfp',
             title: file.name,
             url: '',
-            buffer: readerEvent.target.result,
+            buffer: isFileSignatureMidi ? readerEvent.target.result : this.parseMusicXml(readerEvent.target.result),
           };
 
           this.setMfpMidiFile(mfpFile);
-          await this.loadMfpMidiBuffer(mfpFile.buffer);
+          await this.loadMfpMidiBuffer(mfpFile.buffer, isFileSignatureMidi);
         }
       });
 
-      reader.readAsArrayBuffer(file);
+      if(isFileSignatureMidi) reader.readAsArrayBuffer(file);
+      else reader.readAsText(file);
     },
-    async loadMfpMidiBuffer(buffer) {
-      this.loadingFlag = true
-
+    async loadMfpMidiBuffer(jsonOrBuffer, isBuffer) {
       this.currentMode = 'silent';
       // FIXME : delegate mode to store
       this.performer.setMode(this.currentMode);
 
-      await this.performer.loadArrayBuffer(buffer);
+      await this.performer.loadMidifile(jsonOrBuffer, isBuffer);
 
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
