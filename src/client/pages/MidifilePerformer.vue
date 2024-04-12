@@ -3,6 +3,7 @@
     <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
     <div v-show="!displayLoadingScreen" class="mfp-container"
+      @dragover="onDragOver"
       @drop="onDrop">
 
       <span class="contextualization" v-if="!mfpMidiFile.buffer">
