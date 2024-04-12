@@ -323,9 +323,6 @@ export default {
     document.addEventListener('mouseup', this.endDrag);
     document.addEventListener('keydown', this.onKeyDown);
   },
-  mounted() {
-    this.boundingRect = this.$refs['scroll-bar'].getBoundingClientRect();
-  },
   beforeUnmount() {
     document.removeEventListener('mousemove', this.drag);
     document.removeEventListener('mouseup', this.endDrag);
