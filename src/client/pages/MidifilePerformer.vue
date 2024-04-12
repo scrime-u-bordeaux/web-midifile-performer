@@ -365,34 +365,22 @@ export default {
       this.fileName = file.name;
       this.fileType = isFileSignatureMidi ? ".mid" : ".musicxml";
 
-      // TODO : change from fileReader to the Promise-based Blob API
-      // (so the operations are written in chronological order)
-
       // Begin displaying loading screen immediately, not on loadMfpMidiFile.
       // MusicXML file parsing also needs to be covered by the loading screen.
-      // Doing this inside the callback will not work, so this is the earliest possible point
-      // (until we use Blob instead)
       this.loadingFlag = true;
       await nextTick();
 
-      const reader = new FileReader();
-      reader.addEventListener('loadend', async readerEvent => {
-        if (readerEvent.target.readyState === FileReader.DONE) {
+      const fileContents = await (isFileSignatureMidi ? file.arrayBuffer() : file.text())
 
-          const mfpFile = {
-            id: 'mfp',
-            title: file.name,
-            url: '',
-            buffer: isFileSignatureMidi ? readerEvent.target.result : this.parseMusicXml(readerEvent.target.result),
-          };
+      const mfpFile = {
+        id: 'mfp',
+        title: file.name,
+        url: '',
+        buffer: isFileSignatureMidi ? fileContents : this.parseMusicXml(fileContents),
+      };
 
-          this.setMfpMidiFile(mfpFile);
-          await this.loadMfpMidiBuffer(mfpFile.buffer, isFileSignatureMidi);
-        }
-      });
-
-      if(isFileSignatureMidi) reader.readAsArrayBuffer(file);
-      else reader.readAsText(file);
+      this.setMfpMidiFile(mfpFile);
+      await this.loadMfpMidiBuffer(mfpFile.buffer, isFileSignatureMidi);
     },
     async loadMfpMidiBuffer(jsonOrBuffer, isBuffer) {
       this.currentMode = 'silent';
