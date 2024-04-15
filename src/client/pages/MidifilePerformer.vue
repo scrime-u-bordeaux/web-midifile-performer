@@ -53,7 +53,7 @@
             {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
           </label>
           <div class="file-name-container" v-if="mfpMidiFile.buffer">
-            <div class="file-name">{{ trimmedTitle }}</div>
+            <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
             <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
               {{ $t('midiFilePerformer.noScores.standalone') }}
             </span>
@@ -230,8 +230,6 @@ export default {
   components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll },
   data() {
     return {
-      fileName: noInputFileMsg,
-      fileType: ".mid",
       loadingFlag: false,
       fileArrayBuffer: null,
       currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
@@ -258,10 +256,13 @@ export default {
       'synthNotesDecoded'
     ]),
     trimmedTitle() {
-      return this.mfpMidiFile.title.length < 45 ?
-        this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,40)
-        + "... "
-        + this.fileType
+      return this.mfpMidiFile.title.replace(this.fileExtension, '').length < 45 ?
+        this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,45)
+        + " ... "
+        + this.fileExtension
+    },
+    fileExtension() {
+      return '.' + this.getFileExtension(this.mfpMidiFile.title)
     },
     displayLoadingScreen() {
       return ((!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
@@ -282,7 +283,12 @@ export default {
       set(mode) {
         if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
       }
-    }
+    },
+    // Necessary to use the proper loading path on component remount
+    // If the loaded file is a MusicXML.
+    isTrueBuffer() {
+      return Object.getPrototypeOf(this.mfpMidiFile.buffer) === Object.getPrototypeOf(new ArrayBuffer())
+    },
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
@@ -300,7 +306,7 @@ export default {
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
-      await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer, this.isTrueBuffer());
+      await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer, this.isTrueBuffer);
     } else {
       console.log('no buffer yet');
     }
@@ -329,11 +335,11 @@ export default {
     ...mapMutations([
       'setMfpMidiFile',
     ]),
-    // Necessary to use the proper loading path on component remount
-    // If the loaded file is a MusicXML.
-    isTrueBuffer() {
-      return Object.getPrototypeOf(this.mfpMidiFile.buffer) === Object.getPrototypeOf(new ArrayBuffer())
-    },
+
+    // -------------------------------------------------------------------------
+    // -------------------------FILE INPUT LOGIC--------------------------------
+    // -------------------------------------------------------------------------
+
     async onFileInput(e) {
 
       // if e.target.files is defined, the user uploaded through the button
@@ -354,7 +360,7 @@ export default {
       // Even MuseScore relies on extension, and so I will too.
 
       const testForMusicXml = (file) => {
-        const extension = file.name.split('.').pop().toLowerCase()
+        const extension = this.getFileExtension(file.name)
         return {
           isMusicXml: ["xml", "musicxml", "mxl"].includes(extension),
           isCompressed: extension === "mxl"
@@ -364,11 +370,6 @@ export default {
       const isFileSignatureMidi = await testForMidiSignature(file);
       const isFileMusicXml = testForMusicXml(file);
       if(!(isFileSignatureMidi || isFileMusicXml.isMusicXml)) return;
-
-      this.fileName = file.name;
-      this.fileType = isFileSignatureMidi ?
-        ".mid" :
-        isFileMusicXml.isCompressed ? ".mxl" : ".musicxml";
 
       // Begin displaying loading screen immediately, not on loadMfpMidiFile.
       // MusicXML file parsing also needs to be covered by the loading screen.
@@ -386,15 +387,26 @@ export default {
         url: '',
         buffer: isFileSignatureMidi ?
           fileContents :
-          this.parseMusicXml(isFileMusicXml.isCompressed ?
-            await this.getRootFileFromMxl(file) :
-            fileContents
-          )
+          this.musicXmlToMidi(
+            isFileMusicXml.isCompressed ?
+              await this.getRootFileFromMxl(file) :
+              fileContents
+            )
       };
 
       this.setMfpMidiFile(mfpFile);
       await this.loadMfpMidiBuffer(mfpFile.buffer, isFileSignatureMidi);
     },
+
+    musicXmlToMidi(xmlString) {
+      try {
+        return this.parseMusicXml(xmlString)
+      } catch(e) {
+        this.loadingFlag = false;
+        throw new Error("MusicXML parsing failed", {cause: e});
+      }
+    },
+
     async loadMfpMidiBuffer(jsonOrBuffer, isBuffer) {
       this.currentMode = 'silent';
       // FIXME : delegate mode to store
@@ -407,6 +419,11 @@ export default {
 
       this.loadingFlag = false
     },
+
+    // -------------------------------------------------------------------------
+    // --------------------------EVENT HANDLERS---------------------------------
+    // -------------------------------------------------------------------------
+
     onModeChange(mode) {
       this.performer.setMode(mode);
       if(mode === 'silent') this.$refs.pianoRoll.stop()
@@ -414,12 +431,11 @@ export default {
     onChronology(chronology) {
       this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
-    onPianoRollRedraw(referenceSetIndex) {
-      this.$refs.pianoRoll.refresh(referenceSetIndex)
-    },
+
     onInputChange(input) {
       this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
     },
+
     onStartChange(i) {
       this.performer.setSequenceBounds(i, this.sequenceEnd);
     },
@@ -436,18 +452,17 @@ export default {
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
     },
+
     onSpeedChange(s) {
       this.performer.setPlaybackSpeed(s);
     },
+
     onSilence() {
       if (this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
       else this.performer.setMode('silent') // simply silence if perform mode
       this.$refs.pianoRoll.stop()
     },
-    setRowVelocity(i, category) {
-      this.currentKeyboardVelocities[category] = i
-      this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
-    },
+
     async onDrop(e) {
       e.preventDefault()
       await this.onFileInput(e)
@@ -455,6 +470,7 @@ export default {
     onDragOver(e) {
       e.preventDefault()
     },
+
     onKeyDown(e) {
       if(e.code === 'Space') {
         e.preventDefault()
@@ -475,14 +491,31 @@ export default {
         }
       }
     },
+
     onAllowHighlight(allow) {
       this.$refs.pianoRoll.allowHighlight = allow
+    },
+    onPianoRollRedraw(referenceSetIndex) {
+      this.$refs.pianoRoll.refresh(referenceSetIndex)
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)
     },
     onPianoRollStop() {
       this.ioctl.allNotesOff()
+    },
+
+    // -------------------------------------------------------------------------
+    // -------------------------------MISC--------------------------------------
+    // -------------------------------------------------------------------------
+
+    setRowVelocity(i, category) {
+      this.currentKeyboardVelocities[category] = i
+      this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
+    },
+
+    getFileExtension(fileName) {
+      return fileName.split('.').pop().toLowerCase()
     }
   }
 };

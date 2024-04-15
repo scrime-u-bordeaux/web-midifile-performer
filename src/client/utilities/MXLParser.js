@@ -4,7 +4,9 @@ import { BlobReader, ZipReader, TextWriter } from '@zip.js/zip.js'
 // Test on Windows to see if it works !
 const CONTAINER_FILENAME = 'META-INF/container.xml'
 
-const ROOTFILE_TAG = '<rootfile'
+const ROOTFILE_TAG = '<rootfile' // note that this will actually start the slice at the <rootfiles> node
+// not <rootfile>. But it's irrelevant for us. 
+
 // The rootfile tag can be or not be self-closing.
 const SELF_CLOSER = '/>'
 const NON_SELF_CLOSER = "</rootfile>"
