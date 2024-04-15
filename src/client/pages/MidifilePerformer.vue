@@ -226,7 +226,7 @@ import PianoRoll from '../components/PianoRoll.vue'
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
-  inject: [ 'ioctl', 'performer', 'parseMusicXml', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
+  inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
   components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll },
   data() {
     return {
@@ -355,28 +355,41 @@ export default {
 
       const testForMusicXml = (file) => {
         const extension = file.name.split('.').pop().toLowerCase()
-        return extension === "musicxml" || extension === "xml"
+        return {
+          isMusicXml: ["xml", "musicxml", "mxl"].includes(extension),
+          isCompressed: extension === "mxl"
+        }
       }
 
       const isFileSignatureMidi = await testForMidiSignature(file);
       const isFileMusicXml = testForMusicXml(file);
-      if(!(isFileSignatureMidi || isFileMusicXml)) return;
+      if(!(isFileSignatureMidi || isFileMusicXml.isMusicXml)) return;
 
       this.fileName = file.name;
-      this.fileType = isFileSignatureMidi ? ".mid" : ".musicxml";
+      this.fileType = isFileSignatureMidi ?
+        ".mid" :
+        isFileMusicXml.isCompressed ? ".mxl" : ".musicxml";
 
       // Begin displaying loading screen immediately, not on loadMfpMidiFile.
       // MusicXML file parsing also needs to be covered by the loading screen.
       this.loadingFlag = true;
       await nextTick();
 
+      // TODO : this isn't the most elegant thing, since, if the MXL file is compressed,
+      // We ignore this entirely and pass the blob as-is to the zip.js lib.
+      // Still, I prefer it to having a triple if, or worse, a switch for something so innocuous.
       const fileContents = await (isFileSignatureMidi ? file.arrayBuffer() : file.text())
 
       const mfpFile = {
         id: 'mfp',
         title: file.name,
         url: '',
-        buffer: isFileSignatureMidi ? fileContents : this.parseMusicXml(fileContents),
+        buffer: isFileSignatureMidi ?
+          fileContents :
+          this.parseMusicXml(isFileMusicXml.isCompressed ?
+            await this.getRootFileFromMxl(file) :
+            fileContents
+          )
       };
 
       this.setMfpMidiFile(mfpFile);

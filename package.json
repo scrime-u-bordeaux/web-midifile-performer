@@ -22,6 +22,7 @@
   "dependencies": {
     "@grame/guidolib": "^1.7.12",
     "@vue/server-renderer": "^3.2.23",
+    "@zip.js/zip.js": "^2.7.41",
     "connect-history-api-fallback": "^1.6.0",
     "express": "^4.17.1",
     "json-midi-encoder": "^5.0.49",
