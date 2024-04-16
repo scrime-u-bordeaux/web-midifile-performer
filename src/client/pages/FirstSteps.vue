@@ -212,7 +212,7 @@ export default {
       'setFirstStepsMidiFile',
     ]),
     async loadFirstStepsMidiFile() {
-      await this.performer.loadArrayBuffer(this.firstStepsMidiFile.buffer);
+      await this.performer.loadMidifile(this.firstStepsMidiFile.buffer);
       this.performer.setMode('silent');
       this.performer.setPlaybackSpeed(1)
       this.performer.addListener('index', this.onPerformerIndexChange);
