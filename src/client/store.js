@@ -34,7 +34,7 @@ const store = createStore({
       currentInputId: 0,
       currentOutputId: 0,
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
-      mfpMidiFile: { id: 'mfp', title: '', url: '', buffer: null },
+      mfpMidiFile: { id: 'mfp', title: '', url: '', isMidi: true, buffer: null },
       minKeyboardNote,
       maxKeyboardNote,
       keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),

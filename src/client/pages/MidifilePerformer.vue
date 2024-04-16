@@ -2,7 +2,11 @@
   <div class="mfp-and-loading-container">
     <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
-    <div v-show="!displayLoadingScreen" class="mfp-container"
+    <!--Using v-if won't work because we need access to the elements.
+    Using v-show won't work because it would make the width 0
+    (and sheet music needs an actual width to render)-->
+
+    <div class="mfp-container" :class="displayLoadingScreen ? 'hide' : 'show'"
       @dragover="onDragOver"
       @drop="onDrop">
 
@@ -12,7 +16,9 @@
         <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
       </span>
 
-      <PianoRoll
+      <SheetMusic class="sheet-music" ref="sheetMusic"/>
+
+      <!-- <PianoRoll
         class="piano-roll"
         ref="pianoRoll"
         v-show="visualizerReady"
@@ -21,7 +27,7 @@
         @index="onIndexChange"
         @start="onStartChange"
         @end="onEndChange"
-        @ready="visualizerReady = true"/>
+        @ready="visualizerReady = true"/> -->
 
       <Keyboard
         class="keyboard"
@@ -119,11 +125,20 @@
   align-content: center;
 }
 .mfp-container {
+  position: absolute;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 500px;
+}
+.mfp-container.hide {
+  z-index: -100;
+  opacity: 0;
+}
+.mfp-container.show {
+  z-index: auto;
+  opacity: 1;
 }
 .contextualization {
   color: #777;
@@ -188,7 +203,7 @@ span.link {
   display: inline-block;
   width: 100%;
 }
-.piano-roll {
+.piano-roll, .sheet-music {
   max-height: 70vh; /* Dev approximation, adjust with feedback */
 }
 .keyboard {
@@ -222,12 +237,13 @@ import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
 import PianoRoll from '../components/PianoRoll.vue'
+import SheetMusic from '../components/SheetMusic.vue'
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll },
+  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic },
   data() {
     return {
       loadingFlag: false,
@@ -283,12 +299,7 @@ export default {
       set(mode) {
         if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
       }
-    },
-    // Necessary to use the proper loading path on component remount
-    // If the loaded file is a MusicXML.
-    isTrueBuffer() {
-      return Object.getPrototypeOf(this.mfpMidiFile.buffer) === Object.getPrototypeOf(new ArrayBuffer())
-    },
+    }
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
@@ -306,7 +317,9 @@ export default {
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
-      await this.loadMfpMidiBuffer(this.mfpMidiFile.buffer, this.isTrueBuffer);
+      this.loadingFlag = true;
+      await this.performer.loadMidifile(this.mfpMidiFile.buffer, this.mfpMidiFile.isMidi);
+      this.loadingFlag = false;
     } else {
       console.log('no buffer yet');
     }
@@ -376,26 +389,28 @@ export default {
       this.loadingFlag = true;
       await nextTick();
 
-      // TODO : this isn't the most elegant thing, since, if the MXL file is compressed,
-      // We ignore this entirely and pass the blob as-is to the zip.js lib.
-      // Still, I prefer it to having a triple if, or worse, a switch for something so innocuous.
-      const fileContents = await (isFileSignatureMidi ? file.arrayBuffer() : file.text())
+      this.preparePerformerForLoad()
+
+      const fileContents = await (
+        isFileSignatureMidi ? file.arrayBuffer() :
+        isFileMusicXml.isCompressed ?
+          this.getRootFileFromMxl(file) :
+          file.text()
+      )
 
       const mfpFile = {
         id: 'mfp',
         title: file.name,
         url: '',
-        buffer: isFileSignatureMidi ?
-          fileContents :
-          this.musicXmlToMidi(
-            isFileMusicXml.isCompressed ?
-              await this.getRootFileFromMxl(file) :
-              fileContents
-            )
+        isMidi: isFileSignatureMidi,
+        musicXmlString: isFileSignatureMidi ? '' : fileContents,
+        buffer: isFileSignatureMidi ? fileContents : this.musicXmlToMidi(fileContents)
       };
 
       this.setMfpMidiFile(mfpFile);
-      await this.loadMfpMidiBuffer(mfpFile.buffer, isFileSignatureMidi);
+      await this.performer.loadMidifile(mfpFile.buffer, isFileSignatureMidi);
+
+      this.loadingFlag = false;
     },
 
     musicXmlToMidi(xmlString) {
@@ -407,44 +422,31 @@ export default {
       }
     },
 
-    async loadMfpMidiBuffer(jsonOrBuffer, isBuffer) {
-      this.currentMode = 'silent';
-      // FIXME : delegate mode to store
-      this.performer.setMode(this.currentMode);
-
-      await this.performer.loadMidifile(jsonOrBuffer, isBuffer);
-
-      this.performer.setPlaybackSpeed(1)
-      this.performer.setSequenceIndex(0);
-
-      this.loadingFlag = false
-    },
-
     // -------------------------------------------------------------------------
     // --------------------------EVENT HANDLERS---------------------------------
     // -------------------------------------------------------------------------
 
     onModeChange(mode) {
       this.performer.setMode(mode);
-      if(mode === 'silent') this.$refs.pianoRoll.stop()
+      // if(mode === 'silent') this.$refs.pianoRoll.stop()
     },
     onChronology(chronology) {
-      this.$refs.pianoRoll.updateNoteSequence(chronology)
+      // this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
 
     onInputChange(input) {
-      this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
+      // this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
     },
 
     onStartChange(i) {
-      this.performer.setSequenceBounds(i, this.sequenceEnd);
+      // this.performer.setSequenceBounds(i, this.sequenceEnd);
     },
     onIndexChange(i) {
       // scrollbar callback, i is chordSequence index
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
-      this.$refs.pianoRoll.stop();
+      // this.$refs.pianoRoll.stop()
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
       if(!!this.$refs.pianoRoll) this.$refs.pianoRoll.onIndexJump(i);
@@ -460,7 +462,7 @@ export default {
     onSilence() {
       if (this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
       else this.performer.setMode('silent') // simply silence if perform mode
-      this.$refs.pianoRoll.stop()
+      // this.$refs.pianoRoll.stop()
     },
 
     async onDrop(e) {
@@ -493,10 +495,10 @@ export default {
     },
 
     onAllowHighlight(allow) {
-      this.$refs.pianoRoll.allowHighlight = allow
+      // this.$refs.pianoRoll.allowHighlight = allow
     },
     onPianoRollRedraw(referenceSetIndex) {
-      this.$refs.pianoRoll.refresh(referenceSetIndex)
+      // this.$refs.pianoRoll.refresh(referenceSetIndex)
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)
@@ -508,6 +510,14 @@ export default {
     // -------------------------------------------------------------------------
     // -------------------------------MISC--------------------------------------
     // -------------------------------------------------------------------------
+
+    preparePerformerForLoad() {
+      this.currentMode = 'silent';
+      // FIXME : delegate mode to store
+      this.performer.setMode(this.currentMode);
+      this.performer.setPlaybackSpeed(1)
+      this.performer.setSequenceIndex(0);
+    },
 
     setRowVelocity(i, category) {
       this.currentKeyboardVelocities[category] = i

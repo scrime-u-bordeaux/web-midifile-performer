@@ -4,8 +4,10 @@ import { i18n } from './utilities/I18n'
 import ioctl, { defaultInputs, defaultVelocities, DEFAULT_IO_ID } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth, { NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }  from './utilities/Synth';
+
 import parseMusicXml from './utilities/MusicXMLParser'
 import getRootFileFromMxl from './utilities/MXLParser'
+
 import store              from './store';
 import router             from './router';
 import App                from './App.vue';
