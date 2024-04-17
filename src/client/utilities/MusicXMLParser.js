@@ -118,7 +118,7 @@ export default function parseMusicXml(buffer) {
   // This can be stored in a single place.
   let measureEnd = 0
 
-  xmlScore.measures.forEach((measure, index) => {
+  xmlScore.measures.forEach(measure => {
 
     for(const partID in measure.parts) {
       const partTrack = trackMap.get(partID)

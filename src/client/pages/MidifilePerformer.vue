@@ -16,10 +16,22 @@
         <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
       </span>
 
-      <SheetMusic class="sheet-music" ref="sheetMusic"/>
+      <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
+        <img :src="`pics/piano_roll_icon_${pianoRollSelected ? 'enabled' : 'disabled'}.png`"
+          @click="selectedVisualizer = 'pianoRoll'"/>
+        <img :src="`pics/music_notes_icon_${sheetMusicSelected ? 'enabled' : 'disabled'}.png`"
+          @click="selectedVisualizer = 'sheetMusic'"/>
+      </div>
 
-      <!-- <PianoRoll
+      <SheetMusic
+        class="sheet-music"
+        :class="sheetMusicSelected ? 'show' : 'hide'"
+        ref="sheetMusic"
+      />
+
+      <PianoRoll
         class="piano-roll"
+        :class="pianoRollSelected ? 'show' : 'hide'"
         ref="pianoRoll"
         v-show="visualizerReady"
         @play="onPianoRollPlay"
@@ -27,7 +39,7 @@
         @index="onIndexChange"
         @start="onStartChange"
         @end="onEndChange"
-        @ready="visualizerReady = true"/> -->
+        @ready="visualizerReady = true"/>
 
       <Keyboard
         class="keyboard"
@@ -148,6 +160,16 @@
   margin-top: 4px;
   margin-bottom: 4px;
 }
+.visualizer-selector {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1em;
+}
+.visualizer-selector img {
+  width: 5%;
+  height: 5%;
+  cursor: pointer;
+}
 .manager {
   width: fit-content;
   max-width: var(--score-width);
@@ -206,6 +228,13 @@ span.link {
 .piano-roll, .sheet-music {
   max-height: 70vh; /* Dev approximation, adjust with feedback */
 }
+.piano-roll.hide, .sheet-music.hide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -100;
+  opacity: 0;
+}
 .keyboard {
   max-width: var(--score-width);
 }
@@ -246,6 +275,7 @@ export default {
   components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic },
   data() {
     return {
+      selectedVisualizer: "pianoRoll",
       loadingFlag: false,
       fileArrayBuffer: null,
       currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
@@ -271,6 +301,12 @@ export default {
       'sequenceLength',
       'synthNotesDecoded'
     ]),
+    pianoRollSelected() {
+      return this.selectedVisualizer === "pianoRoll"
+    },
+    sheetMusicSelected() {
+      return this.selectedVisualizer === "sheetMusic"
+    },
     trimmedTitle() {
       return this.mfpMidiFile.title.replace(this.fileExtension, '').length < 45 ?
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,45)
@@ -299,6 +335,11 @@ export default {
       set(mode) {
         if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
       }
+    }
+  },
+  watch: {
+    mfpMidiFile(newFile, oldFile) {
+      if(newFile.isMidi) this.selectedVisualizer = "pianoRoll"
     }
   },
   created() {
@@ -428,10 +469,10 @@ export default {
 
     onModeChange(mode) {
       this.performer.setMode(mode);
-      // if(mode === 'silent') this.$refs.pianoRoll.stop()
+      if(mode === 'silent') this.$refs.pianoRoll.stop()
     },
     onChronology(chronology) {
-      // this.$refs.pianoRoll.updateNoteSequence(chronology)
+      this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
 
     onInputChange(input) {
@@ -439,14 +480,14 @@ export default {
     },
 
     onStartChange(i) {
-      // this.performer.setSequenceBounds(i, this.sequenceEnd);
+      this.performer.setSequenceBounds(i, this.sequenceEnd);
     },
     onIndexChange(i) {
       // scrollbar callback, i is chordSequence index
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
-      // this.$refs.pianoRoll.stop()
+      this.$refs.pianoRoll.stop()
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
       if(!!this.$refs.pianoRoll) this.$refs.pianoRoll.onIndexJump(i);
@@ -462,7 +503,7 @@ export default {
     onSilence() {
       if (this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
       else this.performer.setMode('silent') // simply silence if perform mode
-      // this.$refs.pianoRoll.stop()
+      this.$refs.pianoRoll.stop()
     },
 
     async onDrop(e) {
@@ -495,10 +536,10 @@ export default {
     },
 
     onAllowHighlight(allow) {
-      // this.$refs.pianoRoll.allowHighlight = allow
+      this.$refs.pianoRoll.allowHighlight = allow
     },
     onPianoRollRedraw(referenceSetIndex) {
-      // this.$refs.pianoRoll.refresh(referenceSetIndex)
+      this.$refs.pianoRoll.refresh(referenceSetIndex)
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)

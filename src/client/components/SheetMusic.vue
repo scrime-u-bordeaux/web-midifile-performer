@@ -27,6 +27,7 @@ export default {
       zoom: 0.5,
       osmd: null, // because the OSMD constructor requires a container argument, it cannot just be injected.
       osmdOptions: {
+        autoResize: false,
         backend: "svg" // see if we change this later
       }
     }
