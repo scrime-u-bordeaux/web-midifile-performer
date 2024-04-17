@@ -57,10 +57,10 @@ export default {
       sequenceBoundarySpacing: 1,
       sequenceBoundaryRGB: '2, 167, 240',
 
-      // apparently, Vue can't handle defining data from computed properties,
-      // so I can't rely on mapState for the starting values here.
-      minPitch: 127,
-      maxPitch: 0,
+      // Always use a fixed size based off extrema pitches 21 and 108 offset by 4 each.
+
+      minPitch: 17,
+      maxPitch: 112,
 
       // The main visualizer model, adapted from Magenta's own.
       // Contains notes with their MFP information,
@@ -127,17 +127,14 @@ export default {
   },
 
   mounted() {
+    this.containerWidth = this.$refs.container.getBoundingClientRect().width
+
     document.addEventListener('keydown', this.onKeyDown)
     document.addEventListener('keyup', this.onKeyUp)
     this.$refs.container.addEventListener('wheel', this.onWheel)
     // TODO : add sync on scroll rather than just click ?
     // Or would we prefer scroll to stay a simple "peek" operation ?
     //this.$refs.container.addEventListener('scroll', this.onContainerScroll)
-  },
-
-  updated() { // for some reason, the width of this component changes after mount
-    // so this is the right hook to use.
-    this.containerWidth = this.$refs.container.getBoundingClientRect().width
   },
 
   beforeUnmount() {
@@ -167,10 +164,8 @@ export default {
       // The setTimeout is necessary because the event is received after this function ends.
       // Of course, like any setTimeout hack, it might not actually work on other machines.
       // When it doesn't, we can look at this issue again.
-      // For now I need to move on. 
+      // For now I need to move on.
       setTimeout(() => {this.$refs.container.scrollLeft = 0}, 50)
-
-      this.$emit('ready')
     },
 
     draw() {
@@ -555,26 +550,13 @@ export default {
     // Used to return the width and height instead of mutating them.
 
     setSize() {
-
-      // TODO : we don't have to do this every time...
-
-      this.minPitch = 127
-      this.maxPitch = 0
-
-      this.noteSequence.forEach(note => {
-        this.minPitch = Math.min(this.minPitch, note.pitch);
-        this.maxPitch = Math.max(this.maxPitch, note.pitch);
-      })
-
-      // Keep "padding" norms from Magenta. Adjust as needed.
-      // This means we have to deal with it in the parent element, though.
-
-      this.minPitch -= 4;
-      this.maxPitch += 4;
-
-      this.height = (this.maxPitch - this.minPitch) * this.noteHeight
+      this.height = Math.max(
+        this.$refs.container.getBoundingClientRect().height,
+        (this.maxPitch - this.minPitch) * this.noteHeight
+      )
 
       const endTime = this.noteSequence[this.noteSequence.length - 1].endTime
+
       this.width =
         endTime * this.pixelsPerTimeStep +
         2*(this.sequenceBoundaryWidth) + this.sequenceBoundarySpacing
@@ -607,7 +589,10 @@ export default {
       // "The svg' y=0 is at the top, but a smaller pitch is actually
       // lower, so we're kind of painting backwards"
 
-      const y = this.height - ((note.pitch - this.minPitch) * this.noteHeight)
+      const y = this.height -
+        (this.height / ((this.maxPitch - this.minPitch + 1) * this.noteHeight)
+          * (note.pitch - this.minPitch) * this.noteHeight
+        )
 
       return {x, y, w, h: this.noteHeight}
     },

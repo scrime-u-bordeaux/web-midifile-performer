@@ -25,21 +25,19 @@
 
       <SheetMusic
         class="sheet-music"
-        :class="sheetMusicSelected ? 'show' : 'hide'"
+        :class="!mfpMidiFile.isMidi && mfpMidiFile.buffer && sheetMusicSelected ? 'show' : 'hide'"
         ref="sheetMusic"
       />
 
       <PianoRoll
         class="piano-roll"
-        :class="pianoRollSelected ? 'show' : 'hide'"
+        :class="mfpMidiFile.buffer && pianoRollSelected ? 'show' : 'hide'"
         ref="pianoRoll"
-        v-show="visualizerReady"
         @play="onPianoRollPlay"
         @stop="onPianoRollStop"
         @index="onIndexChange"
         @start="onStartChange"
-        @end="onEndChange"
-        @ready="visualizerReady = true"/>
+        @end="onEndChange"/>
 
       <Keyboard
         class="keyboard"
@@ -226,7 +224,7 @@ span.link {
   width: 100%;
 }
 .piano-roll, .sheet-music {
-  max-height: 70vh; /* Dev approximation, adjust with feedback */
+  height: 70vh; /* Dev approximation, adjust with feedback */
 }
 .piano-roll.hide, .sheet-music.hide {
   position: absolute;
@@ -283,7 +281,6 @@ export default {
       displayKeyboardSettings: false,
       spacePressed: false,
       pauseWithRelease: false,
-      visualizerReady: false,
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
@@ -382,8 +379,6 @@ export default {
     this.performer.removeListener('visualizerRedraw', this.onPianoRollRedraw)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
     this.performer.removeListener('allowHighlight', this.onAllowHighlight)
-
-    this.visualizerReady = false
   },
   methods: {
     ...mapMutations([
