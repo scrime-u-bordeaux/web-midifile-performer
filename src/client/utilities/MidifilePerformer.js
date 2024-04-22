@@ -251,6 +251,10 @@ class MidifilePerformer extends EventEmitter {
   async loadMidifile(jsonOrBuffer, isBuffer = true) {
     // this.emit('allnotesoff');
     const midiJson = isBuffer ? await parseMidiArrayBuffer(jsonOrBuffer) : jsonOrBuffer;
+
+    if(!isBuffer) // A list of absolute-delta tempo events is included in midi JSONs parsed from MusicXML files.
+      this.emit('musicXmlTempos', jsonOrBuffer.tempoEvents) // They are for the OSMD visualizer. Pass them along.
+
     const allNoteEvents = mergeTracks(midiJson);
     this.analyzer.analyze(allNoteEvents);
 
@@ -298,7 +302,7 @@ class MidifilePerformer extends EventEmitter {
       if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet)
         // in passive playback, only redraw on note on's
         // in perform, note offs may dynamically cancel, so redraw on both
-        this.emit('visualizerRedraw', this.#getCurrentIndex())
+        this.emit('visualizerRefresh', this.#getCurrentIndex())
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :

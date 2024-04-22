@@ -33,16 +33,31 @@ const store = createStore({
       outputs: {},
       currentInputId: 0,
       currentOutputId: 0,
+
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
       mfpMidiFile: { id: 'mfp', title: '', url: '', isMidi: true, buffer: null },
+
+      // Model shared by visualizers.
+      // TODO : move it in a more logical place.
+      // setStarts and setEnds register the indices where sets start and begin in noteSequence
+      noteSequence: [],
+      setStarts: [],
+      setEnds: [],
+
+      // Model cache for OSMD visualizer alone.
+      // I don't really know if it can be put elsewhere.
+      osmdCursorAnchors: [],
+
       minKeyboardNote,
       maxKeyboardNote,
       keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),
+      
       sequenceLength: 0,
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
-      performModeStartedAt: 0,
+
+      performModeStartedAt: 0, // hack, aim to remove by storing mode here instead
       midiAccessRequested: false,
       userClickOccurred: false,
       synthNotesFetched: 0,
@@ -72,6 +87,18 @@ const store = createStore({
     },
     setMfpMidiFile(state, file) {
       state.mfpMidiFile = { ...file };
+    },
+    setNoteSequence(state, sequence) {
+      state.noteSequence = sequence;
+    },
+    setSetStarts(state, starts) {
+      state.setStarts = starts;
+    },
+    setSetEnds(state, ends) {
+      state.setEnds = ends;
+    },
+    setOsmdCursorAnchors(state, anchors) {
+      state.osmdCursorAnchors = anchors
     },
     animateNoteOn(state, note) {
       if (note.pitch >= state.minKeyboardNote &&

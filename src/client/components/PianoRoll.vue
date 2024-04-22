@@ -27,7 +27,7 @@ svg {
  * https://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { mapState } from 'vuex'
+import { mapState, mapMutations } from 'vuex'
 
 export default {
 
@@ -145,10 +145,18 @@ export default {
 
   methods: {
 
+    ...mapMutations(['setNoteSequence', 'setSetStarts', 'setSetEnds']),
+
     updateNoteSequence(chronology) {
 
       this.clear()
+
       this.convertChronologyToNoteSequence(chronology)
+
+      this.setNoteSequence(this.noteSequence)
+      this.setSetStarts(this.setStarts)
+      this.setSetEnds(this.setEnds)
+
       this.setSize()
       this.draw()
 

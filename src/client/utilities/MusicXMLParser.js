@@ -259,10 +259,31 @@ export default function parseMusicXml(buffer) {
     }
   })
 
+  // TODO : this isn't very semantically relevant, but it's the best place in the code flow to do so :
+  // The OSMD visualizer is going to require a list of ABSOLUTE DELTA tempo events to convert its cursor's fraction timestamps
+  // And this point is the only place in the entire program where we have absolute delta tempo events at our disposal.
+
+  const tempoEvents = Array.from(trackMap.values())
+  .flatMap(
+    track => track.events.filter(event => !!event.setTempo)
+  ).map(
+    // OSMD uses a fraction of whole notes, so we divide by 4 after getting the amount in quarters
+    event => {
+      return { delta: event.delta / (4 * divisions), setTempo: event.setTempo }
+    }
+  ).sort(
+    (eventA, eventB) => eventA.delta - eventB.delta
+  )
+
+  // Worse yet : we can't emit from there, because this isn't a class
+  // (and it has no reason to be ! This isn't a sufficient reason to change that)
+  // So instead, we pass this data along in the midiJson, for transmission by MFP.js.
+
   const midiJson = {
     division: divisions,
     format: 1,
-    tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events))
+    tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
+    tempoEvents: tempoEvents
   }
 
   return midiJson

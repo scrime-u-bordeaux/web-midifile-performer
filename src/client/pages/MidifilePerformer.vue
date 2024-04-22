@@ -347,7 +347,8 @@ export default {
     this.performer.clear();
 
     this.performer.addListener('chronology', this.onChronology)
-    this.performer.addListener('visualizerRedraw', this.onPianoRollRedraw)
+    this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
+    this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
     // temporary !!
     // TODO : phase out with unification of mode state into store
@@ -376,7 +377,8 @@ export default {
     document.removeEventListener('keyup',this.onKeyUp)
 
     this.performer.removeListener('chronology', this.onChronology)
-    this.performer.removeListener('visualizerRedraw', this.onPianoRollRedraw)
+    this.performer.removeListener('musicXmlTempos', this.onMusicXmlTempos)
+    this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
     this.performer.removeListener('allowHighlight', this.onAllowHighlight)
   },
@@ -469,6 +471,9 @@ export default {
     onChronology(chronology) {
       this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
+    onMusicXmlTempos(tempoEvents) {
+      this.$refs.sheetMusic.setTempoEvents(tempoEvents)
+    },
 
     onInputChange(input) {
       // this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
@@ -485,7 +490,8 @@ export default {
       this.$refs.pianoRoll.stop()
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
-      if(!!this.$refs.pianoRoll) this.$refs.pianoRoll.onIndexJump(i);
+      this.$refs.pianoRoll.onIndexJump(i)
+      this.$refs.sheetMusic.onIndexJump(i)
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
@@ -533,8 +539,9 @@ export default {
     onAllowHighlight(allow) {
       this.$refs.pianoRoll.allowHighlight = allow
     },
-    onPianoRollRedraw(referenceSetIndex) {
+    onVisualizerRefresh(referenceSetIndex) {
       this.$refs.pianoRoll.refresh(referenceSetIndex)
+      this.$refs.sheetMusic.refresh(referenceSetIndex)
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)
