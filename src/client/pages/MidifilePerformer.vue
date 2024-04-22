@@ -64,7 +64,7 @@
 
       <div class="file-input-wrapper">
         <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-          <input accept=".mid, .midi" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+          <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
           <label for="file" class="file-label">
             {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
           </label>
