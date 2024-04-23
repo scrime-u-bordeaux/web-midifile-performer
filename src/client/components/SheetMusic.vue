@@ -22,6 +22,7 @@ export default {
   computed: {
     ...mapState([
       'mfpMidiFile',
+      'sequenceStart', 'sequenceEnd',
       'noteSequence', 'setStarts', 'setEnds',
       'osmdCursorAnchors'
     ]),
@@ -104,6 +105,14 @@ export default {
       await this.updateScore()
     },
 
+    sequenceStart(newStart, oldStart) {
+      if(this.drawn) this.moveCursorToSet(newStart, "start")
+    },
+
+    sequenceEnd(newEnd, oldEnd) {
+      if(this.drawn) this.moveCursorToSet(newEnd + 1, "end")
+    },
+
     // TODO : implement zoom on wheel like the piano roll.
 
     zoom(newZoom, oldZoom) {
@@ -124,16 +133,22 @@ export default {
       this.osmd.setOptions(this.osmdOptions)
     },
 
-    async updateScore(setupCursor = true) {
+    async updateScore(calculateAnchors = true) {
       await this.loadScore(this.mfpMidiFile.musicXmlString)
 
       this.drawn = false
 
       this.displayScore()
 
-      if(setupCursor) this.prepareCursor()
+      if(calculateAnchors) this.calculateCursorAnchors()
       // NORMALLY, if called without the setup step, we should already have the anchors cached.
       else this.cursorAnchors = this.osmdCursorAnchors
+
+      this.moveCursorToSet(0, "start")
+      this.moveCursorToSet(this.setStarts.length, "end") // move to the last anchor, after the last actual set
+
+      this.start.show()
+      this.end.show()
 
       this.drawn = true
     },
@@ -152,9 +167,6 @@ export default {
       // Therefore, it must only be set before render.
       this.osmd.zoom = this.zoom
       this.osmd.render()
-
-      this.start.show()
-      this.end.show()
     },
 
     clearView() {
@@ -186,7 +198,7 @@ export default {
     // ----------------------------BULKY UTILS----------------------------------
     //--------------------------------------------------------------------------
 
-    prepareCursor() {
+    calculateCursorAnchors() {
       const allCursorPositions = []
 
       while(!this.cursor.iterator.endReached) {
@@ -208,6 +220,12 @@ export default {
         this.cursor.next()
       }
 
+      // Also register the position that comes *after* the end,
+      // Because the end cursor can move there.
+
+      this.cursor.next()
+      const endPosition = this.currentCursorPosition()
+
       this.cursor.reset()
 
       // To make the search faster, we keep track of the last index
@@ -222,7 +240,7 @@ export default {
 
       this.cursorAnchors = this.setStarts.map(startIndex =>
         this.findNearestCursorPosition(startIndex, cursorPositionsAndSearchIndex)
-      )
+      ).concat([endPosition]) // push() returns the length instead
 
       this.setOsmdCursorAnchors(this.cursorAnchors)
 
@@ -284,22 +302,45 @@ export default {
       return allCursorPositions[allCursorPositions.length - 1]
     },
 
-    currentCursorPosition() {
-      const tempo = this.getNearestTempoEvent(this.cursor.iterator.currentTimeStamp.realValue)
+    currentCursorPosition(providedCursor = undefined) {
+      const cursor = !!providedCursor ? providedCursor : this.cursor
+
+      const tempo = this.getNearestTempoEvent(cursor.iterator.currentTimeStamp.realValue)
       return (
         tempo.usDate +
-        4 * (this.cursor.iterator.currentTimeStamp.realValue - tempo.delta)
+        4 * (cursor.iterator.currentTimeStamp.realValue - tempo.delta)
           * tempo.setTempo.microsecondsPerQuarter
       ) * 0.000001
     },
 
-    moveCursorToSet(setIndex) {
-      const cursorPosition = this.currentCursorPosition()
+    moveCursorToSet(setIndex, which = "cursor") {
+
+      let chosenCursor;
+      switch(which) {
+        case "start":
+          chosenCursor = this.start
+          break
+        case "end":
+          chosenCursor = this.end
+          break
+        default:
+          chosenCursor = this.cursor
+      }
+
+      // FIXME : this is a strange bug that occurs after remounting on tab switch.
+      // On first mount, the start and end cursors are shown and their hidden flag is false, as expected.
+      // On re-mount, show() is indeed called on them both, but their hidden flag is set back to true at some later point.
+      // Hence the need to show them again.
+      // if(chosenCursor != this.cursor && chosenCursor.hidden) chosenCursor.show()
+      // ...but even this is not enough !
+      // Because the cursor's inner logic ends up graphically updating a non-existent DOM node,
+      // thereby doing nothing. 
+
       const desiredPosition = this.cursorAnchors[setIndex]
 
-      while(this.currentCursorPosition() !== desiredPosition) { // thanks to the cursor anchors, we can use equality
-        if(this.currentCursorPosition() < desiredPosition) this.cursor.next()
-        else if(this.currentCursorPosition() > desiredPosition) this.cursor.previous()
+      while(this.currentCursorPosition(chosenCursor) !== desiredPosition) { // thanks to the cursor anchors, we can use equality
+        if(this.currentCursorPosition(chosenCursor) < desiredPosition) chosenCursor.next()
+        else if(this.currentCursorPosition(chosenCursor) > desiredPosition) chosenCursor.previous()
       }
     },
 
