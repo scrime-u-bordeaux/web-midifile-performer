@@ -178,13 +178,18 @@ export default {
     // -----------------------------LISTENERS-----------------------------------
     //--------------------------------------------------------------------------
 
+    // TODO : is this wrapper really necessary ?
+
     onIndexJump(index) {
-      if(this.drawn) this.refresh(index, true)
+      this.refresh(index, true)
     },
 
     // This still counts as a listener to me, despite the naming.
 
     refresh(referenceSetIndex, scroll = false) {
+
+      if(!this.drawn) return
+
       // Normally, OSMD should call init() on each cursor, which should set its hidden property to true.
       // However in practice, it is left undefined, requiring this.
       if(this.cursor.hidden === undefined || this.cursor.hidden) this.cursor.show()
@@ -334,7 +339,7 @@ export default {
       // if(chosenCursor != this.cursor && chosenCursor.hidden) chosenCursor.show()
       // ...but even this is not enough !
       // Because the cursor's inner logic ends up graphically updating a non-existent DOM node,
-      // thereby doing nothing. 
+      // thereby doing nothing.
 
       const desiredPosition = this.cursorAnchors[setIndex]
 

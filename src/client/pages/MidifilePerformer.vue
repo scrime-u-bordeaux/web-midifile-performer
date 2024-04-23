@@ -491,7 +491,7 @@ export default {
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
       this.$refs.pianoRoll.onIndexJump(i)
-      this.$refs.sheetMusic.onIndexJump(i)
+      if(!this.mfpMidiFile.isMidi) this.$refs.sheetMusic.onIndexJump(i)
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
@@ -541,7 +541,7 @@ export default {
     },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
-      this.$refs.sheetMusic.refresh(refreshState.referenceSetIndex, refreshState.isStartingSet)
+      if(!this.mfpMidiFile.isMidi) this.$refs.sheetMusic.refresh(refreshState.referenceSetIndex, refreshState.isStartingSet)
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)
