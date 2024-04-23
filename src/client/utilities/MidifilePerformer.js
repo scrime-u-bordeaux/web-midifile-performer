@@ -302,7 +302,10 @@ class MidifilePerformer extends EventEmitter {
       if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet)
         // in passive playback, only redraw on note on's
         // in perform, note offs may dynamically cancel, so redraw on both
-        this.emit('visualizerRefresh', this.#getCurrentIndex())
+        this.emit('visualizerRefresh', {
+          isStartingSet: isStartingSet,
+          referenceSetIndex: this.#getCurrentIndex()
+        })
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :

@@ -539,9 +539,9 @@ export default {
     onAllowHighlight(allow) {
       this.$refs.pianoRoll.allowHighlight = allow
     },
-    onVisualizerRefresh(referenceSetIndex) {
-      this.$refs.pianoRoll.refresh(referenceSetIndex)
-      this.$refs.sheetMusic.refresh(referenceSetIndex)
+    onVisualizerRefresh(refreshState) {
+      this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
+      this.$refs.sheetMusic.refresh(refreshState.referenceSetIndex, refreshState.isStartingSet)
     },
     onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)

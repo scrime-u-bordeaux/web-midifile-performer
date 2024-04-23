@@ -1,5 +1,5 @@
 <template>
-  <div class="sheet-music-container">
+  <div ref="container" class="sheet-music-container">
     <div ref="osmdContainer" class="osmd-container" id="osmd-container"></div>
   </div>
 </template>
@@ -9,6 +9,7 @@
   width: var(--score-width);
   height: fit-content;
   overflow: auto;
+  scroll-behavior: smooth;
 }
 </style>
 
@@ -35,6 +36,10 @@ export default {
 
     end() {
       return this.osmd.cursors[2]
+    },
+
+    containerHeight() {
+      return this.$refs.container.getBoundingClientRect().height
     }
   },
 
@@ -67,7 +72,11 @@ export default {
             follow: false,
             type: 1
           }
-        ]
+        ],
+        // Because OSMD uses Element.scrollIntoView() on the cursor to follow it,
+        // The *entire page* is scrolled as a result.
+        // This is not what we want.
+        // followCursor: true
       },
 
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
@@ -80,7 +89,7 @@ export default {
 
   async mounted() {
     if(!this.osmd) this.initOsmd()
-    if(!!this.mfpMidiFile.musicXmlString) await this.refreshScore(false)
+    if(!!this.mfpMidiFile.musicXmlString) await this.updateScore(false)
   },
   beforeUnmount() {
     this.clearView()
@@ -92,7 +101,7 @@ export default {
         this.clearView()
         return;
       }
-      await this.refreshScore()
+      await this.updateScore()
     },
 
     // TODO : implement zoom on wheel like the piano roll.
@@ -115,7 +124,7 @@ export default {
       this.osmd.setOptions(this.osmdOptions)
     },
 
-    async refreshScore(setupCursor = true) {
+    async updateScore(setupCursor = true) {
       await this.loadScore(this.mfpMidiFile.musicXmlString)
 
       this.drawn = false
@@ -158,18 +167,18 @@ export default {
     //--------------------------------------------------------------------------
 
     onIndexJump(index) {
-      if(this.drawn) this.refresh(index)
+      if(this.drawn) this.refresh(index, true)
     },
 
     // This still counts as a listener to me, despite the naming.
 
-    refresh(referenceSetIndex) {
+    refresh(referenceSetIndex, scroll = false) {
       // Normally, OSMD should call init() on each cursor, which should set its hidden property to true.
       // However in practice, it is left undefined, requiring this.
-      console.log(this.cursorAnchors)
       if(this.cursor.hidden === undefined || this.cursor.hidden) this.cursor.show()
 
       this.moveCursorToSet(referenceSetIndex)
+      if(scroll) this.scrollCursorIntoView()
       // console.log(this.currentCursorPosition())
     },
 
@@ -292,6 +301,25 @@ export default {
         if(this.currentCursorPosition() < desiredPosition) this.cursor.next()
         else if(this.currentCursorPosition() > desiredPosition) this.cursor.previous()
       }
+    },
+
+    // Used instead of OSMD's cursor follow system,
+    // Which calls Element.scrollIntoView(), causing the whole page to scroll constantly.
+
+    scrollCursorIntoView() {
+      const cursorTop = this.cursor.cursorElement.offsetTop
+      const cursorHeight = this.cursor.cursorElement.getBoundingClientRect().height
+      // const cursorBottom = cursorTop + cursorHeight
+
+      const isOutOfSight =
+        cursorTop < this.$refs.container.scrollTop ||
+        cursorTop > this.containerHeight / 2 + this.$refs.container.scrollTop
+
+      // Unlike the piano roll, there's only one scrollig alignment,
+      // used both on index skip and on normal refresh.
+      // This is because scrolling is not continuous.
+
+      if(isOutOfSight) this.$refs.container.scrollTop = cursorTop - cursorHeight / 2
     }
   }
 }
