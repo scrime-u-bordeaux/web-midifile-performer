@@ -52,7 +52,8 @@ export default {
       noteHeight: this.initialNoteHeight,
 
       sequenceBoundaryWidth: 3, // should we rather make it noteSpacing ?
-      // but that would incentivize larger spacing and thus smaller notes, with the way things are currently calculated
+      // but that would incentivize larger spacing and thus smaller notes,
+      // with the way things are currently calculated
       sequenceBoundarySpacing: 1,
       sequenceBoundaryRGB: '2, 167, 240',
 
@@ -613,12 +614,12 @@ export default {
 
     scrollIntoView(activeNotePosition, toBoundary = false) {
 
-      if(!this.$refs.container) return; // inherited from Magenta ; probably useless here
+      if (!this.$refs.container) return; // inherited from Magenta ; probably useless here
 
       // Early special case : index jumped to a note off limits.
       // Display the window with it at the left edge.
 
-      if(toBoundary) {
+      if (toBoundary) {
         this.$refs.container.scrollLeft =
           activeNotePosition - this.sequenceBoundaryWidth
         return
@@ -629,7 +630,7 @@ export default {
       const activeNoteBeyondHalfPoint =
         Math.abs(activeNotePosition - this.$refs.container.scrollLeft) > this.containerWidth / 2
 
-      if(activeNoteBeyondHalfPoint)
+      if (activeNoteBeyondHalfPoint)
         // keep active notes in the middle of the window
         this.$refs.container.scrollLeft = activeNotePosition - this.containerWidth / 2
     },

@@ -399,10 +399,10 @@ export default {
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
-      this.$refs.pianoRoll.stop()
+      this.$refs.pianoRoll.stop();
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
-      if(!!this.$refs.pianoRoll) this.$refs.pianoRoll.onIndexJump(i)
+      if(!!this.$refs.pianoRoll) this.$refs.pianoRoll.onIndexJump(i);
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
@@ -411,7 +411,7 @@ export default {
       this.performer.setPlaybackSpeed(s);
     },
     onSilence() {
-      if(this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
+      if (this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
       else this.performer.setMode('silent') // simply silence if perform mode
       this.$refs.pianoRoll.stop()
     },

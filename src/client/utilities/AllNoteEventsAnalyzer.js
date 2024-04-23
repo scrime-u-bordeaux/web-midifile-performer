@@ -32,18 +32,20 @@ class AllNoteEventsAnalyzer {
           notesBuffer.set(k, cnt + 1);
           console.error(`${cnt} duplicate note ons !!!!!!!!!!!!!!!!`);
         } else {
+          console.log("adding note " + k);
           notesBuffer.set(k, 1);
         }
       } else {
         if (notesBuffer.has(k)) {
           const cnt = notesBuffer.get(k);
+          console.log("removing note " + k);
           if (cnt === 1) {
             notesBuffer.delete(k);
           } else {
             notesBuffer.set(k, cnt - 1);
           }
         } else {
-          console.error('error : orphan note off');
+          console.error('error : orphan note off' + k);
         }
       }
     }
