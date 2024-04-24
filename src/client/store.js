@@ -47,11 +47,12 @@ const store = createStore({
       // Model cache for OSMD visualizer alone.
       // I don't really know if it can be put elsewhere.
       osmdCursorAnchors: [],
+      osmdSetCoordinates: [],
 
       minKeyboardNote,
       maxKeyboardNote,
       keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),
-      
+
       sequenceLength: 0,
       sequenceStart: 0,
       sequenceEnd: 0,
@@ -98,7 +99,10 @@ const store = createStore({
       state.setEnds = ends;
     },
     setOsmdCursorAnchors(state, anchors) {
-      state.osmdCursorAnchors = anchors
+      state.osmdCursorAnchors = anchors;
+    },
+    setOsmdSetCoordinates(state, coords) {
+      state.osmdSetCoordinates = coords;
     },
     animateNoteOn(state, note) {
       if (note.pitch >= state.minKeyboardNote &&

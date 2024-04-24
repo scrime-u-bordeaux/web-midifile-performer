@@ -24,7 +24,7 @@ export default {
       'mfpMidiFile',
       'sequenceStart', 'sequenceEnd',
       'noteSequence', 'setStarts', 'setEnds',
-      'osmdCursorAnchors'
+      'osmdCursorAnchors', 'osmdSetCoordinates'
     ]),
 
     start() {
@@ -83,8 +83,16 @@ export default {
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
       tempoEvents: [],
 
-      // The list of available positions for the cursor that correspond to each set.
-      cursorAnchors: []
+      // The list of dates covered by the cursor that correspond to each set.
+      // Used to move cursors during refresh.
+      cursorAnchors: [],
+
+      // The X and Y coordinate of the main cursor at it passes on each set.
+      // Used to move cursors during drag.
+      setCoordinates: [],
+
+      // Simple convenience to avoid redundant switch statements.
+      cursorNames: ["start", "index", "end"]
     }
   },
 
@@ -98,10 +106,8 @@ export default {
 
   watch: {
     async mfpMidiFile(newFile, oldFile) {
-      if(newFile.isMidi || !newFile.musicXmlString) {
-        this.clearView()
-        return;
-      }
+      this.clearView() // do this regardless of file type.
+      if(newFile.isMidi || !newFile.musicXmlString) return
       await this.updateScore()
     },
 
@@ -122,7 +128,7 @@ export default {
 
   methods: {
 
-    ...mapMutations(['setOsmdCursorAnchors']),
+    ...mapMutations(['setOsmdCursorAnchors', 'setOsmdSetCoordinates']),
 
     // -------------------------------------------------------------------------
     // --------------------------SETUP AND CLEAR--------------------------------
@@ -140,15 +146,14 @@ export default {
 
       this.displayScore()
 
-      if(calculateAnchors) this.calculateCursorAnchors()
-      // NORMALLY, if called without the setup step, we should already have the anchors cached.
-      else this.cursorAnchors = this.osmdCursorAnchors
+      if(calculateAnchors) this.calculateCursorAnchorsAndSetCoordinates()
+      // NORMALLY, if called without the setup step, we should already have the anchors/coordinates cached.
+      else {
+        this.cursorAnchors = this.osmdCursorAnchors
+        this.setCoordinates = this.osmdSetCoordinates
+      }
 
-      this.moveCursorToSet(0, "start")
-      this.moveCursorToSet(this.setStarts.length, "end") // move to the last anchor, after the last actual set
-
-      this.start.show()
-      this.end.show()
+      this.setupCursors()
 
       this.drawn = true
     },
@@ -169,6 +174,44 @@ export default {
       this.osmd.render()
     },
 
+    setupCursors() {
+      this.moveCursorToSet(0, "start")
+      this.moveCursorToSet(this.setStarts.length, "end") // move to the last anchor, after the last actual set
+
+      this.start.show()
+      this.end.show()
+
+      // OSMD sets the z-index of all cursors to -2, so the default cursor type stays behind notes as it highlights them.
+      // However, this is unnecessary for thin-line left-aligned cursors.
+      // And if we want to be able to click on them, they can't be behind the score.
+      // So we modify this.
+
+      // Note that for this same reason, it is completely impossible to attach
+      // the mousedown listener to the index cursor without having it overlay the score.
+
+      this.start.cursorElement.style.setProperty('z-index', 200)
+      this.end.cursorElement.style.setProperty('z-index', 200)
+
+      // Actual drag is not desirable here.
+      // This is for two reasons :
+      // 1. Seeing the drag "phantom image" is visually confusing.
+      // 2. We would have to painstakingly interrupt drag event propagation,
+      // since drag and drop are file upload events in the parent.
+
+      this.start.cursorElement.draggable = false
+      this.end.cursorElement.draggable = false
+
+      // Since the cursor index cannot be treated the same, the osmdContainer,
+      // which overlays it, takes the listener in its stead.
+
+      this.start.cursorElement.addEventListener('mousedown', this.onCursorDragStart)
+      this.$refs.osmdContainer.addEventListener('mousedown', this.onCursorDragStart)
+      this.end.cursorElement.addEventListener('mousedown', this.onCursorDragStart)
+
+      this.$refs.osmdContainer.addEventListener('mousemove', this.onCursorDrag)
+      this.$refs.osmdContainer.addEventListener('mouseup', this.onCursorDragEnd)
+    },
+
     clearView() {
       this.$refs.osmdContainer.innerHTML = ''
       this.drawn = false
@@ -184,6 +227,55 @@ export default {
       this.refresh(index, true)
     },
 
+    onCursorDragStart(event) {
+      // Called by the start or end cursor
+      if(event.target instanceof HTMLImageElement) {
+        const imgIndex = parseInt(event.target.id.split('-')[1], 10)
+        this.dragging = this.cursorNames[imgIndex]
+      }
+
+      // Called by the container.
+      else if(event.target instanceof SVGElement) {
+        if(this.isWithinIndexCursorBounds(event.offsetX, event.offsetY))
+          this.dragging = "index"
+      }
+    },
+
+    onCursorDrag(event) {
+      if(!!this.dragging && event.buttons > 0) {
+
+        // The mousemove event may trigger with the cursor itself as target, thereby giving wrong offset values.
+        // We need to prevent this case ; however, it's fine if any other element of the score is the target
+        // (part lines, notes, etc.)
+        // as their offset values are still correct.
+
+        const refCursor = this.osmd.cursors[this.cursorNames.indexOf(this.dragging)].cursorElement
+        if(event.target === refCursor) return
+
+        // FIXME : we should optimize which coords we look for to only be within the container bounds.
+        // However, we can't just filter, since we need to preserve indices. 
+
+        const topDistances = this.setCoordinates.map(coord =>
+          Math.hypot(coord.x - event.offsetX, coord.topY - event.offsetY)
+        )
+        const bottomDistances = this.setCoordinates.map(coord =>
+          Math.hypot(coord.x - event.offsetX, coord.bottomY - event.offsetY)
+        )
+
+        const topMin = Math.min(...topDistances)
+        const bottomMin = Math.min(...bottomDistances)
+        const min = Math.min(topMin, bottomMin)
+
+        const nearestSetIndex = (min === topMin ? topDistances : bottomDistances).indexOf(min)
+
+        this.$emit(this.dragging, nearestSetIndex)
+      }
+    },
+
+    onCursorDragEnd(event) {
+      this.dragging = null
+    },
+
     // This still counts as a listener to me, despite the naming.
 
     refresh(referenceSetIndex, scroll = false) {
@@ -196,22 +288,28 @@ export default {
 
       this.moveCursorToSet(referenceSetIndex)
       if(scroll) this.scrollCursorIntoView()
-      // console.log(this.currentCursorPosition())
+      // console.log(this.currentCursorDate())
     },
 
     // -------------------------------------------------------------------------
     // ----------------------------BULKY UTILS----------------------------------
     //--------------------------------------------------------------------------
 
-    calculateCursorAnchors() {
-      const allCursorPositions = []
+    calculateCursorAnchorsAndSetCoordinates() {
+      const allCursorDates = []
+      const allCursorCoordinates = []
+
+      // This is necessary to get actual X and Y coordinates for the cursor at it moves.
+      // I don't like it, but there's no other way.
+      // It will probably make no difference to the user anyway : they're unlikely to see this.
+      this.cursor.show()
 
       while(!this.cursor.iterator.endReached) {
         // console.log("Measure : ", this.cursor.iterator.currentMeasureIndex)
         const notesUnderCursor = this.cursor.NotesUnderCursor()
         // console.log(notesUnderCursor)
-        if( // Because position approximation is always finicky, we want to put luck on our side
-          // So we exclude positions that :
+        if( // Because date approximation is always finicky, we want to put luck on our side
+          // So we exclude cursor entries that :
           notesUnderCursor.some(
             note => !note.isRest() // - contain only rests
             &&
@@ -219,35 +317,47 @@ export default {
           )
           // ...and which could be found to be closer to our actual sets than we'd like
         ) {
-          allCursorPositions.push(this.currentCursorPosition())
+          allCursorDates.push(this.currentCursorDate())
+          allCursorCoordinates.push(this.currentCursorCoordinates())
         }
 
         this.cursor.next()
       }
 
-      // Also register the position that comes *after* the end,
+      // Also register the information for the cursor entry that comes *after* the end,
       // Because the end cursor can move there.
 
       this.cursor.next()
-      const endPosition = this.currentCursorPosition()
+      const endDate = this.currentCursorDate()
+      const endCoordinates = this.currentCursorCoordinates()
 
       this.cursor.reset()
+      this.cursor.hide()
 
       // To make the search faster, we keep track of the last index
       // (because we only ever move forward)
       // and to do that, we need an object.
       // I miss int references.
 
-      const cursorPositionsAndSearchIndex = {
+      const cursorDatesAndSearchIndex = {
         searchIndex: 0,
-        positions: allCursorPositions
+        dates: allCursorDates
       }
 
       this.cursorAnchors = this.setStarts.map(startIndex =>
-        this.findNearestCursorPosition(startIndex, cursorPositionsAndSearchIndex)
-      ).concat([endPosition]) // push() returns the length instead
+        this.findNearestCursorDate(startIndex, cursorDatesAndSearchIndex)
+      ).concat([endDate]) // push() returns the length instead
+
+      // I'm not very happy with this double array iteration.
+      // I *could* do it inside the map for more efficiency,
+      // But it would also be less readable.
+
+      this.setCoordinates = allCursorCoordinates.filter((coord, index) =>
+        this.cursorAnchors.includes(allCursorDates[index])
+      ).concat([endCoordinates])
 
       this.setOsmdCursorAnchors(this.cursorAnchors)
+      this.setOsmdSetCoordinates(this.setCoordinates)
 
       // console.log("All possible positions : ", allCursorPositions)
       // console.log("Full note sequence : ", this.noteSequence)
@@ -286,28 +396,28 @@ export default {
       return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes)
     },
 
-    findNearestCursorPosition(setStartIndex, cursorPositionsAndSearchIndex) {
+    findNearestCursorDate(setStartIndex, cursorDatesAndSearchIndex) {
       const referenceStartTime = this.noteSequence[setStartIndex].startTime
-      const allCursorPositions = cursorPositionsAndSearchIndex.positions
+      const allCursorDates = cursorDatesAndSearchIndex.dates
 
       let difference = Infinity;
       let prevDifference = difference
 
-      for(let i = cursorPositionsAndSearchIndex.searchIndex ; i < allCursorPositions.length ; i++) {
-        difference = Math.abs(referenceStartTime - allCursorPositions[i])
+      for(let i = cursorDatesAndSearchIndex.searchIndex ; i < allCursorDates.length ; i++) {
+        difference = Math.abs(referenceStartTime - allCursorDates[i])
 
         if(difference > prevDifference) { // since we only ever move forwards in time, once the difference increases it will never decrease again.
-          cursorPositionsAndSearchIndex.searchIndex = i;
-          return allCursorPositions[i-1] // this will never trigger at i = 0, because nothing will be larger than Infinity
+          cursorDatesAndSearchIndex.searchIndex = i;
+          return allCursorDates[i-1] // this will never trigger at i = 0, because nothing will be larger than Infinity
         }
         else prevDifference = difference
       }
 
       // Of course, we won't find a bigger difference for the last anchor point.
-      return allCursorPositions[allCursorPositions.length - 1]
+      return allCursorDates[allCursorDates.length - 1]
     },
 
-    currentCursorPosition(providedCursor = undefined) {
+    currentCursorDate(providedCursor = undefined) {
       const cursor = !!providedCursor ? providedCursor : this.cursor
 
       const tempo = this.getNearestTempoEvent(cursor.iterator.currentTimeStamp.realValue)
@@ -318,19 +428,19 @@ export default {
       ) * 0.000001
     },
 
-    moveCursorToSet(setIndex, which = "cursor") {
+    currentCursorCoordinates(providedCursor = undefined) {
+      const cursor = !!providedCursor ? providedCursor : this.cursor
 
-      let chosenCursor;
-      switch(which) {
-        case "start":
-          chosenCursor = this.start
-          break
-        case "end":
-          chosenCursor = this.end
-          break
-        default:
-          chosenCursor = this.cursor
+      return {
+        x: cursor.cursorElement.offsetLeft,
+        topY: cursor.cursorElement.offsetTop,
+        bottomY: cursor.cursorElement.offsetTop + cursor.cursorElement.offsetHeight
       }
+    },
+
+    moveCursorToSet(setIndex, which = "index") {
+
+      const chosenCursor = this.osmd.cursors[this.cursorNames.indexOf(which)]
 
       // FIXME : this is a strange bug that occurs after remounting on tab switch.
       // On first mount, the start and end cursors are shown and their hidden flag is false, as expected.
@@ -341,11 +451,11 @@ export default {
       // Because the cursor's inner logic ends up graphically updating a non-existent DOM node,
       // thereby doing nothing.
 
-      const desiredPosition = this.cursorAnchors[setIndex]
+      const desiredDate = this.cursorAnchors[setIndex]
 
-      while(this.currentCursorPosition(chosenCursor) !== desiredPosition) { // thanks to the cursor anchors, we can use equality
-        if(this.currentCursorPosition(chosenCursor) < desiredPosition) chosenCursor.next()
-        else if(this.currentCursorPosition(chosenCursor) > desiredPosition) chosenCursor.previous()
+      while(this.currentCursorDate(chosenCursor) !== desiredDate) { // thanks to the cursor anchors, we can use equality
+        if(this.currentCursorDate(chosenCursor) < desiredDate) chosenCursor.next()
+        else if(this.currentCursorDate(chosenCursor) > desiredDate) chosenCursor.previous()
       }
     },
 
@@ -366,6 +476,19 @@ export default {
       // This is because scrolling is not continuous.
 
       if(isOutOfSight) this.$refs.container.scrollTop = cursorTop - cursorHeight / 2
+    },
+
+    isWithinIndexCursorBounds(eventX, eventY) {
+      if(this.cursor.hidden || this.cursor.hidden === undefined) return false
+
+      const refElem = this.cursor.cursorElement
+
+      const leftX = refElem.offsetLeft
+      const rightX = leftX + refElem.offsetWidth
+      const topY = refElem.offsetTop
+      const bottomY = topY + refElem.offsetHeight
+
+      return leftX <= eventX && eventX <= rightX && topY <= eventY && eventY <= bottomY
     }
   }
 }

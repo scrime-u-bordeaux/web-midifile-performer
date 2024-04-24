@@ -27,6 +27,9 @@
         class="sheet-music"
         :class="!mfpMidiFile.isMidi && mfpMidiFile.buffer && sheetMusicSelected ? 'show' : 'hide'"
         ref="sheetMusic"
+        @index="onIndexChange"
+        @start="onStartChange"
+        @end="onEndChange"
       />
 
       <PianoRoll
