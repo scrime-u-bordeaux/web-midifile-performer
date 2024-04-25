@@ -71,12 +71,13 @@ export default function parseMusicXml(buffer) {
     // Thus we can keep track of channels in the track map, since one track/part only has one active channel at a time.
 
     const startingChannel =
-      !!part.midiInstruments &&
+      (!!part.midiInstruments &&
       part.midiInstruments.length === 1 && // if multiple instruments exist, the one to use will be defined in the measure.
       // ...otherwise I don't understand how this works.
       !!part.midiInstruments[0].midiChannel ?
-        part.midiInstruments[0].midiChannel - 1 :
-        DEFAULT_CHANNEL // Is this right ? What if the notes of multiple tracks collide ?
+        part.midiInstruments[0].midiChannel  :
+        DEFAULT_CHANNEL) // Is this right ? What if the notes of multiple tracks collide ?
+      - 1
 
     trackMap.set(
       part.id,
