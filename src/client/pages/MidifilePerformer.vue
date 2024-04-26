@@ -27,6 +27,8 @@
         class="sheet-music"
         :class="!mfpMidiFile.isMidi && mfpMidiFile.buffer && sheetMusicSelected ? 'show' : 'hide'"
         ref="sheetMusic"
+        @play="onVisualizerPlay"
+        @stop="onVisualizerStop"
         @index="onIndexChange"
         @start="onStartChange"
         @end="onEndChange"
@@ -36,8 +38,8 @@
         class="piano-roll"
         :class="mfpMidiFile.buffer && pianoRollSelected ? 'show' : 'hide'"
         ref="pianoRoll"
-        @play="onPianoRollPlay"
-        @stop="onPianoRollStop"
+        @play="onVisualizerPlay"
+        @stop="onVisualizerStop"
         @index="onIndexChange"
         @start="onStartChange"
         @end="onEndChange"/>
@@ -351,6 +353,7 @@ export default {
 
     this.performer.addListener('chronology', this.onChronology)
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
+    this.performer.addListener('musicXmlChannels', this.onMusicXmlChannels)
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
     // temporary !!
@@ -381,6 +384,7 @@ export default {
 
     this.performer.removeListener('chronology', this.onChronology)
     this.performer.removeListener('musicXmlTempos', this.onMusicXmlTempos)
+    this.performer.removeListener('musicXmlChannels', this.onMusicXmlChannels)
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
     this.performer.removeListener('allowHighlight', this.onAllowHighlight)
@@ -469,13 +473,19 @@ export default {
 
     onModeChange(mode) {
       this.performer.setMode(mode);
-      if(mode === 'silent') this.$refs.pianoRoll.stop()
+      if(mode === 'silent') {
+        this.$refs.pianoRoll.stop()
+        this.$refs.sheetMusic.stop()
+      }
     },
     onChronology(chronology) {
       this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
     onMusicXmlTempos(tempoEvents) {
       this.$refs.sheetMusic.setTempoEvents(tempoEvents)
+    },
+    onMusicXmlChannels(channelChanges) {
+      this.$refs.sheetMusic.setChannelChanges(channelChanges)
     },
 
     onInputChange(input) {
@@ -491,6 +501,7 @@ export default {
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
       this.$refs.pianoRoll.stop()
+      this.$refs.sheetMusic.stop()
     },
     onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
       this.$refs.pianoRoll.onIndexJump(i)
@@ -508,6 +519,7 @@ export default {
       if (this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
       else this.performer.setMode('silent') // simply silence if perform mode
       this.$refs.pianoRoll.stop()
+      this.$refs.sheetMusic.stop()
     },
 
     async onDrop(e) {
@@ -541,15 +553,16 @@ export default {
 
     onAllowHighlight(allow) {
       this.$refs.pianoRoll.allowHighlight = allow
+      this.$refs.sheetMusic.allowHighlight = allow
     },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
       if(!this.mfpMidiFile.isMidi) this.$refs.sheetMusic.refresh(refreshState.referenceSetIndex, refreshState.isStartingSet)
     },
-    onPianoRollPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
+    onVisualizerPlay(notes) { // piano roll requests hearing the sound of the notes the user clicked
       this.ioctl.playNoteEvents(notes)
     },
-    onPianoRollStop() {
+    onVisualizerStop() {
       this.ioctl.allNotesOff()
     },
 

@@ -91,8 +91,8 @@ export default {
 
       // for switching between set and single-note highlight/play
       ctrlKey: false,
-      // last note the mouse has been over
-      highlightedNote: null
+      // last rect the mouse has been over
+      rectUnderCursor: null
     }
   },
 
@@ -223,14 +223,14 @@ export default {
     onKeyDown(event) {
       if(event.key === 'Control') {
         this.ctrlKey = true
-        this.highlightedNote?.dispatchEvent(new Event('mouseover'))
+        this.rectUnderCursor?.dispatchEvent(new Event('mouseover'))
       }
     },
 
     onKeyUp(event) {
       if(event.key === 'Control') {
         this.ctrlKey = false
-        this.highlightedNote?.dispatchEvent(new Event('mouseover'))
+        this.rectUnderCursor?.dispatchEvent(new Event('mouseover'))
       }
     },
 
@@ -259,7 +259,7 @@ export default {
         this.paintSetOrNote(rect)
         this.$emit('play',
           this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
-            [this.noteSequence[this.getNoteIndexFromRect(rect)]] :
+            [this.noteSequence[noteIndex]] :
             this.getSet(setIndex) // otherwise send the sets
             // Our notes are compatible with the rest of the app, so this works
         )
@@ -274,7 +274,7 @@ export default {
       if(!this.allowHighlight) return;
 
       const rect = event.target
-      this.highlightedNote = rect
+      this.rectUnderCursor = rect
 
       this.paintSetOrNote(rect)
     },
@@ -282,7 +282,7 @@ export default {
     onNoteLeave(event) {
       if(!this.allowHighlight) return;
 
-      if(!!event) this.highlightedNote = null
+      if(!!event) this.rectUnderCursor = null
       this.unfillActiveRects()
       this.$emit('stop')
     },
@@ -483,6 +483,9 @@ export default {
     },
 
     refreshActiveNotes(setIndex) {
+      // TODO : Array.from() may be less performant than the spread syntax [...]
+      // Consider replacing it in this often-called, performance-critical function.
+
       Array.from(this.activeNotes.values()).forEach(note => {
         // TODO : is the overhead of creating a function for this worth
         // the factorization ?

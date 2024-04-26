@@ -84,6 +84,10 @@ export default function parseMusicXml(buffer) {
       {
         activeChannel: startingChannel,
 
+        // For later identification of notes in the OSMD visualizer,
+        // We need to keep track of each part's channel throughout the totality of the file.
+        channelHistory: [getChannelChangePseudoEvent(startingChannel, DEFAULT_DELTA)],
+
         // Not all files will provide note-specific dynamics.
         // In fact, for "high-level" notation (distanced from MIDI),
         // only written values (like mf, f, p, etc), may be provided.
@@ -168,8 +172,10 @@ export default function parseMusicXml(buffer) {
 
             if(!!soundEvent.tempo) partTrack.events.push(getTempoEvent(soundEvent, partTrack.currentDelta))
 
-            if(!!soundEvent.midiInstrument && !!soundEvent.midiInstrument.channel)
+            if(!!soundEvent.midiInstrument && !!soundEvent.midiInstrument.channel) {
               partTrack.activeChannel = soundEvent.midiInstrument.channel - 1
+              partTrack.channelHistory.push(getChannelChangePseudoEvent(partTrack.activeChannel - 1, partTrack.currentDelta))
+            }
 
             break
 
@@ -261,8 +267,12 @@ export default function parseMusicXml(buffer) {
   })
 
   // TODO : this isn't very semantically relevant, but it's the best place in the code flow to do so :
-  // The OSMD visualizer is going to require a list of ABSOLUTE DELTA tempo events to convert its cursor's fraction timestamps
-  // And this point is the only place in the entire program where we have absolute delta tempo events at our disposal.
+  // The OSMD visualizer is going to require a list of ABSOLUTE DELTA events,
+  // And this point is the only place in the entire program where we have absolute delta events at our disposal.
+
+  // First, we need a list of all tempo changes.
+  // These will be used to convert the OSMD cursor's timestamps,
+  // From fractions of whole notes to actual seconds.
 
   const tempoEvents = Array.from(trackMap.values())
   .flatMap(
@@ -276,6 +286,24 @@ export default function parseMusicXml(buffer) {
     (eventA, eventB) => eventA.delta - eventB.delta
   )
 
+  // Second, we need the list of all channel changes on every part.
+  // This is because OSMD notes keep track of their part (as the parent of their voice),
+  // But not of channels (because it's only concerned with instruments).
+
+  // (we could just use mapValues in Kotlin...)
+
+  const channelChanges = new Map()
+
+  Array.from(trackMap.keys()).forEach(key => {
+    const channelHistory = trackMap.get(key).channelHistory
+    channelChanges.set(key, channelHistory.map(channelChange => {
+      return {
+        channel: channelChange.channel,
+        delta: channelChange.delta / (4 * divisions)
+      }
+    }))
+  })
+
   // Worse yet : we can't emit from there, because this isn't a class
   // (and it has no reason to be ! This isn't a sufficient reason to change that)
   // So instead, we pass this data along in the midiJson, for transmission by MFP.js.
@@ -284,7 +312,8 @@ export default function parseMusicXml(buffer) {
     division: divisions,
     format: 1,
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
-    tempoEvents: tempoEvents
+    tempoEvents: tempoEvents,
+    channelChanges: channelChanges
   }
 
   return midiJson
@@ -387,5 +416,12 @@ function getDefaultTempoEvent() {
     setTempo: {
       microsecondsPerQuarter: DEFAULT_TEMPO
     }
+  }
+}
+
+function getChannelChangePseudoEvent(channel, delta) {
+  return {
+    channel: channel,
+    delta: delta
   }
 }

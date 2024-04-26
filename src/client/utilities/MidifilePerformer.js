@@ -252,8 +252,11 @@ class MidifilePerformer extends EventEmitter {
     // this.emit('allnotesoff');
     const midiJson = isBuffer ? await parseMidiArrayBuffer(jsonOrBuffer) : jsonOrBuffer;
 
-    if(!isBuffer) // A list of absolute-delta tempo events is included in midi JSONs parsed from MusicXML files.
-      this.emit('musicXmlTempos', jsonOrBuffer.tempoEvents) // They are for the OSMD visualizer. Pass them along.
+    if(!isBuffer) { // Arrays and maps of absolute-delta events are included in midi JSONs parsed from MusicXML files.
+      // They are for the OSMD visualizer. Pass them along.
+      this.emit('musicXmlTempos', jsonOrBuffer.tempoEvents)
+      this.emit('musicXmlChannels', jsonOrBuffer.channelChanges)
+    }
 
     const allNoteEvents = mergeTracks(midiJson);
     this.analyzer.analyze(allNoteEvents);

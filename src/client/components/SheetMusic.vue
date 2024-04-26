@@ -18,11 +18,13 @@
 import { mapState, mapMutations } from 'vuex'
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 
+const TAB_CLEF = 4 // Internal OSMD enum not accessible here
+
 export default {
   computed: {
     ...mapState([
       'mfpMidiFile',
-      'sequenceStart', 'sequenceEnd',
+      'sequenceStart', 'sequenceIndex', 'sequenceEnd',
       'noteSequence', 'setStarts', 'setEnds',
       'osmdCursorAnchors', 'osmdSetCoordinates'
     ]),
@@ -46,9 +48,8 @@ export default {
 
   data() {
     return {
-      drawn: false,
-      zoom: 0.5,
       osmd: null, // because the OSMD constructor requires a container argument, it cannot just be injected.
+
       osmdOptions: {
         autoResize: false,
         backend: "svg", // see if we change this later,
@@ -80,8 +81,16 @@ export default {
         // followCursor: true
       },
 
+      drawn: false,
+
+      activeNoteRGB: '#58e28e',
+      noteRGB: '#000000',
+
+      zoom: 0.5,
+
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
       tempoEvents: [],
+      channelChanges: new Map(),
 
       // The list of dates covered by the cursor that correspond to each set.
       // Used to move cursors during refresh.
@@ -91,22 +100,49 @@ export default {
       // Used to move cursors during drag.
       setCoordinates: [],
 
+      // Two-way map (we could use a bijective map lib, but this works too)
+      // between graphical notes and their note sequence equivalents.
+
+      gNoteHeadsToNsNotes: new Map(),
+      nsNotesToGNoteHeads: new Map(),
+
       // Simple convenience to avoid redundant switch statements.
-      cursorNames: ["start", "index", "end"]
+      cursorNames: ["start", "index", "end"],
+
+      // temporary !!
+      // TODO : Phase out with unification of mode state in store
+      allowHighlight: true,
+
+      // Identical role to highlightedNote in PianoRoll
+      noteHeadUnderCursor: null,
+
+      // Additionally, we have to do this instead of querying by active class, because
+      // querySelectorAll() is not recursive.
+      // We take that opportunity to properly separate notes highlighted from the mouse
+      // and notes highlighted because they're active.
+      noteHeadsHighlightedByMouse: [],
+      noteHeadsHighlightedByRefresh: [],
+
+      ctrlKey: false
     }
   },
 
   async mounted() {
     if(!this.osmd) this.initOsmd()
     if(!!this.mfpMidiFile.musicXmlString) await this.updateScore(false)
+
+    document.addEventListener('keydown', this.onKeyDown)
+    document.addEventListener('keyup', this.onKeyUp)
   },
   beforeUnmount() {
-    this.clearView()
+    document.removeEventListener('keydown', this.onKeyDown)
+    document.removeEventListener('keyup', this.onKeyUp)
+
+    this.clear()
   },
 
   watch: {
     async mfpMidiFile(newFile, oldFile) {
-      this.clearView() // do this regardless of file type.
       if(newFile.isMidi || !newFile.musicXmlString) return
       await this.updateScore()
     },
@@ -140,8 +176,12 @@ export default {
     },
 
     async updateScore(calculateAnchors = true) {
+
+      this.clear()
+
       await this.loadScore(this.mfpMidiFile.musicXmlString)
 
+      // Should be redundant from clear(), but we're never too careful.
       this.drawn = false
 
       this.displayScore()
@@ -153,7 +193,21 @@ export default {
         this.setCoordinates = this.osmdSetCoordinates
       }
 
+      // These operations, however, cannot be cached,
+      // Because they rely on instance-specific graphical elements.
+
       this.setupCursors()
+      try {
+        this.setupNoteHeads()
+      } catch(e) {
+        console.error("Error during setup of notehead event listeners.")
+        console.error(e.message)
+        console.error("This is probably due to an OSMD cursor bug : see issue 67")
+        console.error("Sheet music notes will not react to click and hover.")
+      }
+
+
+      this.cursor.show()
 
       this.drawn = true
     },
@@ -174,47 +228,26 @@ export default {
       this.osmd.render()
     },
 
-    setupCursors() {
-      this.moveCursorToSet(0, "start")
-      this.moveCursorToSet(this.setStarts.length, "end") // move to the last anchor, after the last actual set
+    stop() {
+      this.unpaint(true)
+    },
 
-      this.start.show()
-      this.end.show()
-
-      // OSMD sets the z-index of all cursors to -2, so the default cursor type stays behind notes as it highlights them.
-      // However, this is unnecessary for thin-line left-aligned cursors.
-      // And if we want to be able to click on them, they can't be behind the score.
-      // So we modify this.
-
-      // Note that for this same reason, it is completely impossible to attach
-      // the mousedown listener to the index cursor without having it overlay the score.
-
-      this.start.cursorElement.style.setProperty('z-index', 200)
-      this.end.cursorElement.style.setProperty('z-index', 200)
-
-      // Actual drag is not desirable here.
-      // This is for two reasons :
-      // 1. Seeing the drag "phantom image" is visually confusing.
-      // 2. We would have to painstakingly interrupt drag event propagation,
-      // since drag and drop are file upload events in the parent.
-
-      this.start.cursorElement.draggable = false
-      this.end.cursorElement.draggable = false
-
-      // Since the cursor index cannot be treated the same, the osmdContainer,
-      // which overlays it, takes the listener in its stead.
-
-      this.start.cursorElement.addEventListener('mousedown', this.onCursorDragStart)
-      this.$refs.osmdContainer.addEventListener('mousedown', this.onCursorDragStart)
-      this.end.cursorElement.addEventListener('mousedown', this.onCursorDragStart)
-
-      this.$refs.osmdContainer.addEventListener('mousemove', this.onCursorDrag)
-      this.$refs.osmdContainer.addEventListener('mouseup', this.onCursorDragEnd)
+    clearState() {
+      this.noteHeadsHighlightedByMouse = []
+      this.noteHeadsHighlightedByRefresh = []
+      
+      this.gNoteHeadsToNsNotes.clear()
+      this.nsNotesToGNoteHeads.clear()
     },
 
     clearView() {
       this.$refs.osmdContainer.innerHTML = ''
       this.drawn = false
+    },
+
+    clear() {
+      this.clearState()
+      this.clearView()
     },
 
     // -------------------------------------------------------------------------
@@ -253,7 +286,7 @@ export default {
         if(event.target === refCursor) return
 
         // FIXME : we should optimize which coords we look for to only be within the container bounds.
-        // However, we can't just filter, since we need to preserve indices. 
+        // However, we can't just filter, since we need to preserve indices.
 
         const topDistances = this.setCoordinates.map(coord =>
           Math.hypot(coord.x - event.offsetX, coord.topY - event.offsetY)
@@ -274,6 +307,94 @@ export default {
 
     onCursorDragEnd(event) {
       this.dragging = null
+    },
+
+    // FIXME : this is very heavily similar to Piano Roll logic.
+    // I hate how much duplication this is.
+
+    // FIXME : "hollow" notes (wholes and halves) are not triggered when clicking inside their hollow section.
+    // This is because the inside of that hollow section is not part of the graphical note.
+
+    onNoteClick(event) {
+      const noteHead = this.getNoteHeadFromNoteSvgFamily(event.target)
+      const noteIndex = this.gNoteHeadsToNsNotes.get(noteHead).index
+      const setIndex = this.getSetIndex(noteIndex)
+
+      if(setIndex < this.sequenceStart) this.$emit('start', setIndex)
+      if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
+      this.$emit('index', setIndex)
+
+      if(this.allowHighlight) {
+
+        // FIXME : because the cursor and the highlight color are the same,
+        // We can't have both at once.
+        // The ideal thing to do would be to have a highlight color that meshes well with the cursor,
+        // But that doesn't overload the palette.
+        // This ties into reworking the palette of the whole application.
+
+        this.cursor.hide()
+
+        this.paintSetOrNote(noteIndex, "mouse")
+        this.$emit('play',
+          this.ctrlKey ?
+            [this.noteSequence[noteIndex]] :
+            this.getSet(setIndex)
+        )
+      }
+    },
+
+    // FIXME : hollow notes are also unlit when passing in their hollow section.
+
+    onNoteHover(event) {
+      if(!this.allowHighlight) return;
+
+      const noteHead = this.getNoteHeadFromNoteSvgFamily(event.target)
+
+      this.noteHeadUnderCursor = noteHead
+
+      const noteIndex = this.gNoteHeadsToNsNotes.get(noteHead).index
+      const setIndex = this.getSetIndex(noteIndex)
+
+      // We should only paint if we're hovering on a set the cursor isn't on
+      // or if the cursor is currently hidden from click
+      // (in which case, this is an artificial event dispatched after Ctrl was pressed or released)
+      if(this.sequenceIndex !== setIndex || this.cursor.hidden)
+        this.paintSetOrNote(noteIndex, "mouse")
+    },
+
+    onNoteUnClick(event) {
+      // Unlike the piano roll, we need to pass the event, to get access to its target...
+      this.onNoteLeave(event)
+    },
+
+    onNoteLeave(event) {
+      // ...so we test its type instead of its existence.
+      if(event.type === "mouseleave") this.noteHeadUnderCursor = null
+
+      const noteHead = this.getNoteHeadFromNoteSvgFamily(event.target)
+      const noteIndex = this.gNoteHeadsToNsNotes.get(noteHead).index
+      const setIndex = this.getSetIndex(noteIndex)
+
+      this.unpaint()
+      this.$emit('stop')
+      this.cursor.show()
+    },
+
+    // TODO : Can we factorize these ?
+    // (By testing the type of the received event)
+
+    onKeyDown(event) {
+      if(event.key === 'Control') {
+        this.ctrlKey = true
+        this.noteHeadUnderCursor?.dispatchEvent(new Event('mouseover', {bubbles: true}))
+      }
+    },
+
+    onKeyUp(event) {
+      if(event.key === 'Control') {
+        this.ctrlKey = false
+        this.noteHeadUnderCursor?.dispatchEvent(new Event('mouseover', {bubbles: true}))
+      }
     },
 
     // This still counts as a listener to me, despite the naming.
@@ -308,15 +429,11 @@ export default {
         // console.log("Measure : ", this.cursor.iterator.currentMeasureIndex)
         const notesUnderCursor = this.cursor.NotesUnderCursor()
         // console.log(notesUnderCursor)
-        if( // Because date approximation is always finicky, we want to put luck on our side
-          // So we exclude cursor entries that :
-          notesUnderCursor.some(
-            note => !note.isRest() // - contain only rests
-            &&
-            (!note.tie || note.tie.StartNote === note) // - contain only tied notes (except for tie starts, naturally)
-          )
-          // ...and which could be found to be closer to our actual sets than we'd like
-        ) {
+
+        // Because date approximation is always finicky, we want to put luck on our side
+        // So we exclude cursor entries that could never be sets,
+        // Because they contain no eligible note.
+        if(notesUnderCursor.some(this.isEligibleMfpNote)) {
           allCursorDates.push(this.currentCursorDate())
           allCursorCoordinates.push(this.currentCursorCoordinates())
         }
@@ -366,6 +483,111 @@ export default {
       // console.log("Actual set start times : ", this.setStarts.map(startIndex => this.noteSequence[startIndex].startTime))
     },
 
+    setupCursors() {
+      this.moveCursorToSet(0, "start")
+      this.moveCursorToSet(this.setStarts.length, "end") // move to the last anchor, after the last actual set
+
+      this.start.show()
+      this.end.show()
+
+      // OSMD sets the z-index of all cursors to -2, so the default cursor type stays behind notes as it highlights them.
+      // However, this is unnecessary for thin-line left-aligned cursors.
+      // And if we want to be able to click on them, they can't be behind the score.
+      // So we modify this.
+
+      // Note that for this same reason, it is completely impossible to attach
+      // the mousedown listener to the index cursor without having it overlay the score.
+
+      this.start.cursorElement.style.setProperty('z-index', 200)
+      this.end.cursorElement.style.setProperty('z-index', 200)
+
+      // Actual drag is not desirable here.
+      // This is for two reasons :
+      // 1. Seeing the drag "phantom image" is visually confusing.
+      // 2. We would have to painstakingly interrupt drag event propagation,
+      // since drag and drop are file upload events in the parent.
+
+      this.start.cursorElement.draggable = false
+      this.end.cursorElement.draggable = false
+
+      // Since the cursor index cannot be treated the same, the osmdContainer,
+      // which overlays it, takes the listener in its stead.
+
+      this.start.cursorElement.addEventListener('mousedown', this.onCursorDragStart)
+      this.$refs.osmdContainer.addEventListener('mousedown', this.onCursorDragStart)
+      this.end.cursorElement.addEventListener('mousedown', this.onCursorDragStart)
+
+      this.$refs.osmdContainer.addEventListener('mousemove', this.onCursorDrag)
+      this.$refs.osmdContainer.addEventListener('mouseup', this.onCursorDragEnd)
+    },
+
+    setupNoteHeads() {
+
+      this.setStarts.forEach((start, setIndex) => {
+        const end = this.setEnds[setIndex]
+        const set = this.noteSequence.slice(start, end+1)
+        const usedNotesOfSet = []
+
+        this.moveCursorToSet(setIndex)
+
+        this.cursor.GNotesUnderCursor()
+          .filter(gnote =>
+            this.isEligibleMfpNote(gnote.sourceNote) &&
+            gnote.clef.clefType !== TAB_CLEF // There's probably a way to test this with the sourceNote in isEligibleMfpNote instead
+          ).forEach(gnote => {
+
+            const gNoteSVGRoot = gnote.getSVGGElement()
+
+            gNoteSVGRoot.addEventListener("mousedown", this.onNoteClick)
+            gNoteSVGRoot.addEventListener("mouseover", this.onNoteHover)
+            gNoteSVGRoot.addEventListener("mouseup", this.onNoteUnClick)
+            gNoteSVGRoot.addEventListener("mouseleave", this.onNoteLeave)
+
+            const gNoteHead = this.getNoteHeadFromNoteSvgFamily(gNoteSVGRoot)
+
+            const pitch = gnote.sourceNote.halfTone + 12
+            const channel = this.currentChannel(
+              gnote.parentVoiceEntry.parentVoiceEntry.parentVoice.parent.idString
+            )
+
+            // Normally, there should only be one note on of a given pitch and channel in each set.
+            // However, due to how the MusicXML parser currently works, this might not be the case.
+            // (When files with multiple voices set identical pitches on these voices without using separate channels)
+            // I don't yet know if there's a way to translate voices into channels.
+
+            const noteSequenceEquivalent = set.find(candidate =>
+              candidate.pitch === pitch && candidate.channel === channel
+              && !usedNotesOfSet.includes(candidate)
+            )
+
+            console.log(noteSequenceEquivalent)
+
+            if(!noteSequenceEquivalent) throw new Error(
+              `Could not find equivalent for graphical note in set ${setIndex}`
+            )
+
+            usedNotesOfSet.push(noteSequenceEquivalent)
+
+            this.gNoteHeadsToNsNotes.set(gNoteHead, noteSequenceEquivalent)
+            this.nsNotesToGNoteHeads.set(noteSequenceEquivalent, gNoteHead)
+        })
+      })
+
+      if(this.gNoteHeadsToNsNotes.size !== this.nsNotesToGNoteHeads.size) {
+        console.error("Mapping between graphical notes and note sequence failed to biject")
+        console.error(
+        `The map in direction ${
+          this.gNoteHeadsToNsNotes.size > this.nsNotesToGNoteHeads.size ?
+          'GNotes => NoteSequence' : 'NoteSequence => GNotes'
+        } is of greater size`)
+
+        console.log("GNotes to NoteSequence : ", this.gNoteHeadsToNsNotes)
+        console.log("NoteSequence to GNotes : ", this.nsNotesToGNoteHeads)
+      }
+
+      this.cursor.reset()
+    },
+
     // Store tempos with their date of occurrence in microseconds.
     // This is necessary because otherwise, on read, we would assume all quarters to have elapsed with the same microsecond value
     // Which is not the case.
@@ -392,8 +614,16 @@ export default {
       })
     },
 
+    setChannelChanges(channelChanges) {
+      this.channelChanges = channelChanges
+    },
+
     getNearestTempoEvent(timeStampInWholeNotes) {
       return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes)
+    },
+
+    getNearestChannel(partId, timeStampInWholeNotes) {
+      return this.channelChanges.get(partId).findLast(event => event.delta <= timeStampInWholeNotes)
     },
 
     findNearestCursorDate(setStartIndex, cursorDatesAndSearchIndex) {
@@ -438,18 +668,21 @@ export default {
       }
     },
 
+    // Channel histories carry zero-based channels
+    // (since they come from the parser, which targets the lib, which uses zero-based channels)
+    // but we use 1-indexed channels in this app,
+    // so this is necessary.
+
+    currentChannel(partId, index = 1) {
+      return this.getNearestChannel(
+        partId,
+        this.cursor.iterator.currentTimeStamp.realValue
+      ).channel + index
+    },
+
     moveCursorToSet(setIndex, which = "index") {
 
       const chosenCursor = this.osmd.cursors[this.cursorNames.indexOf(which)]
-
-      // FIXME : this is a strange bug that occurs after remounting on tab switch.
-      // On first mount, the start and end cursors are shown and their hidden flag is false, as expected.
-      // On re-mount, show() is indeed called on them both, but their hidden flag is set back to true at some later point.
-      // Hence the need to show them again.
-      // if(chosenCursor != this.cursor && chosenCursor.hidden) chosenCursor.show()
-      // ...but even this is not enough !
-      // Because the cursor's inner logic ends up graphically updating a non-existent DOM node,
-      // thereby doing nothing.
 
       const desiredDate = this.cursorAnchors[setIndex]
 
@@ -471,12 +704,16 @@ export default {
         cursorTop < this.$refs.container.scrollTop ||
         cursorTop > this.containerHeight / 2 + this.$refs.container.scrollTop
 
-      // Unlike the piano roll, there's only one scrollig alignment,
+      // Unlike the piano roll, there's only one scrolling alignment,
       // used both on index skip and on normal refresh.
       // This is because scrolling is not continuous.
 
       if(isOutOfSight) this.$refs.container.scrollTop = cursorTop - cursorHeight / 2
     },
+
+    // Used to initiate index cursor drag.
+    // Since the index cursor has to remain on a low z-index, it can't directly be the target of the event.
+    // So instead, the container receives the event and decides if the cursor was targeted using this method.
 
     isWithinIndexCursorBounds(eventX, eventY) {
       if(this.cursor.hidden || this.cursor.hidden === undefined) return false
@@ -489,7 +726,150 @@ export default {
       const bottomY = topY + refElem.offsetHeight
 
       return leftX <= eventX && eventX <= rightX && topY <= eventY && eventY <= bottomY
-    }
+    },
+
+    // Discriminator for finding sets in cursor positions,
+    // And noteheads eligible for reactivity.
+
+    isEligibleMfpNote(note) {
+      return !note.isRest() // MFP doesn't acknowledge rests
+      &&
+      (!note.tie || note.tie.StartNote === note) // and ties, aside from starts, are not actual notes
+    },
+
+    // When clicking on a note, multiple elements can be the target.
+    // This funnels them all down to the element registered in our relevant maps.
+    // Note that we're looking for the notehead <path>, not the <g> element with class "vf-notehead".
+
+    getNoteHeadFromNoteSvgFamily(gNoteSVGFamilyMember) {
+
+      const getNoteHeadFromStaveNote = (staveNote) => {
+        return [...staveNote.firstChild.children].find(child =>
+          child.classList.contains("vf-notehead")
+        ).firstChild
+      }
+
+      switch(gNoteSVGFamilyMember.classList.item(0)) {
+
+        // The highest element in the SVG hierarchy.
+
+        case "vf-stavenote":
+
+          return getNoteHeadFromStaveNote(gNoteSVGFamilyMember)
+          break
+
+        // FIXME : this does not cover the case of grouped notes (eights and above)
+        // Because their stems are not drawn as part of their graphical notes.
+
+        // The stem of the note.
+
+        case "vf-stem":
+
+          // (In practice, this is probably redundant :
+          // we probably only ever encounter the <path> of the stem as the target,
+          // never the <g>.)
+
+          const staveNote =
+            gNoteSVGFamilyMember instanceof SVGPathElement ?
+            gNoteSVGFamilyMember.parentNode.parentNode.parentNode :
+            gNoteSVGFamilyMember.parentNode.parentNode
+
+          return getNoteHeadFromStaveNote(staveNote)
+          break
+
+        // The <g> of the notehead.
+
+        case "vf-notehead":
+
+          return gNoteSVGFamilyMember.firstChild
+
+        default: // an empty classlist : this is for <path> elements
+
+          // They are their own separate list of cases
+
+          switch(gNoteSVGFamilyMember.parentNode.classList.item(0)) {
+
+            // The flag of an isolated eighth (or shorter) note.
+
+            case "vf-flag":
+
+              return getNoteHeadFromStaveNote(
+                gNoteSVGFamilyMember.parentNode.parentNode.parentNode
+              )
+              break
+
+            // A note accidental.
+
+            case "vf-modifiers":
+              return getNoteHeadFromStaveNote(
+                gNoteSVGFamilyMember.parentNode.parentNode
+              )
+
+            // The <path> of the notehead : this is the element we seek.
+
+            case "vf-notehead":
+
+              return gNoteSVGFamilyMember
+              break
+          }
+      }
+    },
+
+    // -------------------------------------------------------------------------
+    // ----------------------REPRODUCED FROM PIANO ROLL-------------------------
+    // -------------------------------------------------------------------------
+
+    // FIXME : these should be factorized/set to a parent component with overriding
+    // Except Vue doesn't have an inheritance model for components.
+    // Still, there should be a way to improve this.
+
+    paintSetOrNote(noteIndex, paintType = "refresh") {
+
+      this.unpaint(paintType === "refresh")
+
+      const highlightGroup =
+        paintType === "refresh" ?
+        this.noteHeadsHighlightedByRefresh :
+        this.noteHeadsHighlightedByMouse
+
+      const nsNotes =
+        (
+          this.ctrlKey ?
+          [this.noteSequence[noteIndex]] :
+          this.getSet(this.getSetIndex(noteIndex))
+        )
+
+      nsNotes.map(
+        nsNote => this.nsNotesToGNoteHeads.get(nsNote)
+      ).forEach(gNoteHead => {
+        gNoteHead.setAttribute('fill', this.activeNoteRGB)
+        highlightGroup.push(gNoteHead)
+      })
+    },
+
+    unpaint(all = false) {
+
+      const notesToUnpaint =
+        all ?
+        [...this.noteHeadsHighlightedByMouse, ...this.noteHeadsHighlightedByRefresh] :
+        this.noteHeadsHighlightedByMouse
+
+      notesToUnpaint.forEach(gNoteHead =>
+        gNoteHead.setAttribute('fill', this.noteRGB)
+      )
+
+      this.noteHeadsHighlightedByMouse = []
+      if(all) this.noteHeadsHighlightedByRefresh = []
+    },
+
+    getSet(setIndex) {
+      return this.noteSequence.slice(this.setStarts[setIndex], this.setEnds[setIndex]+1)
+    },
+
+    getSetIndex(noteIndex) {
+      const tentativeSetIndex = this.setStarts.findIndex(i => i > noteIndex)
+      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
+    },
   }
 }
 </script>
