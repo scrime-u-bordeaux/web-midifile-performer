@@ -114,7 +114,8 @@ export default {
       allowHighlight: true,
 
       // Identical role to highlightedNote in PianoRoll
-      noteHeadUnderCursor: null,
+      // However, here, multiple noteheads may share the same stem.
+      noteHeadsUnderCursor: [],
 
       // Additionally, we have to do this instead of querying by active class, because
       // querySelectorAll() is not recursive.
@@ -203,7 +204,9 @@ export default {
         console.error("Error during setup of notehead event listeners.")
         console.error(e.message)
         console.error("This is probably due to an OSMD cursor bug : see issue 67")
-        console.error("Sheet music notes will not react to click and hover.")
+        console.error("Sheet music notes after this index will not react to click and hover.")
+
+        this.cursor.reset()
       }
 
 
@@ -235,7 +238,7 @@ export default {
     clearState() {
       this.noteHeadsHighlightedByMouse = []
       this.noteHeadsHighlightedByRefresh = []
-      
+
       this.gNoteHeadsToNsNotes.clear()
       this.nsNotesToGNoteHeads.clear()
     },
@@ -316,8 +319,14 @@ export default {
     // This is because the inside of that hollow section is not part of the graphical note.
 
     onNoteClick(event) {
-      const noteHead = this.getNoteHeadFromNoteSvgFamily(event.target)
-      const noteIndex = this.gNoteHeadsToNsNotes.get(noteHead).index
+      const noteHeads = this.getNoteHeadsFromNoteSvgFamily(event.target)
+      // There shouldn't be more than one set assigned to noteheads sharing the same stem...
+      // ...in practice, there is, because of a noteSequence bug,
+      // (see issue #77)
+      // but only the actual set matters, and it's that of the first valid index.
+      const noteIndex = this.getFirstValidNoteIndex(noteHeads)
+      if(noteIndex < 0 ) return
+
       const setIndex = this.getSetIndex(noteIndex)
 
       if(setIndex < this.sequenceStart) this.$emit('start', setIndex)
@@ -348,11 +357,13 @@ export default {
     onNoteHover(event) {
       if(!this.allowHighlight) return;
 
-      const noteHead = this.getNoteHeadFromNoteSvgFamily(event.target)
+      const noteHeads = this.getNoteHeadsFromNoteSvgFamily(event.target)
 
-      this.noteHeadUnderCursor = noteHead
+      this.noteHeadsUnderCursor = noteHeads
 
-      const noteIndex = this.gNoteHeadsToNsNotes.get(noteHead).index
+      const noteIndex = this.getFirstValidNoteIndex(noteHeads)
+      if(noteIndex < 0) return
+
       const setIndex = this.getSetIndex(noteIndex)
 
       // We should only paint if we're hovering on a set the cursor isn't on
@@ -369,10 +380,12 @@ export default {
 
     onNoteLeave(event) {
       // ...so we test its type instead of its existence.
-      if(event.type === "mouseleave") this.noteHeadUnderCursor = null
+      if(event.type === "mouseleave") this.noteHeadsUnderCursor = []
 
-      const noteHead = this.getNoteHeadFromNoteSvgFamily(event.target)
-      const noteIndex = this.gNoteHeadsToNsNotes.get(noteHead).index
+      const noteHeads = this.getNoteHeadsFromNoteSvgFamily(event.target)
+      const noteIndex = this.getFirstValidNoteIndex(noteHeads)
+      if(noteIndex < 0) return
+
       const setIndex = this.getSetIndex(noteIndex)
 
       this.unpaint()
@@ -386,14 +399,18 @@ export default {
     onKeyDown(event) {
       if(event.key === 'Control') {
         this.ctrlKey = true
-        this.noteHeadUnderCursor?.dispatchEvent(new Event('mouseover', {bubbles: true}))
+        this.noteHeadsUnderCursor.forEach(noteHead =>
+          noteHead.dispatchEvent(new Event('mouseover', {bubbles: true}))
+        )
       }
     },
 
     onKeyUp(event) {
       if(event.key === 'Control') {
         this.ctrlKey = false
-        this.noteHeadUnderCursor?.dispatchEvent(new Event('mouseover', {bubbles: true}))
+        this.noteHeadsUnderCursor.forEach(noteHead =>
+          noteHead.dispatchEvent(new Event('mouseover', {bubbles: true}))
+        )
       }
     },
 
@@ -433,7 +450,7 @@ export default {
         // Because date approximation is always finicky, we want to put luck on our side
         // So we exclude cursor entries that could never be sets,
         // Because they contain no eligible note.
-        if(notesUnderCursor.some(this.isEligibleMfpNote)) {
+        if(notesUnderCursor.some(note => this.isEligibleMfpNote(note))) {
           allCursorDates.push(this.currentCursorDate())
           allCursorCoordinates.push(this.currentCursorCoordinates())
         }
@@ -526,24 +543,53 @@ export default {
       this.setStarts.forEach((start, setIndex) => {
         const end = this.setEnds[setIndex]
         const set = this.noteSequence.slice(start, end+1)
+
         const usedNotesOfSet = []
+
+        // Separate GNotes can share the same stem.
+        // In this case, getSVGGElement will return the same root node.
+        // This is why getNoteHeadsFromNoteSvgFamily returns an array.
+        // To know *which* note head in that array is for which GNote,
+        // we use these two trackers :
+
+        let svgRootBuffer = null // the last unique SVG root node returned by getSVGGElement
+        let indexInBuffer = 0 // the index of the notehead to pick
+
+        // As well, since listeners cannot be set on every new root node
+        // (since some will only contain tie-prolonging noteheads)
+        // a flag is used to keep track of whether they have been set.
+        // As soon as a non-tie-prolonging note is encountered in a buffer,
+        // the listeners are set, and the flag is reset.
+        let listenersSetForBuffer = null
 
         this.moveCursorToSet(setIndex)
 
         this.cursor.GNotesUnderCursor()
           .filter(gnote =>
-            this.isEligibleMfpNote(gnote.sourceNote) &&
+            this.isEligibleMfpNote(gnote.sourceNote, false) &&
             gnote.clef.clefType !== TAB_CLEF // There's probably a way to test this with the sourceNote in isEligibleMfpNote instead
           ).forEach(gnote => {
 
             const gNoteSVGRoot = gnote.getSVGGElement()
 
-            gNoteSVGRoot.addEventListener("mousedown", this.onNoteClick)
-            gNoteSVGRoot.addEventListener("mouseover", this.onNoteHover)
-            gNoteSVGRoot.addEventListener("mouseup", this.onNoteUnClick)
-            gNoteSVGRoot.addEventListener("mouseleave", this.onNoteLeave)
+            if(gNoteSVGRoot !== svgRootBuffer) {
+              svgRootBuffer = gNoteSVGRoot
+              indexInBuffer = 0
 
-            const gNoteHead = this.getNoteHeadFromNoteSvgFamily(gNoteSVGRoot)
+              listenersSetForBuffer = false
+            } else indexInBuffer++
+
+            const isTieProlongation = this.isNoteTieProlongation(gnote.sourceNote)
+            if(isTieProlongation) return
+
+            if(!listenersSetForBuffer) {
+              gNoteSVGRoot.addEventListener("mousedown", this.onNoteClick)
+              gNoteSVGRoot.addEventListener("mouseover", this.onNoteHover)
+              gNoteSVGRoot.addEventListener("mouseup", this.onNoteUnClick)
+              gNoteSVGRoot.addEventListener("mouseleave", this.onNoteLeave)
+
+              listenersSetForBuffer = true
+            }
 
             const pitch = gnote.sourceNote.halfTone + 12
             const channel = this.currentChannel(
@@ -560,13 +606,23 @@ export default {
               && !usedNotesOfSet.includes(candidate)
             )
 
-            console.log(noteSequenceEquivalent)
-
             if(!noteSequenceEquivalent) throw new Error(
               `Could not find equivalent for graphical note in set ${setIndex}`
             )
 
             usedNotesOfSet.push(noteSequenceEquivalent)
+
+            const gNoteHeads = this.getNoteHeadsFromNoteSvgFamily(svgRootBuffer)
+            const gNoteHead = gNoteHeads[indexInBuffer]
+
+            // Testing leftover
+            // (this should not happen, even in cases of OSMD hiccups)
+
+            if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
+              console.error("Duplicate registration for", gNoteHead)
+            } else if(gNoteHead === undefined) {
+              console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
+            }
 
             this.gNoteHeadsToNsNotes.set(gNoteHead, noteSequenceEquivalent)
             this.nsNotesToGNoteHeads.set(noteSequenceEquivalent, gNoteHead)
@@ -583,6 +639,7 @@ export default {
 
         console.log("GNotes to NoteSequence : ", this.gNoteHeadsToNsNotes)
         console.log("NoteSequence to GNotes : ", this.nsNotesToGNoteHeads)
+        console.log(`NoteSequence length : ${this.noteSequence.length}`)
       }
 
       this.cursor.reset()
@@ -728,25 +785,32 @@ export default {
       return leftX <= eventX && eventX <= rightX && topY <= eventY && eventY <= bottomY
     },
 
+    isNoteTieProlongation(note) {
+      return !!note.tie && note.tie.StartNote !== note
+    },
+
     // Discriminator for finding sets in cursor positions,
     // And noteheads eligible for reactivity.
 
-    isEligibleMfpNote(note) {
+    isEligibleMfpNote(note, ignoreTied = true) {
       return !note.isRest() // MFP doesn't acknowledge rests
       &&
-      (!note.tie || note.tie.StartNote === note) // and ties, aside from starts, are not actual notes
+      (!ignoreTied || !this.isNoteTieProlongation(note)) // and ties, aside from starts, are not actual notes
     },
 
     // When clicking on a note, multiple elements can be the target.
-    // This funnels them all down to the element registered in our relevant maps.
-    // Note that we're looking for the notehead <path>, not the <g> element with class "vf-notehead".
+    // This funnels them all down to the elements registered in our relevant maps : the notehead <path>s.
+    // Note that this means we are *not* returning the <g> tag with class "vf-notehead".
 
-    getNoteHeadFromNoteSvgFamily(gNoteSVGFamilyMember) {
+    // This method returns an *array*, because a single note svg family, with one single staveNote root,
+    // Can share one stem but have multiple noteheads (in fact, it's extremely common).
 
-      const getNoteHeadFromStaveNote = (staveNote) => {
-        return [...staveNote.firstChild.children].find(child =>
+    getNoteHeadsFromNoteSvgFamily(gNoteSVGFamilyMember) {
+
+      const getNoteHeadsFromStaveNote = (staveNote) => {
+        return [...staveNote.firstChild.children].filter(child =>
           child.classList.contains("vf-notehead")
-        ).firstChild
+        ).map(gTag => gTag.firstChild)
       }
 
       switch(gNoteSVGFamilyMember.classList.item(0)) {
@@ -755,7 +819,7 @@ export default {
 
         case "vf-stavenote":
 
-          return getNoteHeadFromStaveNote(gNoteSVGFamilyMember)
+          return getNoteHeadsFromStaveNote(gNoteSVGFamilyMember)
           break
 
         // FIXME : this does not cover the case of grouped notes (eights and above)
@@ -774,14 +838,14 @@ export default {
             gNoteSVGFamilyMember.parentNode.parentNode.parentNode :
             gNoteSVGFamilyMember.parentNode.parentNode
 
-          return getNoteHeadFromStaveNote(staveNote)
+          return getNoteHeadsFromStaveNote(staveNote)
           break
 
         // The <g> of the notehead.
 
         case "vf-notehead":
 
-          return gNoteSVGFamilyMember.firstChild
+          return [gNoteSVGFamilyMember.firstChild]
 
         default: // an empty classlist : this is for <path> elements
 
@@ -793,7 +857,7 @@ export default {
 
             case "vf-flag":
 
-              return getNoteHeadFromStaveNote(
+              return getNoteHeadsFromStaveNote(
                 gNoteSVGFamilyMember.parentNode.parentNode.parentNode
               )
               break
@@ -801,7 +865,7 @@ export default {
             // A note accidental.
 
             case "vf-modifiers":
-              return getNoteHeadFromStaveNote(
+              return getNoteHeadsFromStaveNote(
                 gNoteSVGFamilyMember.parentNode.parentNode
               )
 
@@ -809,10 +873,24 @@ export default {
 
             case "vf-notehead":
 
-              return gNoteSVGFamilyMember
+              return [gNoteSVGFamilyMember]
               break
           }
       }
+    },
+
+    // Among the noteHeads of a given SVG family,
+    // some may not be registered in our maps.
+    // The only reason for this so far is them being a tie prolongation.
+
+    getFirstValidNoteIndex(noteHeads) {
+      const firstValidNoteHead = noteHeads.find(noteHead =>
+        this.gNoteHeadsToNsNotes.has(noteHead)
+      )
+
+      return !!firstValidNoteHead ?
+        this.gNoteHeadsToNsNotes.get(firstValidNoteHead).index :
+        -1
     },
 
     // -------------------------------------------------------------------------
