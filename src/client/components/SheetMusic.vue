@@ -62,7 +62,7 @@ export default {
           },
 
           {
-            alpha: 1,
+            alpha: 0.5,
             color: '#58e28e',
             follow: true,
             type: 0
@@ -83,7 +83,7 @@ export default {
 
       drawn: false,
 
-      activeNoteRGB: '#58e28e',
+      activeNoteRGB: '#1eae56',
       noteRGB: '#000000',
 
       zoom: 0.5,
@@ -335,13 +335,13 @@ export default {
 
       if(this.allowHighlight) {
 
-        // FIXME : because the cursor and the highlight color are the same,
-        // We can't have both at once.
-        // The ideal thing to do would be to have a highlight color that meshes well with the cursor,
-        // But that doesn't overload the palette.
-        // This ties into reworking the palette of the whole application.
-
-        this.cursor.hide()
+        // // FIXME : because the cursor and the highlight color are the same,
+        // // We can't have both at once.
+        // // The ideal thing to do would be to have a highlight color that meshes well with the cursor,
+        // // But that doesn't overload the palette.
+        // // This ties into reworking the palette of the whole application.
+        //
+        // this.cursor.hide()
 
         this.paintSetOrNote(noteIndex, "mouse")
         this.$emit('play',
@@ -366,10 +366,10 @@ export default {
 
       const setIndex = this.getSetIndex(noteIndex)
 
-      // We should only paint if we're hovering on a set the cursor isn't on
-      // or if the cursor is currently hidden from click
-      // (in which case, this is an artificial event dispatched after Ctrl was pressed or released)
-      if(this.sequenceIndex !== setIndex || this.cursor.hidden)
+      // // We should only paint if we're hovering on a set the cursor isn't on
+      // // or if the cursor is currently hidden from click
+      // // (in which case, this is an artificial event dispatched after Ctrl was pressed or released)
+      // if(this.sequenceIndex !== setIndex || this.cursor.hidden)
         this.paintSetOrNote(noteIndex, "mouse")
     },
 
