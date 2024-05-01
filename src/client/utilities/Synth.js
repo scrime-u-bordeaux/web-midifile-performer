@@ -7,6 +7,7 @@ class Synth extends EventEmitter {
     super();
 
     this.ctx = null;
+    this.lookahead = 0; // attempt to give more room to chrome to avoid clicks ... fail :(
     this.releaseTime = 0.15; // 150 ms
     this.noteBuffers = new Map();
     this.playingMap = new Map()
@@ -61,8 +62,8 @@ class Synth extends EventEmitter {
       const { buffer } = this.noteBuffers[bufferIndex];
       const noteIndex = this.getNoteIndexIfInRange(noteNumber);
       const notePosition = ((noteIndex / (notesLayout.length - 1)) * 2 - 1);
-      const normVelocity = velocity / 127;
-      const cutoff = Math.pow(normVelocity, 4) * 20000 + 500;
+      const normVelocity = Math.pow(velocity / 127, 1.5);
+      const cutoff = Math.pow(normVelocity, 4) * 12000 + 200; // * 20000 + 500
 
       let player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
@@ -80,7 +81,7 @@ class Synth extends EventEmitter {
       // player.biquad.frequency.value = Math.pow(normVelocity, 2.5) * 20000 + 1500;
 
       // - Velocity-driven gain :
-      player.volume.gain.value = normVelocity;
+      player.volume.gain.value = normVelocity * 0.8 + 0.2;
 
       // - NoteNumber-defined panning :
       // don't pan fully left or right
@@ -89,7 +90,7 @@ class Synth extends EventEmitter {
       // - Velocity-driven start time :
       // TODO : try to make a ramp to avoid clicks -> still doesn't improve anything
       const offset = (1 - normVelocity) * 0.005; // 5ms max
-      player.source.start(this.ctx.currentTime, offset);
+      player.source.start(this.ctx.currentTime + this.lookahead, offset);
       // -----------------------------------------------------------------------
 
       this.setPlayerForNoteOnChannel(noteNumber, channel, player);
@@ -105,8 +106,8 @@ class Synth extends EventEmitter {
       const player = this.getPlayerForNoteOnChannel(noteNumber, channel)
 
       if (!!player) {
-        this.turnOffPlayer(player)
-        this.removePlayerForNoteOnChannel(noteNumber, channel)
+        this.turnOffPlayer(player);
+        this.removePlayerForNoteOnChannel(noteNumber, channel);
       }
     }
   }
@@ -190,10 +191,11 @@ class Synth extends EventEmitter {
   }
 
   turnOffPlayer(player) {
-    player.volume.gain.cancelScheduledValues(this.ctx.currentTime);
     const val = player.volume.gain.value;
-    player.volume.gain.setValueAtTime(val, this.ctx.currentTime);
-    player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime);
+    player.volume.gain.cancelScheduledValues(this.ctx.currentTime + this.lookahead);
+    player.volume.gain.setValueAtTime(val, this.ctx.currentTime + this.lookahead);
+    //player.volume.gain.cancelAndHoldAtTime(this.ctx.currentTime); // not supported by firefox and doesn't fix the issue
+    player.volume.gain.linearRampToValueAtTime(0, this.ctx.currentTime + this.releaseTime + this.lookahead);
   }
 };
 
