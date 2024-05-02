@@ -30,7 +30,7 @@ export default {
     ]),
 
     activeNoteRGB() {
-      return this.highlightPalette.get(this.allowHighlight ? "darkBlue" : "darkGreen")
+      return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
     },
 
     start() {
@@ -119,7 +119,7 @@ export default {
 
       // temporary !!
       // TODO : Phase out with unification of mode state in store
-      allowHighlight: true,
+      isModeSilent: true,
 
       // Identical role to highlightedNote in PianoRoll
       // However, here, multiple noteheads may share the same stem.
@@ -283,9 +283,11 @@ export default {
       this.refresh(index, true)
     },
 
-    onAllowHighlight(allow) {
-      this.updateCursorColor(allow)
-      this.allowHighlight = allow
+    onIsModeSilent(isIt) {
+      if(!this.drawn) return
+
+      this.isModeSilent = isIt
+      this.updateCursorColor()
     },
 
     onCursorDragStart(event) {
@@ -358,17 +360,9 @@ export default {
       if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
       this.$emit('index', setIndex)
 
-      if(this.allowHighlight) {
+      this.paintSetOrNote(noteIndex, "mouse")
 
-        // // FIXME : because the cursor and the highlight color are the same,
-        // // We can't have both at once.
-        // // The ideal thing to do would be to have a highlight color that meshes well with the cursor,
-        // // But that doesn't overload the palette.
-        // // This ties into reworking the palette of the whole application.
-        //
-        // this.cursor.hide()
-
-        this.paintSetOrNote(noteIndex, "mouse")
+      if(this.isModeSilent) {
         this.$emit('play',
           this.ctrlKey ?
             [this.noteSequence[noteIndex]] :
@@ -380,8 +374,6 @@ export default {
     // FIXME : hollow notes are also unlit when passing in their hollow section.
 
     onNoteHover(event) {
-      if(!this.allowHighlight) return;
-
       const noteHeads = this.getNoteHeadsFromNoteSvgFamily(event.target)
 
       this.noteHeadsUnderCursor = noteHeads
@@ -391,11 +383,7 @@ export default {
 
       const setIndex = this.getSetIndex(noteIndex)
 
-      // // We should only paint if we're hovering on a set the cursor isn't on
-      // // or if the cursor is currently hidden from click
-      // // (in which case, this is an artificial event dispatched after Ctrl was pressed or released)
-      // if(this.sequenceIndex !== setIndex || this.cursor.hidden)
-        this.paintSetOrNote(noteIndex, "mouse")
+      this.paintSetOrNote(noteIndex, "mouse")
     },
 
     onNoteUnClick(event) {
@@ -414,7 +402,7 @@ export default {
       const setIndex = this.getSetIndex(noteIndex)
 
       this.unpaint()
-      this.$emit('stop')
+      if(this.isModeSilent) this.$emit('stop')
     },
 
     // TODO : Can we factorize these ?
@@ -746,9 +734,9 @@ export default {
       ).channel + index
     },
 
-    updateCursorColor(allow) {
+    updateCursorColor() {
       this.cursor.cursorElement.src = this.highlightPalette.get(
-        allow ? "cursorBlue" : "cursorGreen"
+        this.isModeSilent ? "cursorBlue" : "cursorGreen"
       )
     },
 
@@ -767,7 +755,7 @@ export default {
       // So we must fight this effect on every step.
       // Thankfully, no blinking results from this, or if it does, it's not perceptible.
 
-      this.updateCursorColor(this.allowHighlight)
+      this.updateCursorColor()
     },
 
     // Used instead of OSMD's cursor follow system,

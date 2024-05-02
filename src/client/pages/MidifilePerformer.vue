@@ -567,7 +567,7 @@ export default {
     onAllowHighlight(allow) {
       this.$refs.keyboard.allowHighlight = allow
       this.$refs.pianoRoll.allowHighlight = allow
-      this.$refs.sheetMusic.onAllowHighlight(allow)
+      this.$refs.sheetMusic.onIsModeSilent(allow)
     },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
