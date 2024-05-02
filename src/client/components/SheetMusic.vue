@@ -25,9 +25,13 @@ export default {
     ...mapState([
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
-      'noteSequence', 'setStarts', 'setEnds',
+      'noteSequence', 'setStarts', 'setEnds', 'highlightPalette',
       'osmdCursorAnchors', 'osmdSetCoordinates'
     ]),
+
+    activeNoteRGB() {
+      return this.highlightPalette.get(this.allowHighlight ? "darkBlue" : "darkGreen")
+    },
 
     start() {
       return this.osmd.cursors[0]
@@ -54,23 +58,28 @@ export default {
         autoResize: false,
         backend: "svg", // see if we change this later,
         cursorsOptions: [
+          // Note that I can't use the palette here :
+          // The computed properties of the component aren't accessible in the function.
           {
-            alpha: 0.5,
-            color: '#02a78c',
+            alpha: 1,
+            color: '#02a7f0',
             follow: false,
             type: 1
           },
 
+          // Note that the alpha and color options of the main cursor are only for setup.
+          // They will change with mode.
+
           {
-            alpha: 0.5,
-            color: '#58e28e',
+            alpha: 0.4,
+            color: '#02a7f0',
             follow: true,
             type: 0
           },
 
           {
-            alpha: 0.5,
-            color: '#02a78c',
+            alpha: 1,
+            color: '#02a7f0',
             follow: false,
             type: 1
           }
@@ -83,7 +92,6 @@ export default {
 
       drawn: false,
 
-      activeNoteRGB: '#1eae56',
       noteRGB: '#000000',
 
       zoom: 0.5,
@@ -168,7 +176,7 @@ export default {
     ...mapMutations(['setOsmdCursorAnchors', 'setOsmdSetCoordinates']),
 
     // -------------------------------------------------------------------------
-    // --------------------------SETUP AND CLEAR--------------------------------
+    // ------------------------------MAIN LOGIC---------------------------------
     // -------------------------------------------------------------------------
 
     initOsmd() {
@@ -209,7 +217,6 @@ export default {
         this.cursor.reset()
       }
 
-
       this.cursor.show()
 
       this.drawn = true
@@ -229,6 +236,19 @@ export default {
       // Therefore, it must only be set before render.
       this.osmd.zoom = this.zoom
       this.osmd.render()
+    },
+
+    refresh(referenceSetIndex, scroll = false) {
+
+      if(!this.drawn) return
+
+      // Normally, OSMD should call init() on each cursor, which should set its hidden property to true.
+      // However in practice, it is left undefined, requiring this.
+      if(this.cursor.hidden === undefined || this.cursor.hidden) this.cursor.show()
+
+      this.moveCursorToSet(referenceSetIndex)
+      if(scroll) this.scrollCursorIntoView()
+      // console.log(this.currentCursorDate())
     },
 
     stop() {
@@ -261,6 +281,11 @@ export default {
 
     onIndexJump(index) {
       this.refresh(index, true)
+    },
+
+    onAllowHighlight(allow) {
+      this.updateCursorColor(allow)
+      this.allowHighlight = allow
     },
 
     onCursorDragStart(event) {
@@ -390,7 +415,6 @@ export default {
 
       this.unpaint()
       this.$emit('stop')
-      this.cursor.show()
     },
 
     // TODO : Can we factorize these ?
@@ -412,21 +436,6 @@ export default {
           noteHead.dispatchEvent(new Event('mouseover', {bubbles: true}))
         )
       }
-    },
-
-    // This still counts as a listener to me, despite the naming.
-
-    refresh(referenceSetIndex, scroll = false) {
-
-      if(!this.drawn) return
-
-      // Normally, OSMD should call init() on each cursor, which should set its hidden property to true.
-      // However in practice, it is left undefined, requiring this.
-      if(this.cursor.hidden === undefined || this.cursor.hidden) this.cursor.show()
-
-      this.moveCursorToSet(referenceSetIndex)
-      if(scroll) this.scrollCursorIntoView()
-      // console.log(this.currentCursorDate())
     },
 
     // -------------------------------------------------------------------------
@@ -737,6 +746,12 @@ export default {
       ).channel + index
     },
 
+    updateCursorColor(allow) {
+      this.cursor.cursorElement.src = this.highlightPalette.get(
+        allow ? "cursorBlue" : "cursorGreen"
+      )
+    },
+
     moveCursorToSet(setIndex, which = "index") {
 
       const chosenCursor = this.osmd.cursors[this.cursorNames.indexOf(which)]
@@ -747,6 +762,12 @@ export default {
         if(this.currentCursorDate(chosenCursor) < desiredDate) chosenCursor.next()
         else if(this.currentCursorDate(chosenCursor) > desiredDate) chosenCursor.previous()
       }
+
+      // OSMD resets the source of the image when moving the cursor,
+      // So we must fight this effect on every step.
+      // Thankfully, no blinking results from this, or if it does, it's not perceptible.
+
+      this.updateCursorColor(this.allowHighlight)
     },
 
     // Used instead of OSMD's cursor follow system,

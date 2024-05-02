@@ -26,6 +26,31 @@ const midifiles = [
   },
 ];
 
+// Palette for visualization
+
+const highlightPalette = new Map([
+
+  // These will be used for the play/pause button (not yet), keyboard (not yet),
+  // And for the current set of the piano roll (not yet), which has no cursor.
+  // Note that they sadly have to be duplicated from CSS definitions
+
+  ["baseBlue", "#02a7f0"], // "Bleu université" / var(--button-blue)
+  ["baseGreen", "#58e28e"], // Keyboard active color / var(--play-perform-green)
+
+  // OSMD cursor uses <img> with a base64 RGBa PNG src, so we store that
+
+  // baseBlue with 0.4 alpha
+  ["cursorBlue", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2O8+uFv2uqnvxnWPvrNcO3jXwZCQIufmSFYjpUhVJqVAQBQYAwqiJrEUwAAAABJRU5ErkJggg=="],
+  // baseBlue with 0.5 alpha
+  ["cursorGreen", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2N8/PN1w4kfdxhOfrvF8OTXGwZCQIZNhMGcS43BgkOFAQBeUQxJfg+WeAAAAABJRU5ErkJggg=="],
+
+  // Both visualizers will use a darker variant to highlight notes on click/hover.
+  // (For now only SheetMusic does)
+
+  ["darkBlue", "#0175a8"], // Basic app blue 30% darker
+  ["darkGreen", "#1eae56"] // Basic app green 60% darker
+]);
+
 const store = createStore({
   state() {
     return {
@@ -43,6 +68,7 @@ const store = createStore({
       noteSequence: [],
       setStarts: [],
       setEnds: [],
+      highlightPalette: highlightPalette,
 
       // Model cache for OSMD visualizer alone.
       // I don't really know if it can be put elsewhere.
