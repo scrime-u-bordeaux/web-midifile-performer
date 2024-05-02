@@ -45,6 +45,7 @@
         @end="onEndChange"/>
 
       <Keyboard
+        ref="keyboard"
         class="keyboard"
         :minNote="minKeyboardNote"
         :maxNote="maxKeyboardNote"
@@ -552,6 +553,7 @@ export default {
     },
 
     onAllowHighlight(allow) {
+      this.$refs.keyboard.allowHighlight = allow
       this.$refs.pianoRoll.allowHighlight = allow
       this.$refs.sheetMusic.onAllowHighlight(allow)
     },

@@ -30,7 +30,7 @@ const midifiles = [
 
 const highlightPalette = new Map([
 
-  // These will be used for the play/pause button (not yet), keyboard (not yet),
+  // These will be used for the play/pause button (not yet), keyboard,
   // And for the current set of the piano roll (not yet), which has no cursor.
   // Note that they sadly have to be duplicated from CSS definitions
 

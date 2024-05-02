@@ -5,7 +5,11 @@
       <!-- whites -->
       <template v-for="n in layoutVars.whiteNotes">
         <rect class="white-note"
-          v-bind:class="state[n.note - minNote] > 0 ? 'active-note' : ''"
+          :class="[
+          allowHighlight ? 'silent' : 'playOrPerform',
+          {
+            activeNote: state[n.note - minNote] > 0,
+          }]"
           :x="n.x"
           :y="0"
           :width="noteDims.white.width"
@@ -24,7 +28,11 @@
       <!-- blacks -->
       <template v-for="n in layoutVars.blackNotes">
         <rect class="black-note"
-          v-bind:class="state[n.note - minNote] > 0 ? 'active-note' : ''"
+          :class="{
+            activeNote: state[n.note - minNote] > 0,
+            silent: allowHighlight,
+            playOrPerform: !allowHighlight
+          }"
           :x="n.x"
           :y="0"
           :width="noteDims.black.width"
@@ -58,7 +66,10 @@
   stroke-width: 0.5;
   z-index: 2;
 }
-.active-note {
+.activeNote.silent {
+  fill: #02a7f0 !important;
+}
+.activeNote.playOrPerform {
   fill: #58e28e !important;
 }
 .octave-text {
@@ -99,6 +110,7 @@ export default {
   data() {
     return {
       noteStates: [],
+      allowHighlight: true
     };
   },
   computed: {
