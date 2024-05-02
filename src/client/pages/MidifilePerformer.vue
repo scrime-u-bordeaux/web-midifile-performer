@@ -17,9 +17,21 @@
       </span>
 
       <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
-        <img :src="`pics/piano_roll_icon_${pianoRollSelected ? 'enabled' : 'disabled'}.png`"
+        <img :src="`pics/piano_roll_icon_${
+          pianoRollSelected ?
+            (currentMode === 'silent' ?
+              'enabled_silent' : 'enabled_play_perform'
+            ) :
+            'disabled'
+          }.png`"
           @click="selectedVisualizer = 'pianoRoll'"/>
-        <img :src="`pics/music_notes_icon_${sheetMusicSelected ? 'enabled' : 'disabled'}.png`"
+        <img :src="`pics/music_notes_icon_${
+          sheetMusicSelected ?
+            (currentMode === 'silent' ?
+              'enabled_silent' : 'enabled_play_perform'
+            ) :
+            'disabled'
+          }.png`"
           @click="selectedVisualizer = 'sheetMusic'"/>
       </div>
 
