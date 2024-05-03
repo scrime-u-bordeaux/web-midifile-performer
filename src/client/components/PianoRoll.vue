@@ -531,7 +531,10 @@ export default {
       // This distinction is only possible once we have unified the mode into the store
       // FIXME : also, this won't work when a longer note is being held...
       // Is there a better way ?
-      if(!this.isModeSilent && this.activeNotes.size === 0) this.paintCurrentSet()
+      if(
+        !this.isModeSilent &&
+        this.activeNotes.size === 0 &&
+        !this.isMouseOverCurrentSet()) this.paintCurrentSet()
     },
 
     refreshActiveNotes(setIndex) {
@@ -603,6 +606,12 @@ export default {
     isOutOfReach(activeNotePosition) {
       return activeNotePosition < this.$refs.container.scrollLeft || // hidden on the left
       activeNotePosition > this.$refs.container.scrollLeft + this.containerWidth // or hidden on the right
+    },
+
+    isMouseOverCurrentSet() {
+      return this.getSet(this.sequenceIndex)
+        .map(note => this.getRectFromNoteIndex(note.index))
+        .includes(this.rectUnderCursor)
     },
 
     // The rest of the utils are taken from the Magenta component.
