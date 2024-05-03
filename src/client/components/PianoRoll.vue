@@ -35,8 +35,6 @@ export default {
     initialNoteHeight: { default: 4 },
     noteSpacing: { default: 5 },
     pixelsPerTimeStep: { default: 60 },
-    noteRGB: { default: '102, 102, 102' },
-    activeNoteRGB: { default: '88, 226, 142' }
 
     // remove min and max pitch props from Magenta and always determine from ambitus
   },
@@ -49,13 +47,14 @@ export default {
       height: 0,
       width: 0,
 
+      noteRGB: '#666666',
       noteHeight: this.initialNoteHeight,
 
       sequenceBoundaryWidth: 3, // should we rather make it noteSpacing ?
       // but that would incentivize larger spacing and thus smaller notes,
       // with the way things are currently calculated
       sequenceBoundarySpacing: 1,
-      sequenceBoundaryRGB: '2, 167, 240',
+      sequenceBoundaryRGB: '#02a7f099', // storing opacity together here, because it never changes
 
       // Always use a fixed size based off extrema pitches 21 and 108 offset by 4 each.
 
@@ -77,7 +76,7 @@ export default {
 
       // temporary !!
       // TODO : Phase out with unification of mode state in store
-      allowHighlight: true,
+      isModeSilent: true,
 
       // temporary !!
       // FIXME (issue #57): this doesn't fix the overlaps of successive notes
@@ -92,15 +91,31 @@ export default {
       // for switching between set and single-note highlight/play
       ctrlKey: false,
       // last rect the mouse has been over
-      rectUnderCursor: null
+      rectUnderCursor: null,
+
+      // Interval for a function that paints the active set in play/perform mode
+      interval: null
     }
   },
 
   computed: {
     ...mapState([
-      'sequenceStart', 'sequenceEnd',
-      'minKeyboardNote', 'keyboardState'
-    ])
+      'sequenceStart', 'sequenceEnd', 'sequenceIndex',
+      'minKeyboardNote', 'keyboardState',
+      'highlightPalette'
+    ]),
+
+    activeNoteRGB() {
+      return this.highlightPalette.get(
+        this.isModeSilent ? "baseBlue" : "baseGreen"
+      )
+    },
+
+    currentSetRGB() {
+      return this.highlightPalette.get(
+        this.isModeSilent ? "darkBlue" : "darkGreen"
+      )
+    }
   },
 
   watch: {
@@ -123,6 +138,10 @@ export default {
 
     sequenceEnd(newEnd, oldEnd) {
       if(newEnd !== oldEnd) this.redrawBoundary('end')
+    },
+
+    sequenceIndex(newIndex, oldIndex) {
+      if(this.isModeSilent) this.paintCurrentSet()
     }
   },
 
@@ -135,12 +154,16 @@ export default {
     // TODO : add sync on scroll rather than just click ?
     // Or would we prefer scroll to stay a simple "peek" operation ?
     //this.$refs.container.addEventListener('scroll', this.onContainerScroll)
+
+    this.interval = setInterval(this.keepTrackOfCurrentSet.bind(this), 100)
   },
 
   beforeUnmount() {
     document.removeEventListener('keydown', this.onKeyDown)
     document.removeEventListener('keyup', this.onKeyUp)
     this.$refs.container.removeEventListener('wheel', this.onWheel)
+
+    clearInterval(this.interval)
   },
 
   methods: {
@@ -159,6 +182,8 @@ export default {
 
       this.setSize()
       this.draw()
+      this.paintCurrentSet()
+
 
       // Okay, so, hello to future me or anyone who might be wondering what this setTimeout is.
       // Normally, this shouldn't be needed.
@@ -183,7 +208,8 @@ export default {
         const pos = this.getNotePosition(note)
         if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
 
-        const fill = this.getNoteFillColor(note, false) // when first drawing, nothing is active
+        const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
+        const fillOpacity = this.getNoteFillOpacity(note)
 
         // Magenta being written in TS used custom types here,
         // We use anonymous objects instead.
@@ -201,7 +227,7 @@ export default {
         ]
 
         this.drawNote(
-          pos.x, pos.y, pos.w, pos.h, fill,
+          pos.x, pos.y, pos.w, pos.h, fill, fillOpacity,
           dataAttributes, cssProperties
         )
       })
@@ -215,6 +241,11 @@ export default {
       const activeNotes = this.refreshActiveNotes(setIndex)
       this.fillActiveRects(activeNotes)
       this.scrollToSet(setIndex)
+    },
+
+    onIsModeSilent(isIt) {
+      this.isModeSilent = isIt
+      if(isIt) this.paintCurrentSet()
     },
 
     // TODO : Can we factorize these ?
@@ -253,9 +284,8 @@ export default {
       if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
       this.$emit('index', setIndex)
 
-      // "allowHighlight" means "if mode is silent".
       // TODO : switch this when mode is unified into store.
-      if(this.allowHighlight) {
+      if(this.isModeSilent) {
         this.paintSetOrNote(rect)
         this.$emit('play',
           this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
@@ -271,7 +301,7 @@ export default {
     },
 
     onNoteHover(event) {
-      if(!this.allowHighlight) return;
+      if(!this.isModeSilent) return;
 
       const rect = event.target
       this.rectUnderCursor = rect
@@ -280,7 +310,7 @@ export default {
     },
 
     onNoteLeave(event) {
-      if(!this.allowHighlight) return;
+      if(!this.isModeSilent) return;
 
       if(!!event) this.rectUnderCursor = null
       this.unfillActiveRects()
@@ -331,7 +361,8 @@ export default {
     },
 
     stop() {
-      this.unfillActiveRects()
+      this.unfillActiveRects(true)
+      this.paintCurrentSet()
     },
 
     clearNoteSequence() {
@@ -452,7 +483,7 @@ export default {
 
       rect.classList.add('boundary')
       rect.classList.add(type)
-      rect.setAttribute('fill', `rgba(${this.sequenceBoundaryRGB}, 0.6)`)
+      rect.setAttribute('fill', this.sequenceBoundaryRGB)
 
       rect.setAttribute('x', `${this.getBoundaryPosition(type)}`)
       rect.setAttribute('y', '0')
@@ -466,20 +497,30 @@ export default {
 
     redrawBoundary(type) {
       const boundaryRect = this.$refs.svg.querySelector(`.${type}`)
-      boundaryRect.setAttribute('x', `${this.getBoundaryPosition(type)}`)
+      boundaryRect?.setAttribute('x', `${this.getBoundaryPosition(type)}`)
     },
 
     paintSetOrNote(rect) {
-      if(!this.ctrlKey) this.paintNoteSet(this.getNoteIndexFromRect(rect))
+      if(!this.ctrlKey) this.paintNoteSet(this.getNoteIndexFromRect(rect), "mouse")
       // It's a bit silly, but it's easier for this to be the exception
       // and fillActiveRects to keep taking notes as input.
-      else this.fillActiveRects([this.noteSequence[this.getNoteIndexFromRect(rect)]])
+      else this.fillActiveRects([this.noteSequence[this.getNoteIndexFromRect(rect)]], "mouse")
     },
 
-    paintNoteSet(index) {
-      const setIndex = this.getSetIndex(index)
+    paintNoteSet(index, mode = "refresh") {
+      const setIndex = mode === "current" ? index : this.getSetIndex(index)
       const set = this.getSet(setIndex)
-      this.fillActiveRects(set)
+      this.fillActiveRects(set, mode)
+    },
+
+    paintCurrentSet() {
+      this.paintNoteSet(this.sequenceIndex, "current")
+    },
+
+    keepTrackOfCurrentSet() {
+      // FIXME : this should only happen in PERFORM mode, not play
+      // This distinction is only possible once we have unified the mode into the store
+      if(!this.isModeSilent && this.activeNotes.size === 0) this.paintCurrentSet()
     },
 
     refreshActiveNotes(setIndex) {
@@ -631,19 +672,35 @@ export default {
         this.$refs.container.scrollLeft = activeNotePosition - this.containerWidth / 2
     },
 
-    getNoteFillColor(note, isActive) {
-      const opacityBaseline = 0.2;  // Original comment : "Shift all the opacities up a little."
-      const opacity = note.velocity ? note.velocity / 100 + opacityBaseline : 1;
-      const fill =
-        `rgba(${isActive ? this.activeNoteRGB : this.noteRGB}, ${opacity})`;
-      return fill;
+    getNoteFillColor(type = "refresh") {
+      switch(type) {
+        case "current":
+          return this.currentSetRGB
+          break
+
+        case "refresh":
+        case "mouse":
+          return this.activeNoteRGB
+          break
+
+        case "disable":
+        default:
+          return this.noteRGB
+          break
+      }
     },
 
-    drawNote(x, y, w, h, fill, dataAttributes, cssProperties) {
+    getNoteFillOpacity(note) {
+      const opacityBaseline = 0.2  // Original comment : "Shift all the opacities up a little."
+      return note.velocity ? note.velocity / 100 + opacityBaseline : 1;
+    },
+
+    drawNote(x, y, w, h, fill, fillOpacity, dataAttributes, cssProperties) {
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
 
       rect.classList.add('note')
       rect.setAttribute('fill', fill)
+      rect.setAttribute('fill-opacity', fillOpacity)
 
       rect.setAttribute('x', `${Math.round(x)}`);
       rect.setAttribute('y', `${Math.round(y)}`);
@@ -669,27 +726,45 @@ export default {
     // This one isn't from Magenta, it just doesn't make sense for it
     // not to be with unfillActiveRects.
 
-    fillActiveRects(activeNotes) {
+    fillActiveRects(activeNotes, type = "refresh") {
       if(!this.drawn) this.draw()
-      this.unfillActiveRects()
+      this.unfillActiveRects(type !== "mouse")
 
       activeNotes.forEach(note => {
         const rect = this.getRectFromNoteIndex(note.index)
-        rect.setAttribute('fill', this.getNoteFillColor(note, true))
-        rect.classList.add('active')
+
+        rect.classList.add(type)
+
+        rect.setAttribute('fill', this.getNoteFillColor(type))
       })
     },
 
-    unfillActiveRects() {
-      const activeRects = this.$refs.svg.querySelectorAll('rect.active')
+    unfillActiveRects(all = false) {
+
+      const activeRects = this.$refs.svg.querySelectorAll(
+        `rect.mouse${all ? ', rect.refresh, rect.current' : ''}`
+      )
+
       activeRects.forEach(rect => {
+        this.clearClassList(rect, all)
+
         const fill = this.getNoteFillColor(
-          this.noteSequence[this.getNoteIndexFromRect(rect)],
-          false
+          rect.classList.contains("current") ? "current" : "disable"
         )
         rect.setAttribute('fill', fill)
-        rect.classList.remove('active')
       })
+    },
+
+    // Ensure a note rect can only have one highlight class.
+    // Never remove the "note" class.
+
+    clearClassList(rect, all = false) {
+      // No error is thrown for the tokens that are not in the classlist.
+      rect.classList.remove('mouse')
+      if(all) {
+        rect.classList.remove('refresh')
+        rect.classList.remove('current')
+      }
     }
   }
 }

@@ -31,7 +31,7 @@ const midifiles = [
 const highlightPalette = new Map([
 
   // These will be used for the play/pause button (not yet), keyboard,
-  // And for the current set of the piano roll (not yet), which has no cursor.
+  // And for highlight in the piano roll (not yet).
   // Note that they sadly have to be duplicated from CSS definitions
 
   ["baseBlue", "#02a7f0"], // "Bleu université" / var(--button-blue)
@@ -44,8 +44,10 @@ const highlightPalette = new Map([
   // baseBlue with 0.5 alpha
   ["cursorGreen", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2N8/PN1w4kfdxhOfrvF8OTXGwZCQIZNhMGcS43BgkOFAQBeUQxJfg+WeAAAAABJRU5ErkJggg=="],
 
-  // Both visualizers will use a darker variant to highlight notes on click/hover.
-  // (For now only SheetMusic does)
+  // SheetMusic will use a darker variant to highlight notes on click/hover.
+  // (To contrast with its cursors)
+  // In PianoRoll, it is the opposite, and these will color the current set
+  // (Because it has no cursor to show it)
 
   ["darkBlue", "#0175a8"], // Basic app blue 30% darker
   ["darkGreen", "#1eae56"] // Basic app green 60% darker

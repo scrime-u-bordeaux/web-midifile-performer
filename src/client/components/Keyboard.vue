@@ -6,7 +6,7 @@
       <template v-for="n in layoutVars.whiteNotes">
         <rect class="white-note"
           :class="[
-          allowHighlight ? 'silent' : 'playOrPerform',
+          isModeSilent ? 'silent' : 'playOrPerform',
           {
             activeNote: state[n.note - minNote] > 0,
           }]"
@@ -30,8 +30,8 @@
         <rect class="black-note"
           :class="{
             activeNote: state[n.note - minNote] > 0,
-            silent: allowHighlight,
-            playOrPerform: !allowHighlight
+            silent: isModeSilent,
+            playOrPerform: !isModeSilent
           }"
           :x="n.x"
           :y="0"
@@ -110,7 +110,7 @@ export default {
   data() {
     return {
       noteStates: [],
-      allowHighlight: true
+      isModeSilent: true
     };
   },
   computed: {

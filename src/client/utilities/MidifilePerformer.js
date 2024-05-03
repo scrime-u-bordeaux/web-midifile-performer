@@ -440,7 +440,7 @@ class MidifilePerformer extends EventEmitter {
 
     // temporary !!
     // TODO : phase out with unification of mode state into store
-    this.emit('allowHighlight', this.mode === 'silent')
+    this.emit('isModeSilent', this.mode === 'silent')
   }
 
   command(cmd) {

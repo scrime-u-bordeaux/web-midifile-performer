@@ -371,7 +371,7 @@ export default {
     this.performer.addListener('userChangedIndex', this.onIndexJump)
     // temporary !!
     // TODO : phase out with unification of mode state into store
-    this.performer.addListener('allowHighlight', this.onAllowHighlight)
+    this.performer.addListener('isModeSilent', this.onIsModeSilent)
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
@@ -400,7 +400,7 @@ export default {
     this.performer.removeListener('musicXmlChannels', this.onMusicXmlChannels)
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
-    this.performer.removeListener('allowHighlight', this.onAllowHighlight)
+    this.performer.removeListener('isModeSilent', this.onIsModeSilent)
   },
   methods: {
     ...mapMutations([
@@ -564,10 +564,10 @@ export default {
       }
     },
 
-    onAllowHighlight(allow) {
-      this.$refs.keyboard.allowHighlight = allow
-      this.$refs.pianoRoll.allowHighlight = allow
-      this.$refs.sheetMusic.onIsModeSilent(allow)
+    onIsModeSilent(isIt) {
+      this.$refs.keyboard.isModeSilent = isIt
+      this.$refs.pianoRoll.onIsModeSilent(isIt)
+      this.$refs.sheetMusic.onIsModeSilent(isIt)
     },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
