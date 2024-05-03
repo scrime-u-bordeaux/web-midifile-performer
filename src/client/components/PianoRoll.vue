@@ -177,6 +177,10 @@ export default {
       'setActiveNotes'
     ]),
 
+    // -------------------------------------------------------------------------
+    // -----------------------------MAIN LOGIC----------------------------------
+    // -------------------------------------------------------------------------
+
     updateNoteSequence(chronology) {
 
       this.clear()
@@ -208,42 +212,6 @@ export default {
       setTimeout(() => {this.$refs.container.scrollLeft = 0}, 50)
     },
 
-    draw() {
-      this.occupiedX.clear()
-
-      this.noteSequence.forEach((note, index) => {
-        const pos = this.getNotePosition(note)
-        if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
-
-        const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
-        const fillOpacity = this.getNoteFillOpacity(note)
-
-        // Magenta being written in TS used custom types here,
-        // We use anonymous objects instead.
-
-        const dataAttributes = [
-          {key: 'index', value: index},
-          {key: 'channel', value: note.channel},
-          {key: 'pitch', value: note.pitch}
-        ]
-
-        const cssProperties = [
-          // Taking this straight from magenta, they color undefined velocity the same as max
-          // Undefined velocity shouldn't happen anyway, or we have bigger issues...
-          {key: '--midi-velocity', value: `${!!note.velocity ? note.velocity : 127}`}
-        ]
-
-        this.drawNote(
-          pos.x, pos.y, pos.w, pos.h, fill, fillOpacity,
-          dataAttributes, cssProperties
-        )
-      })
-
-      this.drawBoundaries()
-
-      this.drawn = true
-    },
-
     refresh(setIndex) {
       const activeNotes = this.refreshActiveNotes(setIndex)
       this.setActiveNotes(activeNotes)
@@ -253,6 +221,38 @@ export default {
 
       this.scrollToSet(setIndex)
     },
+
+    stop() {
+      this.unfillActiveRects("refresh")
+      this.paintCurrentSet()
+    },
+
+    clearNoteSequence() {
+      this.noteSequence = []
+      this.setStarts = []
+      this.setEnds = []
+    },
+
+    clearActiveNotes() {
+      this.activeNotes.clear()
+      this.setActiveNotes(this.activeNotes)
+    },
+
+    clearGraphics() {
+      this.setX = []
+      this.$refs.svg.innerHTML = '';
+      this.drawn = false;
+    },
+
+    clear() {
+      this.clearNoteSequence()
+      this.clearActiveNotes()
+      this.clearGraphics()
+    },
+
+    // -------------------------------------------------------------------------
+    // -----------------------------LISTENERS-----------------------------------
+    // -------------------------------------------------------------------------
 
     onIsModeSilent(isIt) {
       this.isModeSilent = isIt
@@ -303,7 +303,7 @@ export default {
           this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
             [this.noteSequence[noteIndex]] :
             this.getSet(setIndex) // otherwise send the sets
-            // Our notes are compatible with the rest of the app, so this works
+            // nsNotes are compatible with the rest of the app, so this works
         )
       }
     },
@@ -368,36 +368,8 @@ export default {
         this.scrollIntoView(activeNotePosition, true)
     },
 
-    stop() {
-      this.unfillActiveRects("refresh")
-      this.paintCurrentSet()
-    },
-
-    clearNoteSequence() {
-      this.noteSequence = []
-      this.setStarts = []
-      this.setEnds = []
-    },
-
-    clearActiveNotes() {
-      this.activeNotes.clear()
-      this.setActiveNotes(this.activeNotes)
-    },
-
-    clearGraphics() {
-      this.setX = []
-      this.$refs.svg.innerHTML = '';
-      this.drawn = false;
-    },
-
-    clear() {
-      this.clearNoteSequence()
-      this.clearActiveNotes()
-      this.clearGraphics()
-    },
-
     // -------------------------------------------------------------------------
-    // -------------------------------UTILS-------------------------------------
+    // ------------------------------CONVERT------------------------------------
     // -------------------------------------------------------------------------
 
     convertChronologyToNoteSequence(chronology) {
@@ -480,6 +452,74 @@ export default {
       this.noteSequence.forEach((note, index) => note.index = index)
     },
 
+    // -------------------------------------------------------------------------
+    // -------------------------------DRAW--------------------------------------
+    // -------------------------------------------------------------------------
+
+    draw() {
+      this.occupiedX.clear()
+
+      this.noteSequence.forEach((note, index) => {
+        const pos = this.getNotePosition(note)
+        if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
+
+        const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
+        const fillOpacity = this.getNoteFillOpacity(note)
+
+        // Magenta being written in TS used custom types here,
+        // We use anonymous objects instead.
+
+        const dataAttributes = [
+          {key: 'index', value: index},
+          {key: 'channel', value: note.channel},
+          {key: 'pitch', value: note.pitch}
+        ]
+
+        const cssProperties = [
+          // Taking this straight from magenta, they color undefined velocity the same as max
+          // Undefined velocity shouldn't happen anyway, or we have bigger issues...
+          {key: '--midi-velocity', value: `${!!note.velocity ? note.velocity : 127}`}
+        ]
+
+        this.drawNote(
+          pos.x, pos.y, pos.w, pos.h, fill, fillOpacity,
+          dataAttributes, cssProperties
+        )
+      })
+
+      this.drawBoundaries()
+
+      this.drawn = true
+    },
+
+    drawNote(x, y, w, h, fill, fillOpacity, dataAttributes, cssProperties) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+
+      rect.classList.add('note')
+      rect.setAttribute('fill', fill)
+      rect.setAttribute('fill-opacity', fillOpacity)
+
+      rect.setAttribute('x', `${Math.round(x)}`);
+      rect.setAttribute('y', `${Math.round(y)}`);
+      rect.setAttribute('width', `${Math.round(w)}`);
+      rect.setAttribute('height', `${Math.round(h)}`);
+
+      dataAttributes.forEach(attribute => {
+        // We cannot use !! because 0 is a valid value.
+        if(attribute.value !== undefined) rect.dataset[attribute.key] = `${attribute.value}`;
+      });
+      cssProperties.forEach(attribute => {
+        rect.style.setProperty(attribute.key, attribute.value);
+      });
+
+      rect.addEventListener("mousedown", this.onNoteClick)
+      rect.addEventListener("mouseover", this.onNoteHover)
+      rect.addEventListener("mouseup", this.onNoteUnClick)
+      rect.addEventListener("mouseleave", this.onNoteLeave)
+
+      this.$refs.svg.appendChild(rect);
+    },
+
     drawBoundaries() {
       this.drawBoundary('start')
       this.drawBoundary('end')
@@ -509,6 +549,10 @@ export default {
       boundaryRect?.setAttribute('x', `${this.getBoundaryPosition(type)}`)
     },
 
+    // -------------------------------------------------------------------------
+    // ------------------------------PAINT--------------------------------------
+    // -------------------------------------------------------------------------
+
     paintSetOrNote(rect) {
       if(!this.ctrlKey) this.paintNoteSet(this.getNoteIndexFromRect(rect), "mouse")
       // It's a bit silly, but it's easier for this to be the exception
@@ -526,50 +570,99 @@ export default {
       this.paintNoteSet(this.sequenceIndex, "current")
     },
 
-    keepTrackOfCurrentSet() {
-      // FIXME : this should only happen in PERFORM mode, not play
-      // This distinction is only possible once we have unified the mode into the store
-      // FIXME : also, this won't work when a longer note is being held...
-      // Is there a better way ?
-      if(
-        !this.isModeSilent &&
-        this.activeNotes.size === 0 &&
-        !this.isMouseOverCurrentSet()) this.paintCurrentSet()
+    getNoteFillColor(type = "refresh") {
+      switch(type) {
+        case "current":
+          return this.currentSetRGB
+          break
+
+        case "refresh":
+        case "mouse":
+          return this.activeNoteRGB
+          break
+
+        case "disable":
+        default:
+          return this.noteRGB
+          break
+      }
     },
 
-    refreshActiveNotes(setIndex) {
-      // TODO : Array.from() may be less performant than the spread syntax [...]
-      // Consider replacing it in this often-called, performance-critical function.
-
-      Array.from(this.activeNotes.values()).forEach(note => {
-        // TODO : is the overhead of creating a function for this worth
-        // the factorization ?
-        // Depending on how JS behaves, it could slow down the playback.
-
-        const mapKey = `p${note.pitch}c${note.channel}`
-        const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
-        const isPlaying = pitchMask & 1 << note.channel
-
-        if(!isPlaying) this.activeNotes.delete(mapKey)
-      })
-
-      const set = this.getSet(setIndex)
-
-      set.forEach((note, index) => {
-        const mapKey = `p${note.pitch}c${note.channel}`
-        const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
-        const isPlaying = pitchMask & 1 << note.channel
-
-        if(isPlaying) this.activeNotes.set(mapKey, note)
-      })
-
-      return Array.from(this.activeNotes.values())
+    getNoteFillOpacity(note) {
+      const opacityBaseline = 0.2  // Original comment : "Shift all the opacities up a little."
+      return note.velocity ? note.velocity / 100 + opacityBaseline : 1;
     },
 
-    scrollToSet(setIndex) {
-      const activeNotePosition = parseFloat(this.getRectFromNoteIndex(this.setStarts[setIndex]).getAttribute('x'))
-      const alignLeft = this.isOutOfReach(activeNotePosition)
-      this.scrollIntoView(activeNotePosition, alignLeft)
+    // This one isn't from Magenta, it just doesn't make sense for it
+    // not to be with unfillActiveRects.
+
+    fillActiveRects(activeNotes, type = "refresh") {
+      if(!this.drawn) this.draw()
+      this.unfillActiveRects(type)
+
+      activeNotes.forEach(note => {
+        const rect = this.getRectFromNoteIndex(note.index)
+
+        rect.classList.add(type)
+
+        rect.setAttribute('fill', this.getNoteFillColor(type))
+      })
+    },
+
+    // I considered having an array of types instead,
+    // but currently, there's no situation where that is necessary
+
+    unfillActiveRects(type = "mouse") {
+      const activeRects = this.$refs.svg.querySelectorAll(
+        `rect.${type}`
+      )
+
+      activeRects.forEach(rect => {
+        // Ensure a note rect can only have one highlight class.
+        // Never remove the "note" class.
+        rect.classList.remove(type)
+
+        const fill = this.getNoteFillColor(
+          rect.classList.contains("current") ? "current" : "disable"
+        )
+        rect.setAttribute('fill', fill)
+      })
+    },
+
+    // -------------------------------------------------------------------------
+    // ----------------------------MISC GETTERS---------------------------------
+    // -------------------------------------------------------------------------
+
+    getNotePosition(note) {
+      const duration = note.endTime - note.startTime
+
+      // Premature round is necessary for the occupiedX set to work properly
+      const tentativeX =
+        Math.round(note.startTime * this.pixelsPerTimeStep + this.sequenceBoundaryWidth)
+
+      const x = this.occupiedX.has(tentativeX) ?
+        tentativeX + this.noteSpacing : // if we just add the noteSpacing everywhere, it cancels out.
+        tentativeX
+
+      const w = Math.max(
+        1, // make notes at least one pixel wide
+        this.pixelsPerTimeStep * duration - this.noteSpacing + 1
+      )
+
+      // Here too, premature rounding is necessary.
+      // Note that Math.round() is not distributive.
+      this.occupiedX.add(Math.round(x) + Math.round(w))
+
+      // Comment from original Magenta code :
+      // "The svg' y=0 is at the top, but a smaller pitch is actually
+      // lower, so we're kind of painting backwards"
+
+      const y = this.height -
+        (this.height / ((this.maxPitch - this.minPitch + 1) * this.noteHeight)
+          * (note.pitch - this.minPitch) * this.noteHeight
+        )
+
+      return {x, y, w, h: this.noteHeight}
     },
 
     getSet(setIndex) {
@@ -614,9 +707,9 @@ export default {
         .includes(this.rectUnderCursor)
     },
 
-    // The rest of the utils are taken from the Magenta component.
-    // Although they are only used once or twice and do not need to be functions,
-    // Having them be improves the readability of the big methods above.
+    // -------------------------------------------------------------------------
+    // ----------------------------MISC LOGIC-----------------------------------
+    // -------------------------------------------------------------------------
 
     // Originally called getSize()
     // Used to return the width and height instead of mutating them.
@@ -637,36 +730,39 @@ export default {
       this.$refs.svg.style.height = `${this.height}px`
     },
 
-    getNotePosition(note) {
-      const duration = note.endTime - note.startTime
+    refreshActiveNotes(setIndex) {
+      // TODO : Array.from() may be less performant than the spread syntax [...]
+      // Consider replacing it in this often-called, performance-critical function.
 
-      // Premature round is necessary for the occupiedX set to work properly
-      const tentativeX =
-        Math.round(note.startTime * this.pixelsPerTimeStep + this.sequenceBoundaryWidth)
+      Array.from(this.activeNotes.values()).forEach(note => {
+        // TODO : is the overhead of creating a function for this worth
+        // the factorization ?
+        // Depending on how JS behaves, it could slow down the playback.
 
-      const x = this.occupiedX.has(tentativeX) ?
-        tentativeX + this.noteSpacing : // if we just add the noteSpacing everywhere, it cancels out.
-        tentativeX
+        const mapKey = `p${note.pitch}c${note.channel}`
+        const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
+        const isPlaying = pitchMask & 1 << note.channel
 
-      const w = Math.max(
-        1, // make notes at least one pixel wide
-        this.pixelsPerTimeStep * duration - this.noteSpacing + 1
-      )
+        if(!isPlaying) this.activeNotes.delete(mapKey)
+      })
 
-      // Here too, premature rounding is necessary.
-      // Note that Math.round() is not distributive.
-      this.occupiedX.add(Math.round(x) + Math.round(w))
+      const set = this.getSet(setIndex)
 
-      // Comment from original Magenta code :
-      // "The svg' y=0 is at the top, but a smaller pitch is actually
-      // lower, so we're kind of painting backwards"
+      set.forEach((note, index) => {
+        const mapKey = `p${note.pitch}c${note.channel}`
+        const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
+        const isPlaying = pitchMask & 1 << note.channel
 
-      const y = this.height -
-        (this.height / ((this.maxPitch - this.minPitch + 1) * this.noteHeight)
-          * (note.pitch - this.minPitch) * this.noteHeight
-        )
+        if(isPlaying) this.activeNotes.set(mapKey, note)
+      })
 
-      return {x, y, w, h: this.noteHeight}
+      return Array.from(this.activeNotes.values())
+    },
+
+    scrollToSet(setIndex) {
+      const activeNotePosition = parseFloat(this.getRectFromNoteIndex(this.setStarts[setIndex]).getAttribute('x'))
+      const alignLeft = this.isOutOfReach(activeNotePosition)
+      this.scrollIntoView(activeNotePosition, alignLeft)
     },
 
     scrollIntoView(activeNotePosition, toBoundary = false) {
@@ -692,90 +788,15 @@ export default {
         this.$refs.container.scrollLeft = activeNotePosition - this.containerWidth / 2
     },
 
-    getNoteFillColor(type = "refresh") {
-      switch(type) {
-        case "current":
-          return this.currentSetRGB
-          break
-
-        case "refresh":
-        case "mouse":
-          return this.activeNoteRGB
-          break
-
-        case "disable":
-        default:
-          return this.noteRGB
-          break
-      }
-    },
-
-    getNoteFillOpacity(note) {
-      const opacityBaseline = 0.2  // Original comment : "Shift all the opacities up a little."
-      return note.velocity ? note.velocity / 100 + opacityBaseline : 1;
-    },
-
-    drawNote(x, y, w, h, fill, fillOpacity, dataAttributes, cssProperties) {
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-
-      rect.classList.add('note')
-      rect.setAttribute('fill', fill)
-      rect.setAttribute('fill-opacity', fillOpacity)
-
-      rect.setAttribute('x', `${Math.round(x)}`);
-      rect.setAttribute('y', `${Math.round(y)}`);
-      rect.setAttribute('width', `${Math.round(w)}`);
-      rect.setAttribute('height', `${Math.round(h)}`);
-
-      dataAttributes.forEach(attribute => {
-        // We cannot use !! because 0 is a valid value.
-        if(attribute.value !== undefined) rect.dataset[attribute.key] = `${attribute.value}`;
-      });
-      cssProperties.forEach(attribute => {
-        rect.style.setProperty(attribute.key, attribute.value);
-      });
-
-      rect.addEventListener("mousedown", this.onNoteClick)
-      rect.addEventListener("mouseover", this.onNoteHover)
-      rect.addEventListener("mouseup", this.onNoteUnClick)
-      rect.addEventListener("mouseleave", this.onNoteLeave)
-
-      this.$refs.svg.appendChild(rect);
-    },
-
-    // This one isn't from Magenta, it just doesn't make sense for it
-    // not to be with unfillActiveRects.
-
-    fillActiveRects(activeNotes, type = "refresh") {
-      if(!this.drawn) this.draw()
-      this.unfillActiveRects(type)
-
-      activeNotes.forEach(note => {
-        const rect = this.getRectFromNoteIndex(note.index)
-
-        rect.classList.add(type)
-
-        rect.setAttribute('fill', this.getNoteFillColor(type))
-      })
-    },
-
-    // I considered having an array of types instead, but currently, there's no situation where that is necessary
-
-    unfillActiveRects(type = "mouse") {
-      const activeRects = this.$refs.svg.querySelectorAll(
-        `rect.${type}`
-      )
-
-      activeRects.forEach(rect => {
-        // Ensure a note rect can only have one highlight class.
-        // Never remove the "note" class.
-        rect.classList.remove(type)
-
-        const fill = this.getNoteFillColor(
-          rect.classList.contains("current") ? "current" : "disable"
-        )
-        rect.setAttribute('fill', fill)
-      })
+    keepTrackOfCurrentSet() {
+      // FIXME : this should only happen in PERFORM mode, not play
+      // This distinction is only possible once we have unified the mode into the store
+      // FIXME : also, this won't work when a longer note is being held...
+      // Is there a better way ?
+      if(
+        !this.isModeSilent &&
+        this.activeNotes.size === 0 &&
+        !this.isMouseOverCurrentSet()) this.paintCurrentSet()
     }
   }
 }

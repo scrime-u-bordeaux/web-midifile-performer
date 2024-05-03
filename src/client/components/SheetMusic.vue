@@ -429,7 +429,7 @@ export default {
     },
 
     // -------------------------------------------------------------------------
-    // ----------------------------BULKY UTILS----------------------------------
+    // ----------------------------SETUP LOGIC----------------------------------
     //--------------------------------------------------------------------------
 
     calculateCursorAnchorsAndSetCoordinates() {
@@ -644,6 +644,10 @@ export default {
       this.cursor.reset()
     },
 
+    // -------------------------------------------------------------------------
+    // ---------------------------SETUP UTILS-----------------------------------
+    // -------------------------------------------------------------------------
+
     // Store tempos with their date of occurrence in microseconds.
     // This is necessary because otherwise, on read, we would assume all quarters to have elapsed with the same microsecond value
     // Which is not the case.
@@ -703,17 +707,6 @@ export default {
       return allCursorDates[allCursorDates.length - 1]
     },
 
-    currentCursorDate(providedCursor = undefined) {
-      const cursor = !!providedCursor ? providedCursor : this.cursor
-
-      const tempo = this.getNearestTempoEvent(cursor.iterator.currentTimeStamp.realValue)
-      return (
-        tempo.usDate +
-        4 * (cursor.iterator.currentTimeStamp.realValue - tempo.delta)
-          * tempo.setTempo.microsecondsPerQuarter
-      ) * 0.000001
-    },
-
     currentCursorCoordinates(providedCursor = undefined) {
       const cursor = !!providedCursor ? providedCursor : this.cursor
 
@@ -735,6 +728,23 @@ export default {
         this.cursor.iterator.currentTimeStamp.realValue
       ).channel + index
     },
+
+    isNoteTieProlongation(note) {
+      return !!note.tie && note.tie.StartNote !== note
+    },
+
+    // Discriminator for finding sets in cursor positions,
+    // And noteheads eligible for reactivity.
+
+    isEligibleMfpNote(note, ignoreTied = true) {
+      return !note.isRest() // MFP doesn't acknowledge rests
+      &&
+      (!ignoreTied || !this.isNoteTieProlongation(note)) // and ties, aside from starts, are not actual notes
+    },
+
+    // -------------------------------------------------------------------------
+    // ----------------------------RUNTIME UTILS--------------------------------
+    // -------------------------------------------------------------------------
 
     updateCursorColor() {
       this.cursor.cursorElement.src = this.highlightPalette.get(
@@ -796,17 +806,33 @@ export default {
       return leftX <= eventX && eventX <= rightX && topY <= eventY && eventY <= bottomY
     },
 
-    isNoteTieProlongation(note) {
-      return !!note.tie && note.tie.StartNote !== note
+    // Among the noteHeads of a given SVG family,
+    // some may not be registered in our maps.
+    // The only reason for this so far is them being a tie prolongation.
+
+    getFirstValidNoteIndex(noteHeads) {
+      const firstValidNoteHead = noteHeads.find(noteHead =>
+        this.gNoteHeadsToNsNotes.has(noteHead)
+      )
+
+      return !!firstValidNoteHead ?
+        this.gNoteHeadsToNsNotes.get(firstValidNoteHead).index :
+        -1
     },
 
-    // Discriminator for finding sets in cursor positions,
-    // And noteheads eligible for reactivity.
+    // -------------------------------------------------------------------------
+    // ---------------------------SHARED UTILS----------------------------------
+    // -------------------------------------------------------------------------
 
-    isEligibleMfpNote(note, ignoreTied = true) {
-      return !note.isRest() // MFP doesn't acknowledge rests
-      &&
-      (!ignoreTied || !this.isNoteTieProlongation(note)) // and ties, aside from starts, are not actual notes
+    currentCursorDate(providedCursor = undefined) {
+      const cursor = !!providedCursor ? providedCursor : this.cursor
+
+      const tempo = this.getNearestTempoEvent(cursor.iterator.currentTimeStamp.realValue)
+      return (
+        tempo.usDate +
+        4 * (cursor.iterator.currentTimeStamp.realValue - tempo.delta)
+          * tempo.setTempo.microsecondsPerQuarter
+      ) * 0.000001
     },
 
     // When clicking on a note, multiple elements can be the target.
@@ -888,20 +914,6 @@ export default {
               break
           }
       }
-    },
-
-    // Among the noteHeads of a given SVG family,
-    // some may not be registered in our maps.
-    // The only reason for this so far is them being a tie prolongation.
-
-    getFirstValidNoteIndex(noteHeads) {
-      const firstValidNoteHead = noteHeads.find(noteHead =>
-        this.gNoteHeadsToNsNotes.has(noteHead)
-      )
-
-      return !!firstValidNoteHead ?
-        this.gNoteHeadsToNsNotes.get(firstValidNoteHead).index :
-        -1
     },
 
     // -------------------------------------------------------------------------
