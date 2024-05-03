@@ -94,7 +94,9 @@ export default {
       rectUnderCursor: null,
 
       // Interval for a function that paints the active set in play/perform mode
-      interval: null
+      interval: null,
+
+      allHighlightTypes: ["mouse", "refresh", "current"]
     }
   },
 
@@ -239,6 +241,7 @@ export default {
 
     refresh(setIndex) {
       const activeNotes = this.refreshActiveNotes(setIndex)
+      this.unfillActiveRects("current")
       this.fillActiveRects(activeNotes)
       this.scrollToSet(setIndex)
     },
@@ -284,9 +287,10 @@ export default {
       if(setIndex > this.sequenceEnd) this.$emit('end', setIndex)
       this.$emit('index', setIndex)
 
+      this.paintSetOrNote(rect)
+
       // TODO : switch this when mode is unified into store.
       if(this.isModeSilent) {
-        this.paintSetOrNote(rect)
         this.$emit('play',
           this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
             [this.noteSequence[noteIndex]] :
@@ -301,8 +305,6 @@ export default {
     },
 
     onNoteHover(event) {
-      if(!this.isModeSilent) return;
-
       const rect = event.target
       this.rectUnderCursor = rect
 
@@ -310,11 +312,9 @@ export default {
     },
 
     onNoteLeave(event) {
-      if(!this.isModeSilent) return;
-
       if(!!event) this.rectUnderCursor = null
       this.unfillActiveRects()
-      this.$emit('stop')
+      if(this.isModeSilent) this.$emit('stop')
     },
 
     onBoundaryDragStart(event) {
@@ -361,7 +361,7 @@ export default {
     },
 
     stop() {
-      this.unfillActiveRects(true)
+      this.unfillActiveRects("refresh")
       this.paintCurrentSet()
     },
 
@@ -728,7 +728,7 @@ export default {
 
     fillActiveRects(activeNotes, type = "refresh") {
       if(!this.drawn) this.draw()
-      this.unfillActiveRects(type !== "mouse")
+      this.unfillActiveRects(type)
 
       activeNotes.forEach(note => {
         const rect = this.getRectFromNoteIndex(note.index)
@@ -739,32 +739,23 @@ export default {
       })
     },
 
-    unfillActiveRects(all = false) {
+    // I considered having an array of types instead, but currently, there's no situation where that is necessary
 
+    unfillActiveRects(type = "mouse") {
       const activeRects = this.$refs.svg.querySelectorAll(
-        `rect.mouse${all ? ', rect.refresh, rect.current' : ''}`
+        `rect.${type}`
       )
 
       activeRects.forEach(rect => {
-        this.clearClassList(rect, all)
+        // Ensure a note rect can only have one highlight class.
+        // Never remove the "note" class.
+        rect.classList.remove(type)
 
         const fill = this.getNoteFillColor(
           rect.classList.contains("current") ? "current" : "disable"
         )
         rect.setAttribute('fill', fill)
       })
-    },
-
-    // Ensure a note rect can only have one highlight class.
-    // Never remove the "note" class.
-
-    clearClassList(rect, all = false) {
-      // No error is thrown for the tokens that are not in the classlist.
-      rect.classList.remove('mouse')
-      if(all) {
-        rect.classList.remove('refresh')
-        rect.classList.remove('current')
-      }
     }
   }
 }
