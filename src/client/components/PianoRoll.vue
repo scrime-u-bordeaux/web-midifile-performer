@@ -401,8 +401,6 @@ export default {
 
         set.events.forEach((note, index) => {
 
-          if(isStartingSet && index === setLength - 1) this.setEnds.push(boundaryCounter)
-
           const mapKey = `p${note.pitch}c${note.channel}`
           const noteCounter = noteCountMap.get(mapKey) || 0
 
@@ -443,6 +441,8 @@ export default {
             // (Else we have notes that never end...)
             else noteCountMap.set(mapKey, noteCounter - 1)
           }
+
+          if(isStartingSet && index === setLength - 1) this.setEnds.push(boundaryCounter - 1)
         })
       })
 
