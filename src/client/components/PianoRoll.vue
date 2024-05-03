@@ -170,7 +170,12 @@ export default {
 
   methods: {
 
-    ...mapMutations(['setNoteSequence', 'setSetStarts', 'setSetEnds']),
+    ...mapMutations([
+      'setNoteSequence',
+      'setSetStarts',
+      'setSetEnds',
+      'setActiveNotes'
+    ]),
 
     updateNoteSequence(chronology) {
 
@@ -241,8 +246,11 @@ export default {
 
     refresh(setIndex) {
       const activeNotes = this.refreshActiveNotes(setIndex)
+      this.setActiveNotes(activeNotes)
+
       this.unfillActiveRects("current")
       this.fillActiveRects(activeNotes)
+
       this.scrollToSet(setIndex)
     },
 
@@ -345,7 +353,7 @@ export default {
     },
 
     onIndexJump(index) { // don't forget, this is also called on file reset.
-      this.activeNotes.clear()
+      this.clearActiveNotes()
 
       const referenceNoteIndex = this.setStarts[index]
       const rect = this.getRectFromNoteIndex(referenceNoteIndex)
@@ -373,6 +381,7 @@ export default {
 
     clearActiveNotes() {
       this.activeNotes.clear()
+      this.setActiveNotes(this.activeNotes)
     },
 
     clearGraphics() {
@@ -520,6 +529,8 @@ export default {
     keepTrackOfCurrentSet() {
       // FIXME : this should only happen in PERFORM mode, not play
       // This distinction is only possible once we have unified the mode into the store
+      // FIXME : also, this won't work when a longer note is being held...
+      // Is there a better way ?
       if(!this.isModeSilent && this.activeNotes.size === 0) this.paintCurrentSet()
     },
 

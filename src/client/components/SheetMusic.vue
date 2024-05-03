@@ -25,7 +25,7 @@ export default {
     ...mapState([
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
-      'noteSequence', 'setStarts', 'setEnds', 'highlightPalette',
+      'noteSequence', 'setStarts', 'setEnds', 'activeNotes', 'highlightPalette',
       'osmdCursorAnchors', 'osmdSetCoordinates'
     ]),
 
@@ -246,13 +246,15 @@ export default {
       // However in practice, it is left undefined, requiring this.
       if(this.cursor.hidden === undefined || this.cursor.hidden) this.cursor.show()
 
+      this.paintNotes([...this.activeNotes.values()])
+
       this.moveCursorToSet(referenceSetIndex)
       if(scroll) this.scrollCursorIntoView()
       // console.log(this.currentCursorDate())
     },
 
     stop() {
-      this.unpaint(true)
+      this.unpaint("refresh")
     },
 
     clearState() {
@@ -910,21 +912,24 @@ export default {
     // Except Vue doesn't have an inheritance model for components.
     // Still, there should be a way to improve this.
 
-    paintSetOrNote(noteIndex, paintType = "refresh") {
+    paintSetOrNote(noteIndex) {
+      this.paintNotes(
+          this.ctrlKey ?
+          [this.noteSequence[noteIndex]] :
+          this.getSet(this.getSetIndex(noteIndex)),
 
-      this.unpaint(paintType === "refresh")
+          "mouse"
+        )
+    },
+
+    paintNotes(nsNotes, paintType = "refresh") {
+
+      this.unpaint(paintType)
 
       const highlightGroup =
         paintType === "refresh" ?
         this.noteHeadsHighlightedByRefresh :
         this.noteHeadsHighlightedByMouse
-
-      const nsNotes =
-        (
-          this.ctrlKey ?
-          [this.noteSequence[noteIndex]] :
-          this.getSet(this.getSetIndex(noteIndex))
-        )
 
       nsNotes.map(
         nsNote => this.nsNotesToGNoteHeads.get(nsNote)
@@ -934,19 +939,19 @@ export default {
       })
     },
 
-    unpaint(all = false) {
+    unpaint(paintType = "mouse") {
 
       const notesToUnpaint =
-        all ?
-        [...this.noteHeadsHighlightedByMouse, ...this.noteHeadsHighlightedByRefresh] :
-        this.noteHeadsHighlightedByMouse
+        paintType === "mouse" ?
+        this.noteHeadsHighlightedByMouse :
+        this.noteHeadsHighlightedByRefresh
 
       notesToUnpaint.forEach(gNoteHead =>
         gNoteHead.setAttribute('fill', this.noteRGB)
       )
 
-      this.noteHeadsHighlightedByMouse = []
-      if(all) this.noteHeadsHighlightedByRefresh = []
+      if(paintType === "mouse") this.noteHeadsHighlightedByMouse = []
+      else this.noteHeadsHighlightedByRefresh = []
     },
 
     getSet(setIndex) {

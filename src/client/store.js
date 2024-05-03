@@ -70,6 +70,7 @@ const store = createStore({
       noteSequence: [],
       setStarts: [],
       setEnds: [],
+      activeNotes: [],
       highlightPalette: highlightPalette,
 
       // Model cache for OSMD visualizer alone.
@@ -125,6 +126,9 @@ const store = createStore({
     },
     setSetEnds(state, ends) {
       state.setEnds = ends;
+    },
+    setActiveNotes(state, notes) {
+      state.activeNotes = notes;
     },
     setOsmdCursorAnchors(state, anchors) {
       state.osmdCursorAnchors = anchors;
