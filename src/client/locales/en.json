@@ -35,7 +35,7 @@
   },
   "lookForScores": {
     "findNew": "Find new scores...",
-    "pdf": "As PDF files",
+    "pdfmxl": "As PDF or MusicXML files",
     "midi": "As MIDI files",
     "imslp": {
       "site": "IMSLP website",
@@ -49,12 +49,12 @@
   },
   "midiFilePerformer": {
     "contextualization": {
-      "firstLine": "Upload any MIDI file to interpret it as you please!",
+      "firstLine": "Upload any MIDI or MusicXML file to interpret it as you please!",
       "secondLine": "You can use an external MIDI controller, or your computer keyboard.",
       "thirdLine": "Try altering legato, tempo or velocity."
     },
     "upload": {
-      "first": "Upload a MIDI file",
+      "first": "Upload a MIDI/MusicXML file",
       "change": "Upload a different file"
     },
     "keyboardVelocity": {

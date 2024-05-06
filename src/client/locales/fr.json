@@ -35,7 +35,7 @@
   },
   "lookForScores": {
     "findNew": "Trouvez de nouvelles partitions...",
-    "pdf": "Au format PDF",
+    "pdfmxl": "Au format PDF ou MusicXML",
     "midi": "Au format MIDI",
     "imslp": {
       "site": "Site de l'IMSLP",
@@ -43,18 +43,18 @@
     },
     "archives": "Archive de MIDI classiques",
     "google": {
-      "first": "Ou faire une ",
+      "first": "Ou par une ",
       "second": "recherche Google"
     }
   },
   "midiFilePerformer": {
     "contextualization": {
-      "firstLine": "Chargez un fichier MIDI de votre choix pour l'interpréter librement !",
+      "firstLine": "Chargez un fichier MIDI ou MusicXML de votre choix pour l'interpréter librement !",
       "secondLine": "Vous pouvez utiliser un contrôleur MIDI externe, ou bien votre clavier d'ordinateur.",
       "thirdLine": "Essayez de jouer sur le legato, le tempo, ou encore la vélocité."
     },
     "upload": {
-      "first": "Charger un fichier MIDI",
+      "first": "Charger un fichier MIDI/MusicXML",
       "change": "Changer de fichier"
     },
     "keyboardVelocity": {

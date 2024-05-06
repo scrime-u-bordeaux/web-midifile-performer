@@ -7,7 +7,7 @@
 
   <div class="dual">
     <div class="right-border">
-      <h2> {{$t('lookForScores.pdf')}} </h2>
+      <h2> {{$t('lookForScores.pdfmxl')}} </h2>
       <ul>
         <li> <a href="https://imslp.org/wiki/Main_Page" target="_blank"> {{ $t('lookForScores.imslp.site') }} </a> </li>
         <li>
@@ -41,7 +41,7 @@
   min-height: 450px;
 }
 .wrapper {
-  margin: 0 20%;
+  margin: 0 10%;
   font-size: 0.85em;
 }
 ul {
@@ -49,9 +49,6 @@ ul {
 }
 .dual {
   display: flex;
-}
-.dual h2 {
-  /*text-align: center;*/
 }
 .dual > div {
   text-align: center;
