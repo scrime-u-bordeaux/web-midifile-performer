@@ -41,7 +41,7 @@
   .whole-header {
     display: grid;
     position: relative;
-    grid-template-columns: 13% 72% 13%;
+    grid-template-columns: 13% 74% 13%;
     text-align: center;
     padding: 0 15px;
     background-color: transparent;
