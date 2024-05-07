@@ -161,7 +161,7 @@
     font-style: italic;
   }
   .wrapper {
-    text-align: left;
+    text-align: justify;
     font-size: 0.93em;
     max-width: var(--content-width);
     margin: 0 auto;
