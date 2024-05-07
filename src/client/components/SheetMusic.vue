@@ -165,6 +165,8 @@ export default {
     },
 
     // TODO : implement zoom on wheel like the piano roll.
+    // However, this would be *very* costly,
+    // since the whole notehead setup would need to be repeated.
 
     zoom(newZoom, oldZoom) {
       this.osmd.zoom = newZoom;
@@ -242,8 +244,9 @@ export default {
 
       if(!this.drawn) return
 
-      // Normally, OSMD should call init() on each cursor, which should set its hidden property to true.
-      // However in practice, it is left undefined, requiring this.
+      // Each cursor is put through init() internally, which should set its hidden property to true.
+      // However in practice, a bug sets it back to undefined.
+      // A fix has been made, but not released to OSMD yet, so for now we do this.
       if(this.cursor.hidden === undefined || this.cursor.hidden) this.cursor.show()
 
       this.paintNotes([...this.activeNotes.values()])
@@ -945,7 +948,13 @@ export default {
 
       nsNotes.map(
         nsNote => this.nsNotesToGNoteHeads.get(nsNote)
-      ).forEach(gNoteHead => {
+      ).forEach((gNoteHead, index) => {
+        if(!gNoteHead) {
+          console.error("Could not find matching notehead for noteSequence note",
+            nsNotes[index]
+          )
+          return
+        }
         gNoteHead.setAttribute('fill', this.activeNoteRGB)
         highlightGroup.push(gNoteHead)
       })
