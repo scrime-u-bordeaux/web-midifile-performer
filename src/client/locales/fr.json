@@ -90,6 +90,8 @@
 
     "summary": "Vous trouverez sur cette page des informations sur le fonctionnement du Midifile Performer et ses capacités, ainsi que des indications pour l'utiliser et comprendre son interface.",
 
+    "toc": "Sommaire",
+
     "whatIs": {
       "h1": "Qu'est-ce que le Midifile Performer ?",
 

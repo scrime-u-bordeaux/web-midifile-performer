@@ -5,7 +5,10 @@
 
     <p> {{ $t('guide.summary') }} </p>
 
-    <div ref="tocContainer" class="toc-container"></div>
+    <div class="toc-wrapper">
+      <p> {{ $t('guide.toc') }} </p>
+      <div ref="tocContainer"></div>
+    </div>
 
     <h1> {{ $t('guide.whatIs.h1' )}} </h1>
 
@@ -221,7 +224,7 @@
     margin-right: auto;
   }
 
-  .toc-container {
+  .toc-wrapper {
     margin-right: auto;
     margin-left: auto;
     width: fit-content;
@@ -229,11 +232,17 @@
     border: 2px solid var(--button-blue);
     border-radius: 10px;
   }
-  .toc-container::v-deep a {
+  .toc-wrapper p {
+    text-align: center;
+    color: #222;
+    font-weight: bold;
+    padding-left: 2.8em;
+  }
+  .toc-wrapper::v-deep a {
     color: #666;
     text-decoration: none;
   }
-  .toc-container::v-deep a:hover, .toc-container::v-deep a:active {
+  .toc-wrapper::v-deep a:hover, .toc-wrapper::v-deep a:active {
     color: var(--button-blue)
   }
 
@@ -273,7 +282,7 @@ export default {
     async locale(newLocale, oldLocale) {
       await nextTick() // ptherwise, there's a race condition on whether the text has been updated
       // ...but still, it seems like sometimes, this isn't enough ?
-      
+
       this.refreshToc()
     }
   },
@@ -284,6 +293,8 @@ export default {
 
   methods: {
     createHeaderLink(headerElem) {
+      // TODO : maybe I should just use the router instead...
+      // though it has the same effect in the end.
       return '<li><a href="#' + headerElem.id + '">' + headerElem.title + '</a></li>'
     },
 
@@ -298,7 +309,9 @@ export default {
         if (/h[1-6]/i.test(node.tagName)) {
           node.setAttribute('id',
             // FIXME : does this work on the server..?
-            '/guide#'+node.innerText.replaceAll(' ', '_').toLowerCase()
+            '/guide#' +
+            node.innerText.replaceAll(' ', '_').replace('?', '').toLowerCase()
+            // Yes, this leaves trailing underscores in headings with question marks.
           )
 
           headers.push({
