@@ -223,8 +223,12 @@
             "describe": "Le piano roll est composé de rectangles dont la position verticale indique leur hauteur, et dont la largeur est proportionnelle à leur durée dans le fichier d'origine. ",
 
             "highlight": "Lorsque le fichier progresse, en mode lecture ou interprétation, les notes du piano roll deviennent vertes. Elles ne retrouvent leur couleur d'origine que lorsque les notes correspondantes sont relâchées ; ainsi, en mode interprétation, leur durée d'illumination, décorrélée de leur longueur, indique la durée de maintien réel de la note.",
-            "currentColor": "Lorsque votre interprétation cesse sans laisser de note active, l'ensemble en cours est marqué d'un vert plus foncé. En mode silencieux, cette couleur est remplacée par du bleu.",
-            "hoverClick": "Dans les deux cas, vous pouvez interagir avec les notes du piano roll en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel. Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
+            "currentColor": {
+              "green": "Lorsque votre interprétation cesse sans laisser de note active, l'ensemble en cours est marqué d'un vert plus foncé.",
+              "blue": "En mode silencieux, cette couleur est remplacée par du bleu."
+            },
+            "hoverClick": "Dans les deux cas, vous pouvez interagir avec les notes du piano roll en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel.",
+            "ctrl": " Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
             "clickSelect": "Cliquer sur une note désignera en outre son ensemble comme ensemble courant, et, en mode silencieux uniquement, rejouera cette note ou l'ensemble selon le maintien de la touche Ctrl.",
             "boundaryControl": "Enfin, le piano roll contient deux barres bleues verticales, qui marquent l'emplacement des ensembles de début et de fin de la séquence. En les glissant à travers les notes, vous pouvez modifier ces ensembles directement."
           },
@@ -236,7 +240,8 @@
 
             "cursor": "L'ensemble courant est marqué par un curseur. Ce dernier est bleu en mode silencieux, et vert en mode lecture ou interprétation. Vous pouvez le déplacer sur la partition, et ainsi changer l'ensemble en cours. ",
             "highlight": "Lorsque le curseur survole des notes en mode lecture ou interprétation, elles deviennent vertes. Elles ne retrouvent leur couleur d'origine que lorsque les notes correspondantes sont relâchées ; ainsi, en mode interprétation, leur durée d'illumination indique la durée de maintien réel de la note.",
-            "hoverClick": "Vous pouvez également interagir avec les notes en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel. Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
+            "hoverClick": "Vous pouvez également interagir avec les notes en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel.",
+            "ctrl": " Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
             "clickSelect": "Cliquer sur une note désignera en outre son ensemble comme ensemble courant, et, en mode silencieux uniquement, rejouera cette note ou l'ensemble selon le maintien de la touche Ctrl.",
             "boundaryControl": "Enfin, la partition comporte deux barres bleues verticales, qui marquent l'emplacement des ensembles de début et de fin de la séquence. En les glissant à travers la partition, vous pouvez modifier ces ensembles directement."
           }
