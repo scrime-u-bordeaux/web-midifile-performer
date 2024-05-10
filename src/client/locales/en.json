@@ -132,7 +132,7 @@
         "h2": "Supported file formats",
 
         "mxl": "On top of MIDI (.mid / .midi), this application also supports MusicXML files, both in their uncompressed (.musicxml / .xml) or compressed (.mxl) forms.",
-        "import": "You can import a compatible file by clicking on the \"Upload a MIDI file\" button, or dragging and dropping the file directly on the page."
+        "import": "You can import a compatible file by clicking on the \"Upload a MIDI / MusicXML file\" button, or dragging and dropping the file directly on the page."
       },
 
       "io": {
@@ -147,7 +147,7 @@
             "number": "Number row : Forte (MIDI Velocity 75)",
             "firstLine": "QWERTY row : Mezzoforte (MIDI Velocity 55)",
             "secondLine": "ASDF row : Piano (MIDI Velocity 30)",
-            "thirdLine": "ZXCB row : Pianissimo (MIDI velocity 15)"
+            "thirdLine": "XCVB row : Pianissimo (MIDI velocity 15)"
           },
 
           "custom": "Of course, if you own a MIDI input device, your experience will be greatly improved by using it. You can connect it via USB, and it will be automatically detected as long as your browser supports the WebMIDI interface. This excludes all versions of Safari, but should pose no problem on Mozilla Firefox or Chromium-based browsers such as Google Chrome, Opera, or Brave. Once detected, you may select it in the appropriate dropdown menu."
@@ -194,14 +194,14 @@
 
         "keyboard": {
           "h3": "Keyboard",
-          "describe": "As you give MIDI inputs to the application, the keyboard will light up to indicate which notes were played. These notes are those of the set you triggered, and thus are unrelated to the specific button press that triggered them."
+          "describe": "As the file progresses, the keyboard will light up to indicate which notes were played. These notes are those of the set you triggered, and thus are unrelated to the specific button press that triggered them."
         },
 
         "progressBar": {
           "h3": "Progress bar",
 
           "preface": "The progress bar is divided into the following controls :",
-          "playButton": "The play/pause button toggles between the playback and silent modes (see their appropriate sections) ; if you wish, you may also use the spacebar of your keyboard for the same purpose. Alternatively if you hold down the space bar, rather than only pressing it, playback will continue until you release it.",
+          "playButton": "The play/pause button toggles between the playback and silent modes (see their appropriate sections) ; if you wish, you may also use the spacebar of your keyboard for the same purpose. Alternatively, if you hold down the space bar, rather than only pressing it, playback will continue until you release it.",
           "speed": "The speed input controls the playback speed of playback mode.",
           "start": "The start input controls the starting set of the looping sequence (see : looping).",
           "current": "The current input controls the current set, allowing you to move through the file. It may also be moved with the left and right arrow keys of your keyboard.",
@@ -221,8 +221,7 @@
             "describe": "The piano roll presents a series of rectangles whose vertical positions correspond to their pitches, and whose widths correlate to their duration in the original file.",
 
             "highlight": "As you perform or play back the file, the notes of the piano roll will turn green. They will only revert to their original color once their respective note is released ; therefore, in perform mode, their highlight duration can clue you in on how long you are actually holding the note, as opposed to its original duration.",
-            "stopGreen": "When your performance stops with no active notes, your current set is kept track of by a darker shade of green.",
-            "stopBlue": "When in silent mode, the current set instead turns blue.",
+            "currentColor": "When your performance stops with no active notes, your current set is kept track of by a darker shade of green. When in silent mode, the current set instead turns blue.",
             "hoverClick": "In any case, you may interact with the piano roll notes by hovering over them or clicking on them. Doing so will highlight the entire set the note under your cursor belongs to, in either green or blue, depending on the present mode ; if you wish to highlight a single note, you may hold the Ctrl key of your keyboard.",
             "clickSelect": "Additionally, clicking on a note will select its set as the current set of the piece, and, in silent mode only, play back either that note alone or its set (depending on whether Ctrl is held).",
             "boundaryControl": "Finally, the piano roll contains two vertical blue bars, which mark the locations of the start and end sets of the looping sequence. Dragging and dropping them across the display will update these sets accordingly."

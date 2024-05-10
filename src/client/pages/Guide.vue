@@ -114,9 +114,7 @@
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.highlight') }} </p>
 
-            <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.stopGreen') }} </p>
-
-            <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.stopBlue') }} </p>
+            <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.currentColor') }} </p>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.hoverClick') }} </p>
 
