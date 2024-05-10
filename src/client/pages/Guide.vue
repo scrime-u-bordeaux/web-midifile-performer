@@ -168,19 +168,3 @@
     margin: 0 auto;
   }
 </style>
-
-<script>
-export default {
-  data() {
-    return {
-      hidden: false,
-    };
-  },
-  methods: {
-    clickedCloseBtn() {
-      console.log('closing');
-      this.hidden = true;
-    },
-  },
-};
-</script>
