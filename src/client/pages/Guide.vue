@@ -9,14 +9,14 @@
 
       <h2> {{ $t('guide.whatIs.midiFile.h2') }} </h2>
 
-        <p> {{ $t('guide.whatIs.midiFile.define') }} </p>
-        <p> {{ $t('guide.whatIs.midiFile.limit') }} </p>
-        <p> {{ $t('guide.whatIs.midiFile.solution') }} </p>
+        <p v-html="$t('guide.whatIs.midiFile.define')"></p>
+        <p v-html="$t('guide.whatIs.midiFile.limit')"></p>
+        <p v-html="$t('guide.whatIs.midiFile.solution')"></p>
 
       <h2> {{ $t('guide.whatIs.howWork.h2') }} </h2>
 
-        <p> {{ $t('guide.whatIs.howWork.sets') }} </p>
-        <p> {{ $t('guide.whatIs.howWork.playingOn') }} </p>
+        <p v-html="$t('guide.whatIs.howWork.sets')"></p>
+        <p v-html="$t('guide.whatIs.howWork.playingOn')"></p>
         <p> {{ $t('guide.whatIs.howWork.playingOff') }} </p>
 
       <h2> {{ $t('guide.whatIs.whatCanDo.h2') }} </h2>
@@ -56,6 +56,7 @@
           </ul>
 
           <p> {{ $t('guide.howToUse.io.input.custom') }} </p>
+          <p> {{ $t('guide.howToUse.io.input.customSelect') }} </p>
 
         <h3> {{ $t('guide.howToUse.io.output.h3') }} </h3>
 
@@ -63,23 +64,25 @@
 
       <h2> {{ $t('guide.howToUse.modes.h2') }} </h2>
 
+        <p v-html="$t('guide.howToUse.modes.modeList')"></p>
+
         <h3> {{ $t('guide.howToUse.modes.silent.h3') }} </h3>
 
-          <p> {{ $t('guide.howToUse.modes.silent.describe') }} </p>
+          <p v-html="$t('guide.howToUse.modes.silent.describe')"></p>
 
         <h3> {{ $t('guide.howToUse.modes.playback.h3') }} </h3>
 
-          <p> {{ $t('guide.howToUse.modes.playback.describe') }} </p>
+          <p v-html="$t('guide.howToUse.modes.playback.describe')"></p>
 
         <h3> {{ $t('guide.howToUse.modes.perform.h3') }} </h3>
 
-          <p> {{ $t('guide.howToUse.modes.perform.describe') }} </p>
+          <p v-html="$t('guide.howToUse.modes.perform.describe')"></p>
 
       <h2> {{ $t('guide.howToUse.looping.h2') }} </h2>
 
         <p> {{ $t('guide.howToUse.looping.whatIs') }} </p>
 
-        <p> {{ $t('guide.howToUse.looping.note') }} </p>
+        <p v-html="$t('guide.howToUse.looping.note')"></p>
 
       <h2> {{ $t('guide.howToUse.interface.h2') }} </h2>
 
@@ -94,19 +97,19 @@
           <p> {{ $t('guide.howToUse.interface.progressBar.preface') }} </p>
 
           <ol>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.playButton') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.speed') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.start') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.current') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.end') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.stop') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.cursor') }} </p></li>
-            <li><p> {{ $t('guide.howToUse.interface.progressBar.loopFlag') }} </p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.playButton')"> </p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.speed')"></p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.start')"></p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.current')"></p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.end')"></p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.stop')"></p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.cursor')"></p></li>
+            <li><p v-html="$t('guide.howToUse.interface.progressBar.loopFlag')"></p></li>
           </ol>
 
         <h3> {{ $t('guide.howToUse.interface.visualizer.h3') }} </h3>
 
-          <p> {{ $t('guide.howToUse.interface.visualizer.describe') }} </p>
+          <p v-html="$t('guide.howToUse.interface.visualizer.describe')"></p>
 
           <h4> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.h4') }} </h4>
 
@@ -116,7 +119,7 @@
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.currentColor') }} </p>
 
-            <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.hoverClick') }} </p>
+            <p v-html="$t('guide.howToUse.interface.visualizer.pianoRoll.hoverClick')"></p>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.clickSelect') }} </p>
 
@@ -130,7 +133,7 @@
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.highlight') }} </p>
 
-            <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.hoverClick') }} </p>
+            <p v-html="$t('guide.howToUse.interface.visualizer.sheetMusic.hoverClick')"></p>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.clickSelect') }} </p>
 

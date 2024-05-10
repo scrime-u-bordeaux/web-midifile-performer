@@ -96,16 +96,16 @@
       "midiFile": {
         "h2": "Qu'est-ce qu'un fichier MIDI ?",
 
-        "define": "Un fichier MIDI est une séquence d'instructions destinées à un synthétiseur, qui lui permettent de produire du son. En d'autres termes, il s'agit en quelque sorte de l'équivalent d'une partition musicale, à ceci près qu'elle est écrite pour un programme spécialisé, et non un être humain.",
-        "limit": "Par conséquent, même si les fichiers MIDI sont écrits par des humains, ils ne sont pas utilisables par ces derniers, qui ne peuvent que les fournir à un synthétiseur. En revanche, des appareils nommés contrôleurs MIDI existent, qui sont destinés à l'usage humain, et permettent la commande directe de ces synthétiseurs sans besoin de fichier pour intermédiaire.",
-        "solution": "Le rôle du Midifile Performer est de relier ces deux entités, et ainsi, de vous permettre de rejouer un fichier MIDI en usant d'un contrôleur."
+        "define": "Un <b>fichier MIDI</b> est une séquence d'instructions destinées à un synthétiseur, qui lui permettent de produire du son. En d'autres termes, il s'agit en quelque sorte de l'équivalent d'une partition musicale, à ceci près qu'elle est écrite pour un programme spécialisé, et non un être humain.",
+        "limit": "Par conséquent, même si les fichiers MIDI sont <i>écrits</i> par des humains, ils ne sont pas <i>utilisables</i> par ces derniers, qui ne peuvent que les fournir à un synthétiseur. En revanche, des appareils nommés <b>contrôleurs MIDI</b> existent, qui sont destinés à l'usage humain, et permettent la commande directe de ces synthétiseurs sans besoin de fichier pour intermédiaire.",
+        "solution": "Le rôle du Midifile Performer est de relier ces deux entités, et ainsi, de vous permettre de <b>rejouer un fichier MIDI</b> en usant d'un contrôleur."
       },
 
       "howWork": {
         "h2": "Comment l'application fonctionne-t-elle ?",
 
-        "sets": "Lorsque vous transmettez un fichier MIDI à l'application, les instructions qu'il contient sont regroupées en ensembles de simultanéité. Ces ensembles forment des paires : les ensembles \"on\" sont déclenchés par l'appui d'un bouton sur votre contrôleur, et activent des notes ; tandis que les ensembles \"off\" sont déclenchés par le relâchement d'un bouton, et arrêtent des notes.",
-        "playingOn": "Lorsque vous appuyez sur un bouton et déclenchez un ensemble \"on\", les notes qu'il contient sont jouées simultanément par le synthétiseur de l'application. Les notes produites sont indépendantes de votre appui, et ne reflètent que le contenu de l'ensemble déclenché. Par exemple, vous pouvez déclencher un ensemble contenant une triade de Do majeur avec une touche de La.",
+        "sets": "Lorsque vous transmettez un fichier MIDI à l'application, les instructions qu'il contient sont regroupées en <b>ensembles</b> de simultanéité. Ces ensembles forment des paires : les ensembles <b>\"on\"</b> sont déclenchés par <b>l'appui</b> d'un bouton sur votre contrôleur, et <b>activent</b> des notes ; tandis que les ensembles <b>\"off\"</b> sont déclenchés par le <b>relâchement</b> d'un bouton, et <b>arrêtent</b> des notes.",
+        "playingOn": "Lorsque vous appuyez sur un bouton et déclenchez un ensemble \"on\", les notes qu'il contient sont jouées simultanément par le synthétiseur de l'application. Les notes produites sont <b>indépendantes de votre appui</b>, et ne reflètent que le contenu de l'ensemble déclenché. Par exemple, vous pouvez déclencher un ensemble contenant une triade de Do majeur avec une touche de La.",
         "playingOff": "En retour, relâcher le bouton qui a déclenché l'ensemble \"on\" produit l'ensemble \"off\" qui lui est appairé. En répétant ce processus, vous itérez ainsi tous les événements du fichier."
       },
 
@@ -151,7 +151,8 @@
             "thirdLine": "Rangée WXCV : Pianissimo (Vélocité 15)"
           },
 
-          "custom": "Bien entendu, si vous possédez un contrôleur MIDI externe, vous bénéficierez d'une expérience améliorée en l'utilisant. Vous pouvez le connecter via un port USB, et il sera automatiquement détecté si votre navigateur implémente WebMIDI. Ceci est le cas de Firefox et des navigateurs Chromium tels que Google Chrome, Opera ou Brave, mais exclut cependant Safari. Une fois votre contrôleur détecté, vous pourrez le sélectionner dans le menu déroulant prévu à cet effet."
+          "custom": "Bien entendu, si vous possédez un contrôleur MIDI externe, vous bénéficierez d'une expérience améliorée en l'utilisant. Vous pouvez le connecter via un port USB, et il sera automatiquement détecté si votre navigateur implémente WebMIDI. Ceci est le cas de Firefox et des navigateurs Chromium tels que Google Chrome, Opera ou Brave, mais exclut cependant Safari.",
+          "customSelect": "Une fois votre contrôleur détecté, vous pourrez le sélectionner dans le menu déroulant prévu à cet effet."
         },
 
         "output": {
@@ -163,21 +164,21 @@
 
       "modes": {
         "h2": "Modes",
-        "modeList": "Cette application se divise en trois modes : silencieux, lecture, et interprétation.",
+        "modeList": "Cette application se divise en trois modes : <b>silencieux</b>, <b>lecture</b>, et <b>interprétation</b>.",
 
         "silent": {
           "h3": "Mode silencieux",
-          "describe": "Le mode silencieux est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être désactivé dans les paramètres."
+          "describe": "Le <b>mode silencieux</b> est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être désactivé dans les paramètres."
         },
 
         "playback": {
           "h3": "Mode lecture",
-          "describe": "Le mode lecture vous permet d'écouter le fichier tel quel, directement interprété par le synthétiseur. Vous pouvez modifier la vitesse à laquelle il se joue (voir plus bas). "
+          "describe": "Le <b>mode lecture</b> vous permet d'écouter le fichier tel quel, directement interprété par le synthétiseur. Vous pouvez modifier la vitesse à laquelle il se joue (voir plus bas). "
         },
 
         "perform": {
           "h3": "Mode interprétation",
-          "describe": "Le mode interprétation, mode principal décrit ci-dessus, est déclenché par l'émission de commandes MIDI depuis votre contrôleur. Lorsqu'il est activé, vous contrôlez désormais le fichier. "
+          "describe": "Le <b>mode interprétation</b>, mode principal décrit ci-dessus, est déclenché par l'émission de commandes MIDI depuis votre contrôleur. Lorsqu'il est activé, vous contrôlez désormais le fichier. "
         }
       },
 
@@ -185,7 +186,7 @@
         "h2": "Bouclage",
 
         "whatIs": "En utilisant des contrôles de bouclage présents dans l'interface (voir ci-dessous), vous pouvez délimiter une section particulière du fichier qui bouclera de manière continue, la première note succédant à la dernière. Par défaut, cette section s'étend à l'intégralité du fichier. Il vous est également possible de désactiver le bouclage dans les paramètres.",
-        "note": "Notez par ailleurs qu'il vous est possible de tenir des notes à travers une boucle, les prolongeant ainsi jusqu'à un point antérieur du morceau. "
+        "note": "Notez par ailleurs qu'il vous est possible de tenir des notes à travers une boucle, les prolongeant ainsi jusqu'à un point <i>antérieur</i> du morceau. "
       },
 
       "interface": {
@@ -202,19 +203,19 @@
           "h3": "Barre de défilement",
 
           "preface": "La barre de défilement est constituée des éléments suivants :",
-          "playButton": "Le bouton play/pause alterne entre les modes lecture et silencieux (voir leurs sections respectives) ; si vous le souhaitez, vous pouvez également utiliser la barre d'espace de votre clavier pour accomplir le même changement. Alternativement, maintenir la barre d'espace au lieu de la presser maintiendra la lecture uniquement jusqu'à son relâchement.",
-          "speed": "Le champ de vitesse contrôle la vitesse du mode lecture.",
-          "start": "Le champ de début définit le premier ensemble de la section bouclée (voir : Bouclage).",
-          "current": "Le champ d'ensemble courant définit l'ensemble actuellement sélectionné, ou, en d'autres termes, votre position dans le fichier. Il peut être modifié avec les flèches gauche et droite de votre clavier.",
-          "end": "Le champ de fin définit le dernier ensemble de la section bouclée (voir : Bouclage).",
-          "stop": "Le bouton stop bascule l'application en mode silencieux, quel que soit le mode actuel.",
-          "cursor": "Le curseur modifie l'ensemble courant, tout comme le champ d'ensemble courant.",
-          "loopFlag": "Les drapeaux modifient les ensembles de début et de fin de la séquence, tout comme leurs champs respectifs."
+          "playButton": "Le <b>bouton play/pause</b> alterne entre les modes lecture et silencieux (voir leurs sections respectives) ; si vous le souhaitez, vous pouvez également utiliser la barre d'espace de votre clavier pour accomplir le même changement. Alternativement, maintenir la barre d'espace au lieu de la presser maintiendra la lecture uniquement jusqu'à son relâchement.",
+          "speed": "Le <b>champ de vitesse</b> contrôle la vitesse du mode lecture.",
+          "start": "Le <b>champ de début</b> définit le premier ensemble de la section bouclée (voir : Bouclage).",
+          "current": "Le <b>champ d'ensemble courant</b> définit l'ensemble actuellement sélectionné, ou, en d'autres termes, votre position dans le fichier. Il peut être modifié avec les flèches gauche et droite de votre clavier.",
+          "end": "Le <b>champ de fin</b> définit le dernier ensemble de la section bouclée (voir : Bouclage).",
+          "stop": "Le <b>bouton stop</b> bascule l'application en mode silencieux, quel que soit le mode actuel.",
+          "cursor": "Le <b>curseur</b> modifie l'ensemble courant, tout comme le champ d'ensemble courant.",
+          "loopFlag": "Les <b>drapeaux</b> modifient les ensembles de début et de fin de la séquence, tout comme leurs champs respectifs."
         },
 
         "visualizer": {
           "h3": "Visualiseur",
-          "describe": "Cette application propose deux visualiseurs : un piano roll, disponible pour les fichiers MIDI et MusicXML, et un afficheur de partitions, qui n'est disponible que pour les fichiers MusicXML. Lorsque les deux visualiseurs sont disponibles, il vous est possible de sélectionner l'un ou l'autre en faisant usage des icônes qui les surmontent.",
+          "describe": "Cette application propose deux visualiseurs : un <b>piano roll</b>, disponible pour les fichiers MIDI et MusicXML, et un <b>afficheur de partitions</b>, qui n'est disponible que pour les fichiers MusicXML. Lorsque les deux visualiseurs sont disponibles, il vous est possible de sélectionner l'un ou l'autre en faisant usage des icônes qui les surmontent.",
 
           "pianoRoll": {
             "h4": "Piano roll",
@@ -223,7 +224,7 @@
 
             "highlight": "Lorsque le fichier progresse, en mode lecture ou interprétation, les notes du piano roll deviennent vertes. Elles ne retrouvent leur couleur d'origine que lorsque les notes correspondantes sont relâchées ; ainsi, en mode interprétation, leur durée d'illumination, décorrélée de leur longueur, indique la durée de maintien réel de la note.",
             "currentColor": "Lorsque votre interprétation cesse sans laisser de note active, l'ensemble en cours est marqué d'un vert plus foncé. En mode silencieux, cette couleur est remplacée par du bleu.",
-            "hoverClick": "Dans les deux cas, vous pouvez interagir avec les notes du piano roll en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez tout l'ensemble auquel appartient la note, en vert ou en bleu, selon le mode actuel. Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
+            "hoverClick": "Dans les deux cas, vous pouvez interagir avec les notes du piano roll en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel. Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
             "clickSelect": "Cliquer sur une note désignera en outre son ensemble comme ensemble courant, et, en mode silencieux uniquement, rejouera cette note ou l'ensemble selon le maintien de la touche Ctrl.",
             "boundaryControl": "Enfin, le piano roll contient deux barres bleues verticales, qui marquent l'emplacement des ensembles de début et de fin de la séquence. En les glissant à travers les notes, vous pouvez modifier ces ensembles directement."
           },
@@ -235,7 +236,7 @@
 
             "cursor": "L'ensemble courant est marqué par un curseur. Ce dernier est bleu en mode silencieux, et vert en mode lecture ou interprétation. Vous pouvez le déplacer sur la partition, et ainsi changer l'ensemble en cours. ",
             "highlight": "Lorsque le curseur survole des notes en mode lecture ou interprétation, elles deviennent vertes. Elles ne retrouvent leur couleur d'origine que lorsque les notes correspondantes sont relâchées ; ainsi, en mode interprétation, leur durée d'illumination indique la durée de maintien réel de la note.",
-            "hoverClick": "Vous pouvez également interagir avec les notes en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez tout l'ensemble auquel appartient la note, en vert ou en bleu, selon le mode actuel. Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
+            "hoverClick": "Vous pouvez également interagir avec les notes en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel. Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
             "clickSelect": "Cliquer sur une note désignera en outre son ensemble comme ensemble courant, et, en mode silencieux uniquement, rejouera cette note ou l'ensemble selon le maintien de la touche Ctrl.",
             "boundaryControl": "Enfin, la partition comporte deux barres bleues verticales, qui marquent l'emplacement des ensembles de début et de fin de la séquence. En les glissant à travers la partition, vous pouvez modifier ces ensembles directement."
           }

@@ -95,16 +95,16 @@
       "midiFile": {
         "h2": "What is a MIDI file ?",
 
-        "define": "A MIDI file is a sequence of instructions that allow a synthesizer to produce sound. In other words, it can be thought of as the equivalent of a musical score, but written for specialized programs instead of humans.",
-        "limit": "Stemming from this nature, MIDI files are meant to be written by a human, but not used by one, except to feed it directly to a synthesizer. However, there exist MIDI devices which can produce individual synthesizer commands, and which are meant for human use.",
-        "solution": "The Midifile Performer, in turn, bridges the gap between these two, and allows you to play back a MIDI file by using a MIDI device."
+        "define": "A <b>MIDI file</b> is a sequence of instructions that allow a synthesizer to produce sound. In other words, it can be thought of as the equivalent of a musical score, but written for specialized programs instead of humans.",
+        "limit": "Stemming from this nature, MIDI files are meant to be <i>written</i> by a human, but not <i>used</i> by one, except to feed it directly to a synthesizer. However, there exist <b>MIDI devices</b> which can produce individual synthesizer commands, and which are meant for human use.",
+        "solution": "The Midifile Performer, in turn, bridges the gap between these two, and allows you to <b>play back a MIDI file</b> by using a MIDI device."
       },
 
       "howWork": {
         "h2": "How does it work ? ",
 
-        "sets": "When uploading a MIDI file to the application, the instructions contained within are grouped together in sets of simultaneous occurrence. These sets come in pairs : on sets are triggered by pressing any button on your MIDI device, and will activate notes ; off sets are triggered by releasing a button, and will stop notes.",
-        "playingOn": "Once you press a button and trigger an on set, every note it contains is played by the app’s synthesizer. The notes that are played are independent of the key you pressed, and solely reflect the content of the triggered set ; e.g., you may press an A4 key on a MIDI keyboard, but produce a C major chord).",
+        "sets": "When uploading a MIDI file to the application, the instructions contained within are grouped together in <b>sets</b> of simultaneous occurrence. These sets come in pairs : <b>on sets</b> are triggered by <b>pressing</b> any button on your MIDI device, and will <b>activate</b> notes ; <b>off sets</b> are triggered by <b>releasing</b> a button, and will <b>stop</b> notes.",
+        "playingOn": "Once you press a button and trigger an on set, every note it contains is played by the app’s synthesizer. The notes that are played are <b>independent of the key you pressed</b>, and solely reflect the content of the triggered set ; e.g., you may press an A4 key on a MIDI keyboard, but produce a C major chord).",
         "playingOff": "Releasing the button that triggered the on set, in turn, triggers the off set that was paired with it. By repeating this process, you can then iterate through the file."
       },
 
@@ -150,7 +150,8 @@
             "thirdLine": "XCVB row : Pianissimo (MIDI velocity 15)"
           },
 
-          "custom": "Of course, if you own a MIDI input device, your experience will be greatly improved by using it. You can connect it via USB, and it will be automatically detected as long as your browser supports the WebMIDI interface. This excludes all versions of Safari, but should pose no problem on Mozilla Firefox or Chromium-based browsers such as Google Chrome, Opera, or Brave. Once detected, you may select it in the appropriate dropdown menu."
+          "custom": "Of course, if you own a MIDI input device, your experience will be greatly improved by using it. You can connect it via USB, and it will be automatically detected as long as your browser supports the WebMIDI interface. This excludes all versions of Safari, but should pose no problem on Mozilla Firefox or Chromium-based browsers such as Google Chrome, Opera, or Brave.",
+          "customSelect": "Once detected, you may select it in the appropriate dropdown menu."
         },
 
         "output": {
@@ -162,21 +163,21 @@
 
       "modes": {
         "h2": "Modes",
-        "modeList": "This application features three modes : silent, playback, and perform.",
+        "modeList": "This application features three modes : <b>silent</b>, <b>playback</b>, and <b>perform</b>.",
 
         "silent": {
           "h3": "Silent mode",
-          "describe": "Silent mode is the default mode of the application as a file is uploaded. It is also the only mode in which clicking on visualizer notes will play back their sound to help understand them ; this behavior can be disabled in settings."
+          "describe": "<b>Silent mode</b> is the default mode of the application as a file is uploaded. It is also the only mode in which clicking on visualizer notes will play back their sound to help understand them ; this behavior can be disabled in settings."
         },
 
         "playback": {
           "h3": "Playback mode",
-          "describe": "Playback mode allows you to hear an interpretation of the file as it would normally sound when fed to a synthesizer as-is. You may influence the speed of playback (see below). "
+          "describe": "<b>Playback mode</b> allows you to hear an interpretation of the file as it would normally sound when fed to a synthesizer as-is. You may influence the speed of playback (see below). "
         },
 
         "perform": {
           "h3": "Perform mode",
-          "describe": "Perform mode is triggered by MIDI commands emitted by your MIDI device. Once entered, you control how the file plays. "
+          "describe": "<b>Perform mode</b> is triggered by MIDI commands emitted by your MIDI device. Once entered, you control how the file plays. "
         }
       },
 
@@ -184,7 +185,7 @@
         "h2": "Looping",
 
         "whatIs": "By using loop controls found in the interface (see below), you can determine a specific section of the file that will loop continuously, with the first note succeeding the last. By default, this section is the entire file. You may also disable looping in settings.",
-        "note": "Note that you may hold notes through the boundaries of a loop, thereby prolonging them into an earlier section of the piece."
+        "note": "Note that you may hold notes through the boundaries of a loop, thereby prolonging them into an <i>earlier</i> section of the piece."
       },
 
       "interface": {
@@ -201,19 +202,19 @@
           "h3": "Progress bar",
 
           "preface": "The progress bar is divided into the following controls :",
-          "playButton": "The play/pause button toggles between the playback and silent modes (see their appropriate sections) ; if you wish, you may also use the spacebar of your keyboard for the same purpose. Alternatively, if you hold down the space bar, rather than only pressing it, playback will continue until you release it.",
-          "speed": "The speed input controls the playback speed of playback mode.",
-          "start": "The start input controls the starting set of the looping sequence (see : looping).",
-          "current": "The current input controls the current set, allowing you to move through the file. It may also be moved with the left and right arrow keys of your keyboard.",
-          "end": "The end input controls the ending set of the looping sequence (see : looping).",
-          "stop": "The stop button activates silent mode (see : silent mode), whether during playback or perform.",
-          "cursor": "The cursor modifies the current set, just as the current input.",
-          "loopFlag": "The looping flags modify the start and end set, just as the start and end inputs."
+          "playButton": "The <b>play/pause button</b> toggles between the playback and silent modes (see their appropriate sections) ; if you wish, you may also use the spacebar of your keyboard for the same purpose. Alternatively, if you hold down the space bar, rather than only pressing it, playback will continue until you release it.",
+          "speed": "The <b>speed input</b> controls the playback speed of playback mode.",
+          "start": "The <b>start input</b> controls the starting set of the looping sequence (see : looping).",
+          "current": "The <b>current input</b> controls the current set, allowing you to move through the file. It may also be moved with the left and right arrow keys of your keyboard.",
+          "end": "The <b>end input</b> controls the ending set of the looping sequence (see : looping).",
+          "stop": "The <b>stop button</b> activates silent mode (see : silent mode), whether during playback or perform.",
+          "cursor": "The <b>cursor</b> modifies the current set, just as the current input.",
+          "loopFlag": "The <b>looping flags</b> modify the start and end set, just as the start and end inputs."
         },
 
         "visualizer": {
           "h3": "Visualizer",
-          "describe": "There are two selectable visualizers on this application : the piano roll, which is available for both MIDI and MusicXML files ; and the sheet music, which is available for MusicXML files only. When both visualizers are available, you may switch between them by using the icons situated above them.",
+          "describe": "There are two selectable visualizers on this application : the <b>piano roll</b>, which is available for both MIDI and MusicXML files ; and the <b>sheet music</b>, which is available for MusicXML files only. When both visualizers are available, you may switch between them by using the icons situated above them.",
 
           "pianoRoll": {
             "h4": "Piano roll",
@@ -222,7 +223,7 @@
 
             "highlight": "As you perform or play back the file, the notes of the piano roll will turn green. They will only revert to their original color once their respective note is released ; therefore, in perform mode, their highlight duration can clue you in on how long you are actually holding the note, as opposed to its original duration.",
             "currentColor": "When your performance stops with no active notes, your current set is kept track of by a darker shade of green. When in silent mode, the current set instead turns blue.",
-            "hoverClick": "In any case, you may interact with the piano roll notes by hovering over them or clicking on them. Doing so will highlight the entire set the note under your cursor belongs to, in either green or blue, depending on the present mode ; if you wish to highlight a single note, you may hold the Ctrl key of your keyboard.",
+            "hoverClick": "In any case, you may interact with the piano roll notes by hovering over them or clicking on them. Doing so will highlight the <b>entire set</b> the note under your cursor belongs to, in either green or blue, depending on the present mode ; if you wish to highlight a single note, you may hold the Ctrl key of your keyboard.",
             "clickSelect": "Additionally, clicking on a note will select its set as the current set of the piece, and, in silent mode only, play back either that note alone or its set (depending on whether Ctrl is held).",
             "boundaryControl": "Finally, the piano roll contains two vertical blue bars, which mark the locations of the start and end sets of the looping sequence. Dragging and dropping them across the display will update these sets accordingly."
           },
@@ -234,7 +235,7 @@
 
             "cursor": "The current set is indicated by a cursor. It is blue in silent mode, and green in playback and perform modes. You may drag this cursor along the sheet to change its position, and thereby update the current set.",
             "highlight": "As the cursor passes over notes in playback or perform mode, they will be highlighted in green. They will only revert to their original color once their respective note is released ; therefore, in perform mode, their highlight duration can clue you in on how long you are actually holding the note, as opposed to its original duration.",
-            "hoverClick": "You may also interact with the notes by hovering over them or clicking on them. Doing so will highlight the entire set the note under your cursor belongs to, in either green or blue, depending on the present mode ; if you wish to highlight a single note, you may hold the Ctrl key of your keyboard.",
+            "hoverClick": "You may also interact with the notes by hovering over them or clicking on them. Doing so will highlight the <b>entire set</b> the note under your cursor belongs to, in either green or blue, depending on the present mode ; if you wish to highlight a single note, you may hold the Ctrl key of your keyboard.",
             "clickSelect": "Additionally, clicking on a note will select its set as the current set of the piece, and, in silent mode only, play back either that note alone or its set (depending on whether Ctrl is held).",
             "boundaryControl": "Finally, the music sheet contains two vertical blue bars, which mark the locations of the start and end sets of the looping sequence. Dragging and dropping them across the sheet will update these sets accordingly."
           }
