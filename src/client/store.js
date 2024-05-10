@@ -56,6 +56,8 @@ const highlightPalette = new Map([
 const store = createStore({
   state() {
     return {
+      locale: "fr",
+
       inputs: {},
       outputs: {},
       currentInputId: 0,
@@ -100,6 +102,9 @@ const store = createStore({
     mfpMidiFile: state => state.mfpMidiFile,
   },
   mutations: {
+    setLocale(state, locale) {
+      state.locale = locale
+    },
     setInputs(state, inputs) {
       state.inputs = inputs;
     },

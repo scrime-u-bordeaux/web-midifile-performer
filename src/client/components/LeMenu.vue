@@ -125,6 +125,9 @@
 </style>
 
 <script>
+
+import { mapMutations } from 'vuex'
+
 export default {
   props: [ 'items' ],
   data() {
@@ -137,9 +140,16 @@ export default {
   beforeUnmount() {
   },
   methods: {
+
+    ...mapMutations(['setLocale']),
+
     onLocaleChange(e) {
       // Through watching this, the app can update anything that vue-i18n doesn't automatically update itself
+      // FIXME : just using the store should be enough !
+      // But for the ioctl, it isn't.
       this.$emit('localeChanged', this.$i18n.locale)
+      this.setLocale(this.$i18n.locale)
+
       localStorage.setItem('locale', this.$i18n.locale)
     }
   }

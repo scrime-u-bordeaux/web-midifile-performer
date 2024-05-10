@@ -1,9 +1,11 @@
 <template>
 <div>
-  <div class="wrapper">
+  <div ref="wrapper" class="wrapper">
     <div class="pseudo-title"> {{ $t('guide.title') }} </div>
 
     <p> {{ $t('guide.summary') }} </p>
+
+    <div ref="tocContainer" class="toc-container"></div>
 
     <h1> {{ $t('guide.whatIs.h1' )}} </h1>
 
@@ -219,6 +221,22 @@
     margin-right: auto;
   }
 
+  .toc-container {
+    margin-right: auto;
+    margin-left: auto;
+    width: fit-content;
+    padding-right: 2.8em;
+    border: 2px solid var(--button-blue);
+    border-radius: 10px;
+  }
+  .toc-container::v-deep a {
+    color: #666;
+    text-decoration: none;
+  }
+  .toc-container::v-deep a:hover, .toc-container::v-deep a:active {
+    color: var(--button-blue)
+  }
+
   .interface, .progress-bar {
     width: 85%;
     height: 85%;
@@ -230,3 +248,95 @@
     padding-bottom: 2em;
   }
 </style>
+
+<script>
+
+import { mapState } from 'vuex'
+import { nextTick } from 'vue'
+
+// This code for generating a TOC from the header tags was taken from @simov
+// Original : https://gist.github.com/simov/4b4cfefa1bf0e5f0c359f7635326fa06
+
+export default {
+
+  data() {
+    return {
+      headers: []
+    }
+  },
+
+  computed: {
+    ...mapState(['locale'])
+  },
+
+  watch: {
+    async locale(newLocale, oldLocale) {
+      await nextTick() // ptherwise, there's a race condition on whether the text has been updated
+      // ...but still, it seems like sometimes, this isn't enough ?
+      
+      this.refreshToc()
+    }
+  },
+
+  mounted() {
+    this.refreshToc()
+  },
+
+  methods: {
+    createHeaderLink(headerElem) {
+      return '<li><a href="#' + headerElem.id + '">' + headerElem.title + '</a></li>'
+    },
+
+    walk(nodes, headers) {
+      nodes.forEach((node) => {
+        const children = Array.from(node.childNodes)
+
+        if (children.length) {
+          this.walk(children)
+        }
+
+        if (/h[1-6]/i.test(node.tagName)) {
+          node.setAttribute('id',
+            // FIXME : does this work on the server..?
+            '/guide#'+node.innerText.replaceAll(' ', '_').toLowerCase()
+          )
+
+          headers.push({
+            id: node.getAttribute('id'),
+            level: parseInt(node.tagName.replace('H', '')),
+            title: node.innerText
+          })
+        }
+      })
+    },
+
+    refreshToc() {
+      this.$refs.tocContainer.innerHTML = ''
+      this.headers = []
+
+      this.walk([...this.$refs.wrapper.childNodes], this.headers)
+
+      let tocHtml = '<ul>'
+
+      this.headers.forEach((header, index) => {
+        if (index) {
+          var prev = this.headers[index - 1]
+        }
+        if (!index || prev.level === header.level) {
+          tocHtml += this.createHeaderLink(header)
+        }
+        else if (prev.level > header.level) {
+          tocHtml += '</ul>' + this.createHeaderLink(header)
+        }
+        else if (prev.level < header.level) {
+          tocHtml += '<ul>' + this.createHeaderLink(header)
+        }
+      })
+
+      tocHtml += '</ul>'
+
+      this.$refs.tocContainer.insertAdjacentHTML('afterbegin', tocHtml)
+    }
+  }
+}
+</script>
