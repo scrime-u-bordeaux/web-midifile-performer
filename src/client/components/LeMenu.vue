@@ -41,7 +41,7 @@
   .whole-header {
     display: grid;
     position: relative;
-    grid-template-columns: 15% 72% 13%;
+    grid-template-columns: 13% 74% 13%;
     text-align: center;
     padding: 0 15px;
     background-color: transparent;
@@ -125,6 +125,9 @@
 </style>
 
 <script>
+
+import { mapMutations } from 'vuex'
+
 export default {
   props: [ 'items' ],
   data() {
@@ -137,9 +140,16 @@ export default {
   beforeUnmount() {
   },
   methods: {
+
+    ...mapMutations(['setLocale']),
+
     onLocaleChange(e) {
       // Through watching this, the app can update anything that vue-i18n doesn't automatically update itself
+      // FIXME : just using the store should be enough !
+      // But for the ioctl, it isn't.
       this.$emit('localeChanged', this.$i18n.locale)
+      this.setLocale(this.$i18n.locale)
+
       localStorage.setItem('locale', this.$i18n.locale)
     }
   }

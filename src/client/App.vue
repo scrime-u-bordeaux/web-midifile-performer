@@ -6,6 +6,7 @@
       { text: $t('menu.home'),            page: 'Home' },
       { text: $t('menu.firstSteps'),       page: 'FirstSteps' },
       { text: $t('menu.mfp'), page: 'MidifilePerformer' },
+      { text: $t('menu.help'), page: 'Guide' },
       { text: $t('menu.credits'),            page: 'Credits'}
     ]"
     @localeChanged="onLocaleChanged"

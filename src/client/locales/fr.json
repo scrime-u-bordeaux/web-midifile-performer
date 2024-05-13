@@ -7,6 +7,7 @@
     "home": "Accueil",
     "firstSteps": "Premiers Pas",
     "mfp": "Midifile Performer",
+    "help": "Aide",
     "credits": "Crédits"
   },
   "home": {
@@ -76,7 +77,7 @@
     "help": "Aide"
   },
   "credits": {
-    "metapiano": "Métapiano et vidéo de performance",
+    "metapiano": "Métapiano et vidéo de interprétation",
     "article": "Article Midifile Performer",
     "firstImplem": "Première implémentation",
     "cppLib": "Librairie C++",
@@ -84,30 +85,172 @@
     "samples": "Enregistrement et traitement des échantillons de piano"
   },
   "guide": {
-    "how": "Comment utiliser le Midifile Performer ?",
-    "io": {
-      "heading": "Gérer les entrées MIDI et les sorties audio",
-      "default": "Par défaut, le clavier d’ordinateur est fonctionnel ; les quatre rangées alphanumériques offrent chacune dix touches avec une vélocité commune : de pianissimo pour la rangée du bas (commençant par W sur un clavier AZERTY), jusqu'à fortissimo pour la rangée du haut (chiffres). S'il est présent, le trackpad est aussi actif. Vous pouvez, au besoin, ajuster les vélocités de ces rangées.",
-      "custom": "Vous pouvez aussi insérer un clavier MIDI en USB comme entrée alternative. Un synthétiseur piano intégré est sélectionné comme sortie audio par défaut. Si vous disposez de vos propres VSTs (Pianoteq par exemple), ils apparaîtront dans la liste des sorties audio."
-    },
-    "score": {
-      "heading": "Choix et gestion des partitions à jouer",
-      "instructions": "Importez une partition au format .mid pour pouvoir l'interpréter à votre façon. Pour cela, cliquez sur le bouton « Charger un fichier MIDI », ou glissez-déposez le fichier sur la page.",
-      "advice": {
-        "heading": "Conseils pour gérer vos fichiers dans votre ordinateur",
-        "content": "Vous pouvez créer un dossier par oeuvre/compositeur où placer la partition PDF, la partition MIDI et vos différentes interprétations."
+
+    "title": "Aide",
+
+    "summary": "Vous trouverez sur cette page des informations sur le fonctionnement du Midifile Performer et ses capacités, ainsi que des indications pour l'utiliser et comprendre son interface.",
+
+    "toc": "Sommaire",
+
+    "whatIs": {
+      "h1": "Qu'est-ce que le Midifile Performer ?",
+
+      "midiFile": {
+        "h2": "Qu'est-ce qu'un fichier MIDI ?",
+
+        "define": "Un <b>fichier MIDI</b> est une séquence d'instructions destinées à un synthétiseur, qui lui permettent de produire du son. En d'autres termes, il s'agit en quelque sorte de l'équivalent d'une partition musicale, à ceci près qu'elle est écrite pour un programme spécialisé, et non un être humain.",
+        "limit": "Par conséquent, même si les fichiers MIDI sont <i>écrits</i> par des humains, ils ne sont pas <i>utilisables</i> par ces derniers, qui ne peuvent que les fournir à un synthétiseur. En revanche, des appareils nommés <b>contrôleurs MIDI</b> existent, qui sont destinés à l'usage humain, et permettent la commande directe de ces synthétiseurs sans besoin de fichier pour intermédiaire.",
+        "solution": "Le rôle du Midifile Performer est de relier ces deux entités, et ainsi, de vous permettre de <b>rejouer un fichier MIDI</b> en usant d'un contrôleur."
+      },
+
+      "howWork": {
+        "h2": "Comment l'application fonctionne-t-elle ?",
+
+        "sets": "Lorsque vous transmettez un fichier MIDI à l'application, les instructions qu'il contient sont regroupées en <b>ensembles</b> de simultanéité. Ces ensembles forment des paires : les ensembles <b>\"on\"</b> sont déclenchés par <b>l'appui</b> d'un bouton sur votre contrôleur, et <b>activent</b> des notes ; tandis que les ensembles <b>\"off\"</b> sont déclenchés par le <b>relâchement</b> d'un bouton, et <b>arrêtent</b> des notes.",
+        "playingOn": "Lorsque vous appuyez sur un bouton et déclenchez un ensemble \"on\", les notes qu'il contient sont jouées simultanément par le synthétiseur de l'application. Les notes produites sont <b>indépendantes de votre appui</b>, et ne reflètent que le contenu de l'ensemble déclenché. Par exemple, vous pouvez déclencher un ensemble contenant une triade de Do majeur avec une touche de La.",
+        "playingOff": "En retour, relâcher le bouton qui a déclenché l'ensemble \"on\" produit l'ensemble \"off\" qui lui est appairé. En répétant ce processus, vous itérez ainsi tous les événements du fichier."
+      },
+
+      "whatCanDo": {
+        "h2": "Quels exemples d'usage ?",
+
+        "describe": "En déterminant le rythme de déclenchement des ensembles \"on\", vous pouvez rejouer le morceau encodé par le fichier d'origine selon la cadence de votre choix. De même, puisque le déclenchement des ensembles \"off\" est le produit des relâchements de votre commande, il vous est possible d'étendre des notes au-delà de leur durée d'origine, ou d'altérer l'articulation de notes successives. Enfin, tout contrôle supplémentaire, tel qu'une pédale, un \"pitch bend\", ou plus simplement la vélocité de vos appuis, sera transmis au synthétiseur comme lors d'un jeu ordinaire, affectant le son produit. ",
+        "listPossibilities": {
+          "preface": "Vous pouvez ainsi exploiter ces propriétés afin de :",
+
+          "practice": "Vous familiariser avec un morceau avant de le jouer",
+          "try": "Explorer de nouvelles interprétations de morceaux déjà connus",
+          "analyze": "Analyser une composition sans risque de fausse note",
+          "specificSection": "Répéter une section d'intérêt (voir : Bouclage)",
+
+          "withVisual": "…avec, pour vous aider, une représentation visuelle du fichier chargé."
+        }
       }
     },
-    "perform": {
-      "heading": "Jouer un morceau",
-      "sequence": {
-        "heading": "Gestion de la séquence du morceau à jouer :",
-        "default": "Par défaut, la séquence à jouer démarre à la première note, et s'achève à la dernière note",
-        "select": "Vous pouvez cependant décider de sélectionner une plus petite séquence en entrant les indices des notes de début et de fin, ou en déplaçant les drapeaux sur la barre de progression",
-        "cursor": "Vous pouvez aussi déplacer le curseur de la barre de progression pour reprendre à ce niveau du morceau",
-        "rewind": "Appuyez sur le bouton « Rejouer » pour redémarrer au début de la séquence sélectionnée ; le morceau bouclera également au début de la séquence après avoir atteint sa fin"
+
+    "howToUse": {
+      "h1": "Utilisation",
+
+      "formats": {
+        "h2": "Formats de fichiers compatibles",
+
+        "mxl": "En plus des fichiers MIDI (.mid / .midi), cette application est également compatible avec les fichiers MusicXML, en format standard (.musicxml / .xml) comme compressé (.mxl).",
+        "import": "Pour importer un fichier, vous pouvez cliquer sur le bouton \"Charger un fichier MIDI / MusicXML\", mais aussi glisser et déposer le fichier en question directement sur la page."
+      },
+
+      "io": {
+        "h2": "Entrée et sortie",
+
+        "input": {
+          "h3": "Entrée",
+
+          "keyboard": {
+            "preface": "Par défaut, il vous est possible d'utiliser votre clavier d'ordinateur comme contrôleur MIDI. Puisqu'il ne transmet aucune information de vélocité, celle-ci est déterminée par la rangée de la touche utilisée, avec les valeurs par défaut suivantes : ",
+
+            "number": "Rangée numérique : Forte (Vélocité 75)",
+            "firstLine": "Rangée AZERTY : Mezzoforte (Vélocité 55)",
+            "secondLine": "Rangée QSDF : Piano (Vélocité 30)",
+            "thirdLine": "Rangée WXCV : Pianissimo (Vélocité 15)"
+          },
+
+          "custom": "Bien entendu, si vous possédez un contrôleur MIDI externe, vous bénéficierez d'une expérience améliorée en l'utilisant. Vous pouvez le connecter via un port USB, et il sera automatiquement détecté si votre navigateur implémente WebMIDI. Ceci est le cas de Firefox et des navigateurs Chromium tels que Google Chrome, Opera ou Brave, mais exclut cependant Safari.",
+          "customSelect": "Une fois votre contrôleur détecté, vous pourrez le sélectionner dans le menu déroulant prévu à cet effet."
+        },
+
+        "output": {
+          "h3": "Sortie",
+
+          "rundown": "Par défaut, un synthétiseur au son de piano est fourni par l'application. Symétriquement à l'entrée, il vous est possible d'utiliser tout synthétiseur installé sur votre système (par exemple, Pianoteq) en le sélectionnant dans le menu déroulant prévu à cet effet. "
+        }
+      },
+
+      "modes": {
+        "h2": "Modes",
+        "modeList": "Cette application se divise en trois modes : <b>silencieux</b>, <b>lecture</b>, et <b>interprétation</b>.",
+
+        "silent": {
+          "h3": "Mode silencieux",
+          "describe": "Le <b>mode silencieux</b> est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être désactivé dans les paramètres."
+        },
+
+        "playback": {
+          "h3": "Mode lecture",
+          "describe": "Le <b>mode lecture</b> vous permet d'écouter le fichier tel quel, directement interprété par le synthétiseur. Vous pouvez modifier la vitesse à laquelle il se joue (voir plus bas). "
+        },
+
+        "perform": {
+          "h3": "Mode interprétation",
+          "describe": "Le <b>mode interprétation</b>, mode principal décrit ci-dessus, est déclenché par l'émission de commandes MIDI depuis votre contrôleur. Lorsqu'il est activé, vous contrôlez désormais le fichier. "
+        }
+      },
+
+      "looping": {
+        "h2": "Bouclage",
+
+        "whatIs": "En utilisant des contrôles de bouclage présents dans l'interface (voir ci-dessous), vous pouvez délimiter une section particulière du fichier qui bouclera de manière continue, la première note succédant à la dernière. Par défaut, cette section s'étend à l'intégralité du fichier. Il vous est également possible de désactiver le bouclage dans les paramètres.",
+        "note": "Notez par ailleurs qu'il vous est possible de tenir des notes à travers une boucle, les prolongeant ainsi jusqu'à un point <i>antérieur</i> du morceau. "
+      },
+
+      "interface": {
+        "h2": "Interface",
+
+        "preface": "Une fois votre fichier chargé, l'interface suivante se présentera à vous.",
+
+        "keyboard": {
+          "h3": "Piano",
+          "describe": "A mesure que le fichier progresse, ce piano s'illuminera pour indiquer les notes jouées. Les notes en surbrillance sont ainsi celles contenues dans les ensembles produits, et n'ont aucun lien avec les touches utilisées pour les produire. "
+        },
+
+        "progressBar": {
+          "h3": "Barre de défilement",
+
+          "preface": "La barre de défilement est constituée des éléments suivants :",
+          "playButton": "Le <b>bouton play/pause</b> alterne entre les modes lecture et silencieux (voir leurs sections respectives) ; si vous le souhaitez, vous pouvez également utiliser la barre d'espace de votre clavier pour accomplir le même changement. Alternativement, maintenir la barre d'espace au lieu de la presser maintiendra la lecture uniquement jusqu'à son relâchement.",
+          "speed": "Le <b>champ de vitesse</b> contrôle la vitesse du mode lecture.",
+          "start": "Le <b>champ de début</b> définit le premier ensemble de la section bouclée (voir : Bouclage).",
+          "current": "Le <b>champ d'ensemble courant</b> définit l'ensemble actuellement sélectionné, ou, en d'autres termes, votre position dans le fichier. Il peut être modifié avec les flèches gauche et droite de votre clavier.",
+          "end": "Le <b>champ de fin</b> définit le dernier ensemble de la section bouclée (voir : Bouclage).",
+          "stop": "Le <b>bouton stop</b> bascule l'application en mode silencieux, quel que soit le mode actuel.",
+          "cursor": "Le <b>curseur</b> modifie l'ensemble courant, tout comme le champ d'ensemble courant.",
+          "loopFlag": "Les <b>drapeaux</b> modifient les ensembles de début et de fin de la séquence, tout comme leurs champs respectifs."
+        },
+
+        "visualizer": {
+          "h3": "Visualiseur",
+          "describe": "Cette application propose deux visualiseurs : un <b>piano roll</b>, disponible pour les fichiers MIDI et MusicXML, et un <b>afficheur de partitions</b>, qui n'est disponible que pour les fichiers MusicXML. Lorsque les deux visualiseurs sont disponibles, il vous est possible de sélectionner l'un ou l'autre en faisant usage des icônes qui les surmontent.",
+
+          "pianoRoll": {
+            "h4": "Piano roll",
+
+            "describe": "Le piano roll est composé de rectangles dont la position verticale indique leur hauteur, et dont la largeur est proportionnelle à leur durée dans le fichier d'origine. ",
+
+            "highlight": "Lorsque le fichier progresse, en mode lecture ou interprétation, les notes du piano roll deviennent vertes. Elles ne retrouvent leur couleur d'origine que lorsque les notes correspondantes sont relâchées ; ainsi, en mode interprétation, leur durée d'illumination, décorrélée de leur longueur, indique la durée de maintien réel de la note.",
+            "currentColor": {
+              "green": "Lorsque votre interprétation cesse sans laisser de note active, l'ensemble en cours est marqué d'un vert plus foncé.",
+              "blue": "En mode silencieux, cette couleur est remplacée par du bleu."
+            },
+            "hoverClick": "Dans les deux cas, vous pouvez interagir avec les notes du piano roll en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel.",
+            "ctrl": " Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
+            "clickSelect": "Cliquer sur une note désignera en outre son ensemble comme ensemble courant, et, en mode silencieux uniquement, rejouera cette note ou l'ensemble selon le maintien de la touche Ctrl.",
+            "boundaryControl": "Enfin, le piano roll contient deux barres bleues verticales, qui marquent l'emplacement des ensembles de début et de fin de la séquence. En les glissant à travers les notes, vous pouvez modifier ces ensembles directement."
+          },
+
+          "sheetMusic": {
+            "h4": "Partition",
+
+            "describe": "Les fichiers MusicXML disposent d'une partition identique à celles qui se rencontrent sur papier, enrichie de fonctionnalités identiques à celles du piano roll.",
+
+            "cursor": "L'ensemble courant est marqué par un curseur. Ce dernier est bleu en mode silencieux, et vert en mode lecture ou interprétation. Vous pouvez le déplacer sur la partition, et ainsi changer l'ensemble en cours. ",
+            "highlight": "Lorsque le curseur survole des notes en mode lecture ou interprétation, elles deviennent vertes. Elles ne retrouvent leur couleur d'origine que lorsque les notes correspondantes sont relâchées ; ainsi, en mode interprétation, leur durée d'illumination indique la durée de maintien réel de la note.",
+            "hoverClick": "Vous pouvez également interagir avec les notes en passant votre souris sur elles, ou en cliquant dessus. Ce faisant, vous illuminerez <b>tout l'ensemble</b> auquel appartient la note, en vert ou en bleu, selon le mode actuel.",
+            "ctrl": " Si vous ne souhaitez mettre qu'une note en surbrillance, vous le pouvez, en maintenant enfoncée la touche Ctrl de votre clavier.",
+            "clickSelect": "Cliquer sur une note désignera en outre son ensemble comme ensemble courant, et, en mode silencieux uniquement, rejouera cette note ou l'ensemble selon le maintien de la touche Ctrl.",
+            "boundaryControl": "Enfin, la partition comporte deux barres bleues verticales, qui marquent l'emplacement des ensembles de début et de fin de la séquence. En les glissant à travers la partition, vous pouvez modifier ces ensembles directement."
+          }
+        }
       }
     },
+
     "export": {
       "heading": "Enregistrer votre interprétation",
       "content": "Vous pouvez enregistrer vos interprétations depuis le MidiFile Performer en cliquant sur le bouton « Exporter ». Ceci produira un fichier MIDI que vous pourrez ensuite exploiter à l’aide de l'outil de votre choix."
