@@ -182,7 +182,7 @@ function mergeTracks({ division, format, tracks }) {
 
 /**
  * Convert a C++-WASM vector of noteData to an array of JS objects.
- * Used by MidifilePerformer.loadArrayBuffer when setting up the note events
+ * Used by MidifilePerformer.loadMidifile when setting up the note events
  * callback : this.performer.setNoteEventsCallback(() => { ... });
  */
 function noteEventsFromNoteDataVector(notes) {
@@ -248,9 +248,16 @@ class MidifilePerformer extends EventEmitter {
     this.performer.setLooping(true);
   }
 
-  async loadArrayBuffer(buffer) {
+  async loadMidifile(jsonOrBuffer, isBuffer = true) {
     // this.emit('allnotesoff');
-    const midiJson = await parseMidiArrayBuffer(buffer);
+    const midiJson = isBuffer ? await parseMidiArrayBuffer(jsonOrBuffer) : jsonOrBuffer;
+
+    if(!isBuffer) { // Arrays and maps of absolute-delta events are included in midi JSONs parsed from MusicXML files.
+      // They are for the OSMD visualizer. Pass them along.
+      this.emit('musicXmlTempos', jsonOrBuffer.tempoEvents)
+      this.emit('musicXmlChannels', jsonOrBuffer.channelChanges)
+    }
+
     const allNoteEvents = mergeTracks(midiJson);
     this.analyzer.analyze(allNoteEvents);
 
@@ -298,7 +305,10 @@ class MidifilePerformer extends EventEmitter {
       if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet)
         // in passive playback, only redraw on note on's
         // in perform, note offs may dynamically cancel, so redraw on both
-        this.emit('visualizerRedraw', this.#getCurrentIndex())
+        this.emit('visualizerRefresh', {
+          isStartingSet: isStartingSet,
+          referenceSetIndex: this.#getCurrentIndex()
+        })
 
       // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :
@@ -430,7 +440,7 @@ class MidifilePerformer extends EventEmitter {
 
     // temporary !!
     // TODO : phase out with unification of mode state into store
-    this.emit('allowHighlight', this.mode === 'silent')
+    this.emit('isModeSilent', this.mode === 'silent')
   }
 
   command(cmd) {

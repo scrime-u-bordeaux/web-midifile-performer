@@ -26,6 +26,33 @@ const midifiles = [
   },
 ];
 
+// Palette for visualization
+
+const highlightPalette = new Map([
+
+  // These will be used for the play/pause button (not yet), keyboard,
+  // And for highlight in the piano roll (not yet).
+  // Note that they sadly have to be duplicated from CSS definitions
+
+  ["baseBlue", "#02a7f0"], // "Bleu université" / var(--button-blue)
+  ["baseGreen", "#58e28e"], // Keyboard active color / var(--play-perform-green)
+
+  // OSMD cursor uses <img> with a base64 RGBa PNG src, so we store that
+
+  // baseBlue with 0.4 alpha
+  ["cursorBlue", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2O8+uFv2uqnvxnWPvrNcO3jXwZCQIufmSFYjpUhVJqVAQBQYAwqiJrEUwAAAABJRU5ErkJggg=="],
+  // baseBlue with 0.5 alpha
+  ["cursorGreen", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2N8/PN1w4kfdxhOfrvF8OTXGwZCQIZNhMGcS43BgkOFAQBeUQxJfg+WeAAAAABJRU5ErkJggg=="],
+
+  // SheetMusic will use a darker variant to highlight notes on click/hover.
+  // (To contrast with its cursors)
+  // In PianoRoll, it is the opposite, and these will color the current set
+  // (Because it has no cursor to show it)
+
+  ["darkBlue", "#0175a8"], // Basic app blue 30% darker
+  ["darkGreen", "#1eae56"] // Basic app green 60% darker
+]);
+
 const store = createStore({
   state() {
     return {
@@ -33,16 +60,34 @@ const store = createStore({
       outputs: {},
       currentInputId: 0,
       currentOutputId: 0,
+
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
-      mfpMidiFile: { id: 'mfp', title: '', url: '', buffer: null },
+      mfpMidiFile: { id: 'mfp', title: '', url: '', isMidi: true, buffer: null },
+
+      // Model shared by visualizers.
+      // TODO : move it in a more logical place.
+      // setStarts and setEnds register the indices where sets start and begin in noteSequence
+      noteSequence: [],
+      setStarts: [],
+      setEnds: [],
+      activeNotes: [],
+      highlightPalette: highlightPalette,
+
+      // Model cache for OSMD visualizer alone.
+      // I don't really know if it can be put elsewhere.
+      osmdCursorAnchors: [],
+      osmdSetCoordinates: [],
+
       minKeyboardNote,
       maxKeyboardNote,
       keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),
+
       sequenceLength: 0,
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
-      performModeStartedAt: 0,
+
+      performModeStartedAt: 0, // hack, aim to remove by storing mode here instead
       midiAccessRequested: false,
       userClickOccurred: false,
       synthNotesFetched: 0,
@@ -72,6 +117,24 @@ const store = createStore({
     },
     setMfpMidiFile(state, file) {
       state.mfpMidiFile = { ...file };
+    },
+    setNoteSequence(state, sequence) {
+      state.noteSequence = sequence;
+    },
+    setSetStarts(state, starts) {
+      state.setStarts = starts;
+    },
+    setSetEnds(state, ends) {
+      state.setEnds = ends;
+    },
+    setActiveNotes(state, notes) {
+      state.activeNotes = notes;
+    },
+    setOsmdCursorAnchors(state, anchors) {
+      state.osmdCursorAnchors = anchors;
+    },
+    setOsmdSetCoordinates(state, coords) {
+      state.osmdSetCoordinates = coords;
     },
     animateNoteOn(state, note) {
       if (note.pitch >= state.minKeyboardNote &&
