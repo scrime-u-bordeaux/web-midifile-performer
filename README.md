@@ -1,13 +1,32 @@
 # Midifile Performer
 
-### website and online application
+### About
 
-This is a minimal website about Jean Haury's MetaPiano and the Midifile
-Performer software.
-It also includes a simplified JavaScript version of Midifile Performer which is
-playable in the browser.
+This is a VueJS implementation of the Midifile
+Performer software, as described in [Serpette, Haury et al.](https://dl.acm.org/doi/10.1145/3471872.3472968).
 
-### building
+### Setup
+
+The application keeps track of the current date on every git commit, and displays it.
+
+For this to work, please take the following steps when you set up the repository, before you commit any code :
+
+1. If such is not already the case, make the `config_hooks.sh` file executable through the following command :
+
+```bash
+chmod 744 config_hooks.sh
+```
+
+2. Run the following npm script :
+
+```bash
+npm run init_hooks
+```
+
+After this, the process is automatic, and the commit date will be automatically registered.
+Note : to ensure this information remains meaningful, please **do not** manually modify or interact with the `meta.json` file, and only let the git hook do it.
+
+### Building
 
 The website is a SPA (single page application) mostly written with VueJS and bundled
 with Webpack.
@@ -31,6 +50,6 @@ routes.
 
 see [`vue-router`'s history modes](https://next.router.vuejs.org/guide/essentials/history-mode.html)
 
-### todo's
+### Todo
 
 define clean dev and prod env files
