@@ -34,30 +34,6 @@ html, body {
   position: relative;
 }
 
-.pop-up {
-  z-index: 100000;
-  position: absolute;
-  /*top: var(--menubar-height);*/
-  top:0;
-  right:0;
-  bottom:0;
-  left:0;
-
-  padding: 15px;
-  text-align: justify;
-  background-color: rgba(255,255,255,0.95);
-
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.2s, visibility 0s;
-}
-
-.pop-up.hidden {
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s, visibility 0.2s;
-}
-
 #app-menu {
   margin-bottom: 15px;
 }

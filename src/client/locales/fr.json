@@ -74,7 +74,8 @@
       "link": "ici !",
       "standalone": "Trouver d'autres partitions"
     },
-    "help": "Aide"
+    "help": "? Aide",
+    "settings": "⚙ Paramètres"
   },
   "credits": {
     "metapiano": "Métapiano et vidéo de interprétation",
@@ -255,6 +256,9 @@
       "heading": "Enregistrer votre interprétation",
       "content": "Vous pouvez enregistrer vos interprétations depuis le MidiFile Performer en cliquant sur le bouton « Exporter ». Ceci produira un fichier MIDI que vous pourrez ensuite exploiter à l’aide de l'outil de votre choix."
     }
+  },
+  "settings": {
+    "title": "Paramètres"
   },
   "loading": {
     "afterClick": "Chargement des samples...",

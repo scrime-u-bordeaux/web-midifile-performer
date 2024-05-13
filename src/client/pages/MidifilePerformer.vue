@@ -10,6 +10,8 @@
       @dragover="onDragOver"
       @drop="onDrop">
 
+      <Settings ref="settings" @closed="onSettingsClosed"/>
+
       <span class="contextualization" v-if="!mfpMidiFile.buffer">
         <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
         <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
@@ -112,6 +114,11 @@
           <button
             @click="$router.push('/guide')">
             {{ $t("midiFilePerformer.help") }}
+          </button>
+
+          <button
+            @click="openSettings">
+            {{ $t('midiFilePerformer.settings') }}
           </button>
 
           <button
@@ -283,12 +290,13 @@ import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
 import PianoRoll from '../components/PianoRoll.vue'
 import SheetMusic from '../components/SheetMusic.vue'
+import Settings from '../components/Settings.vue'
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic },
+  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic, Settings },
   data() {
     return {
       selectedVisualizer: "pianoRoll",
@@ -578,6 +586,14 @@ export default {
     },
     onVisualizerStop() {
       this.ioctl.allNotesOff()
+    },
+
+    openSettings() {
+      this.$refs.settings.open()
+      this.$emit("canPerform", false)
+    },
+    onSettingsClosed() {
+      this.$emit("canPerform", true)
     },
 
     // -------------------------------------------------------------------------

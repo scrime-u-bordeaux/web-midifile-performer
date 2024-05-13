@@ -74,7 +74,8 @@
       "link": "here!",
       "standalone": "Find more scores"
     },
-    "help": "Help"
+    "help": "? Help",
+    "settings": "⚙ Settings"
   },
   "credits": {
     "metapiano": "Metapiano demonstration video",
@@ -254,6 +255,9 @@
       "heading": "Export an interpretation",
       "content": "The \"Export\" button will download a MIDI file containing your last interpretation of the piece or sequence. You can then make use of it through the software of your choice."
     }
+  },
+  "settings": {
+    "title": "Settings"
   },
   "loading": {
     "afterClick": "Loading synth samples...",
