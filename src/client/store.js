@@ -1,4 +1,5 @@
 import { createStore } from 'vuex';
+import metaJson from '../../meta.json'
 
 const minKeyboardNote = 21;
 const maxKeyboardNote = 108;
@@ -94,6 +95,8 @@ const store = createStore({
       userClickOccurred: false,
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
+
+      meta: metaJson
     };
   },
   getters: {

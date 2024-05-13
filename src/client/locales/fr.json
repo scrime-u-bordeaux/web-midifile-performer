@@ -264,5 +264,9 @@
     "midiAccess": "Demande d'accès MIDI au navigateur",
     "generic": "Chargement"
   },
+  "meta": {
+    "lastCommitDate": "Version du : <b>{date}</b>"
+  },
+
   "notFound": "Cette page n'existe pas :("
 }

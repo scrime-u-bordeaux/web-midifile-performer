@@ -26,6 +26,10 @@
         <strong>Joseph Larralde</strong>
       </p>
     </div>
+
+    <div class="meta-info">
+      <p v-html="$t('meta.lastCommitDate', {date: meta.lastCommitDate})"></p>
+    </div>
   </div>
 </template>
 
@@ -35,17 +39,26 @@
     max-width: fit-content;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
   }
-  .credits-container, a {
+  .credits-container p, .credits-container a, .meta-info {
     color: #777;
     font-style: italic;
+  }
+  a:active, a:hover {
+    color: var(--button-blue);
+  }
+  .meta-info {
+    text-align: right;
   }
 </style>
 
 <script>
-export default {
+import { mapState } from 'vuex'
 
+export default {
+  computed: {
+    ...mapState(['meta'])
+  }
 };
 </script>

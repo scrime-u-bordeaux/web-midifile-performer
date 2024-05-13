@@ -263,5 +263,8 @@
     "midiAccess": "Requesting MIDI access from browser",
     "generic": "Loading"
   },
+  "meta": {
+    "lastCommitDate": "Last modified : <b>{date}</b>"
+  },
   "notFound": "This page doesn't exist :("
 }
