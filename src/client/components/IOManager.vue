@@ -64,6 +64,8 @@ export default {
 
   created() {
     this.ioctl.addListener('command', this.onCommand);
+    // Writer doesn't trigger on store create
+    this.ioctl.refreshVelocities(this.currentKeyboardVelocities);
   },
 
   beforeUnmount() {

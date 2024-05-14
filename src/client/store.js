@@ -55,6 +55,9 @@ const highlightPalette = new Map([
   ["darkGreen", "#1eae56"] // Basic app green 60% darker
 ]);
 
+const savedSettings = localStorage.getItem('settings')
+const startingSettings = !!savedSettings ? JSON.parse(savedSettings) : defaultSettings
+
 const store = createStore({
   state() {
     return {
@@ -97,7 +100,7 @@ const store = createStore({
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
 
-      currentKeyboardVelocities: defaultSettings.keyboardRowVelocities,
+      currentKeyboardVelocities: startingSettings.keyboardRowVelocities,
 
       meta: metaJson
     };
@@ -155,6 +158,8 @@ const store = createStore({
 
     updateSettings(state, settings) {
       state.currentKeyboardVelocities = settings.keyboardRowVelocities
+
+      localStorage.setItem("settings", JSON.stringify(settings))
     },
 
     animateNoteOn(state, note) {
