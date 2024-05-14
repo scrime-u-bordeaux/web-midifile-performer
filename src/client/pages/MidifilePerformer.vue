@@ -1,4 +1,11 @@
 <template>
+
+  <Settings
+    ref="settings"
+    :initialSettings="currentSettings"
+    @closed="onSettingsClosed"
+  />
+
   <div class="mfp-and-loading-container">
     <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
@@ -9,8 +16,6 @@
     <div class="mfp-container" :class="displayLoadingScreen ? 'hide' : 'show'"
       @dragover="onDragOver"
       @drop="onDrop">
-
-      <Settings ref="settings" @closed="onSettingsClosed"/>
 
       <span class="contextualization" v-if="!mfpMidiFile.buffer">
         <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
@@ -128,26 +133,6 @@
             {{ $t('midiFilePerformer.export') }}
           </button>
         </div>
-
-        <div v-if="isInputKeyboard">
-          <span class="settings-toggle pseudo-link" @click="displayKeyboardSettings = !displayKeyboardSettings">
-            {{ $t('midiFilePerformer.keyboardVelocity.' + (!displayKeyboardSettings ? 'display' : 'hide')) }}
-          </span>
-          <div v-if="displayKeyboardSettings">
-            <div v-for="(velocity, category) in currentKeyboardVelocities" class="velocity-slider">
-              <scroll-bar class="velocity-scroll"
-                :hasBounds="false"
-                :start="MIN_VELOCITY"
-                :end="MAX_VELOCITY"
-                :index="velocity"
-                :size="MAX_VELOCITY+1"
-                :indexLabel="$t('midiFilePerformer.velocitySliders.'+category)"
-                @index="setRowVelocity($event, category)"
-                @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
-                />
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -158,6 +143,7 @@
   display: flex;
   justify-content: center;
   align-content: center;
+  text-align: center;
 }
 .mfp-container {
   position: absolute;
@@ -261,15 +247,6 @@ span.link {
 .keyboard {
   max-width: var(--score-width);
 }
-.velocity-slider {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 12px;
-}
-.velocity-scroll {
-  display: inline-block;
-  width: var(--score-width);
-}
 .pseudo-link {
   font-style: italic;
   color: var(--hint-blue);
@@ -283,7 +260,7 @@ span.link {
 
 <script>
 import { nextTick } from 'vue';
-import { mapMutations, mapState } from 'vuex';
+import { mapMutations, mapState, mapGetters } from 'vuex';
 import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
@@ -303,12 +280,8 @@ export default {
       loadingFlag: false,
       fileArrayBuffer: null,
       currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
-      isInputKeyboard: true,
-      displayKeyboardSettings: false,
       spacePressed: false,
       pauseWithRelease: false,
-      MIN_VELOCITY: 0,
-      MAX_VELOCITY: 127,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
     };
   },
@@ -322,7 +295,10 @@ export default {
       'sequenceEnd',
       'sequenceIndex',
       'sequenceLength',
-      'synthNotesDecoded'
+      'synthNotesDecoded',
+    ]),
+    ...mapGetters([
+      'currentSettings'
     ]),
     pianoRollSelected() {
       return this.selectedVisualizer === "pianoRoll"
@@ -606,11 +582,6 @@ export default {
       this.performer.setMode(this.currentMode);
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
-    },
-
-    setRowVelocity(i, category) {
-      this.currentKeyboardVelocities[category] = i
-      this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
     },
 
     getFileExtension(fileName) {

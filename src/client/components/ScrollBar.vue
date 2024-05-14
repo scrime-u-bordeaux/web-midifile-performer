@@ -1,8 +1,25 @@
 <template>
+
 <div class="scroll-bar-container" :class="!hasBounds ? 'horizontal-layout' : 'vertical-layout'" >
-  <div :class="!hasBounds ? 'with-reset' : 'full-width'">
+
+  <div class="indices" v-if="!hasBounds">
+    <div class="no-bounds-indice">
+      <NumberInput
+        ref="index-input"
+        :label="capitalizedIndexLabel || $t('scrollBar.current')"
+        :min="hasBounds ? start + 1 : start"
+        :max="hasBounds ? end + 1 : end"
+        :step="1"
+        :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
+        :allowNaN="true"
+        @input="onIndexInput"
+      />
+    </div>
+  </div>
+
+  <div :class="!hasBounds ? 'reduced-width' : 'full-width'">
     <!-- @mousedown="startDrag"> -->
-    <span v-if="!hasBounds" class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
+
     <svg
       style="/*display: none;*/"
       ref="scroll-bar"
@@ -74,15 +91,15 @@
     </svg>
   </div>
 
-  <div class="indices">
-    <div v-if="hasBounds" class="play-button-container">
+  <div class="indices" v-if="hasBounds">
+    <div class="play-button-container">
       <div class="play-button"
        :class="currentMode === 'listen' ? 'pause-icon' : 'play-icon'"
        @click="toggleListen">
       </div>
     </div>
 
-    <div v-if="hasBounds" class="speed-input">
+    <div class="speed-input">
       <NumberInput
         ref="speed-input"
         :label="$t('scrollBar.speed')"
@@ -95,7 +112,7 @@
       />
     </div>
 
-    <div v-if="hasBounds">
+    <div>
       <NumberInput
         ref="start-input"
         :label="$t('scrollBar.start')"
@@ -108,7 +125,7 @@
       />
     </div>
 
-    <div :class="!hasBounds ? 'no-padding-indice' : ''">
+    <div>
       <NumberInput
         ref="index-input"
         :label="capitalizedIndexLabel || $t('scrollBar.current')"
@@ -121,7 +138,7 @@
       />
     </div>
 
-    <div v-if="hasBounds">
+    <div>
       <NumberInput
         ref="end-input"
         :label="$t('scrollBar.end')"
@@ -134,10 +151,12 @@
       />
     </div>
 
-    <div v-if="hasBounds" class="stop-button-container">
+    <div class="stop-button-container">
       <div class="stop-button" @click="silence()"></div>
     </div>
   </div>
+
+  <span v-else class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
 </div>
 </template>
 
@@ -150,24 +169,22 @@
 .scroll-bar-container.vertical-layout .full-width{
   width: var(--score-width)
 }
-.scroll-bar-container.horizontal-layout {
+.horizontal-layout {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center; /* Actually, this is useless on Firefox (because the elements on the same size) and doesn't work on Chrome (because native Chrome inputs are different sizes and thus misaligned anyway)*/
+  justify-content: space-between;
 }
-.scroll-bar-container.horizontal-layout .with-reset {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  margin-top: 12px;
-  width: 85%;
+.horizontal-layout .reduced-width {
+  margin-top: 2em;
+  width: 60%;
 }
 .pseudo-link {
   font-style: italic;
   color: var(--hint-blue);
   text-decoration: underline;
   cursor: pointer;
+  margin-top: 1.5em;
 }
 /* diable pointer events on all children : */
 rect, circle {
@@ -179,7 +196,7 @@ rect, circle {
 .line-bg {
   /*stroke: black;*/
   /* fill: black; */
-  fill: #555;
+  fill: #666;
 }
 .line-fg {
   /*stroke: var(--button-blue);*/
@@ -235,10 +252,12 @@ rect, circle {
   height: 1.875rem;
   background-color: red;
 }
-.indices .no-padding-indice {
+.indices .no-bounds-indice {
   padding-right: 0;
   padding-top: 0;
   padding-bottom: 0;
+
+  width: 11.25em;
 }
 .event-number {
   font-size: 2em;

@@ -58,16 +58,6 @@
       "first": "Charger un fichier MIDI/MusicXML",
       "change": "Changer de fichier"
     },
-    "keyboardVelocity": {
-      "display": "Régler les vélocités du clavier",
-      "hide": "Minimiser"
-    },
-    "velocitySliders": {
-      "pianissimo": "Rangée pianissimo",
-      "piano": "Rangée piano",
-      "mezzo": "Rangée mezzo",
-      "forte": "Rangée forte"
-    },
     "export": "Exporter",
     "noScores": {
       "message": "Vous n'avez pas de partitions ? Trouvez-en de nouvelles",
@@ -258,7 +248,19 @@
     }
   },
   "settings": {
-    "title": "Paramètres"
+    "title": "Paramètres",
+
+    "keyboardVelocities": {
+
+      "heading": "Vélocités du clavier",
+
+      "velocitySliders": {
+        "pianissimo": "Rangée pianissimo",
+        "piano": "Rangée piano",
+        "mezzo": "Rangée mezzo",
+        "forte": "Rangée forte"
+      }
+    }
   },
   "loading": {
     "afterClick": "Chargement des samples...",

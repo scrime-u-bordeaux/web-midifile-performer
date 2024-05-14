@@ -1,5 +1,6 @@
 import { createStore } from 'vuex';
 import metaJson from '../../meta.json'
+import { defaultVelocities } from '../client/utilities/IOController'
 
 const minKeyboardNote = 21;
 const maxKeyboardNote = 108;
@@ -96,6 +97,8 @@ const store = createStore({
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
 
+      currentRowVelocities: defaultVelocities,
+
       meta: metaJson
     };
   },
@@ -103,6 +106,11 @@ const store = createStore({
     // midiBuffers: state => state.midiBuffers,
     firstStepsMidiFile: state => state.firstStepsMidiFile,
     mfpMidiFile: state => state.mfpMidiFile,
+    currentSettings: state => {
+      return {
+        keyboardRowVelocities: { ... state.currentRowVelocities }
+      }
+    }
   },
   mutations: {
     setLocale(state, locale) {
@@ -144,6 +152,11 @@ const store = createStore({
     setOsmdSetCoordinates(state, coords) {
       state.osmdSetCoordinates = coords;
     },
+
+    updateSettings(state, settings) {
+      state.currentRowVelocities = settings.keyboardRowVelocities
+    },
+
     animateNoteOn(state, note) {
       if (note.pitch >= state.minKeyboardNote &&
           note.pitch <= state.maxKeyboardNote) {

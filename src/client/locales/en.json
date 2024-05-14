@@ -58,16 +58,6 @@
       "first": "Upload a MIDI/MusicXML file",
       "change": "Upload a different file"
     },
-    "keyboardVelocity": {
-      "display": "Adjust keyboard velocities",
-      "hide": "Hide"
-    },
-    "velocitySliders": {
-      "pianissimo": "Pianissimo row",
-      "piano": "Piano row",
-      "mezzo": "Mezzo row",
-      "forte": "Forte row"
-    },
     "export": "Export",
     "noScores": {
       "message": "Looking for scores? You can find some",
@@ -257,7 +247,19 @@
     }
   },
   "settings": {
-    "title": "Settings"
+    "title": "Settings",
+
+    "keyboardVelocities": {
+
+      "heading": "Keyboard velocities",
+
+      "velocitySliders": {
+        "pianissimo": "Pianissimo row",
+        "piano": "Piano row",
+        "mezzo": "Mezzo row",
+        "forte": "Forte row"
+      }
+    }
   },
   "loading": {
     "afterClick": "Loading synth samples...",
