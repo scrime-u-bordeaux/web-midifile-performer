@@ -14,7 +14,7 @@
             <div class="sliders-container">
 
               <div class="velocity-slider"
-                v-for="(velocity, category) in currentSettings.keyboardRowVelocities"
+                v-for="(velocity, category) in settingsBuffer.keyboardRowVelocities"
               >
                 <scroll-bar class="velocity-scroll"
                   :hasBounds="false"
@@ -66,13 +66,14 @@ h4 {
 
 <script>
 
+import { mapGetters } from 'vuex';
+
 import PopUp from './PopUp.vue'
 import ScrollBar from './ScrollBar.vue'
 
 export default {
   components: { PopUp, ScrollBar },
 
-  props: ['initialSettings'],
   inject: ['defaultKeyboardVelocities'],
 
   data() {
@@ -81,10 +82,12 @@ export default {
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
 
-      // Do NOT simply assign them. Clone the object.
-      // (Thank Heavens for this 2022 deep cloning function that JS so desperately needed)
-      currentSettings: structuredClone(this.initialSettings)
+      settingsBuffer: {} // computed properties can't be referenced in data.
     }
+  },
+
+  computed: {
+    ...mapGetters(['currentSettings'])
   },
 
   methods: {
@@ -95,17 +98,11 @@ export default {
 
     open() {
       this.$refs.popup.open()
-
-      // Start rant : Vue has no component inheritance system.
-      // This means this component cannot merely inherit from a popup,
-      // and then 1. call base popup logic, 2. be invoked by a function
-      // (so it would be unmounted and remounted on every open to reset its values)
-
-      // No, this is a *perpetually present* part of the MFP.vue page.
-      // It is mounted *once.*
-      // So as a consequence, its data is *not* reset on re-open,
-      // Making this necessary.
-      this.currentSettings = structuredClone(this.initialSettings)
+      // A deep clone should not be necessary here.
+      // this.currentSettings is a *getter*. It should return a new object on every call.
+      // This is probably something to do with the inner workings of mapGetters.
+      // Either way, it's extremely fishy.
+      this.settingsBuffer = structuredClone(this.currentSettings)
     },
 
     // close() {
@@ -113,7 +110,7 @@ export default {
     // },
 
     closed() {
-      // Similarly, because closing logic happens in the base popup component,
+      // Because closing logic happens in the base popup component,
       // This one has to painstakingly relay its messages over to the invoking page.
       this.$emit('closed')
     },
@@ -123,7 +120,7 @@ export default {
     // -------------------------------------------------------------------------
 
     setRowVelocity(i, category) {
-      this.currentSettings.keyboardRowVelocities[category] = i
+      this.settingsBuffer.keyboardRowVelocities[category] = i
       // this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
     },
   }

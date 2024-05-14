@@ -2,7 +2,6 @@
 
   <Settings
     ref="settings"
-    :initialSettings="currentSettings"
     @closed="onSettingsClosed"
   />
 
@@ -260,7 +259,7 @@ span.link {
 
 <script>
 import { nextTick } from 'vue';
-import { mapMutations, mapState, mapGetters } from 'vuex';
+import { mapMutations, mapState } from 'vuex';
 import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
@@ -296,9 +295,6 @@ export default {
       'sequenceIndex',
       'sequenceLength',
       'synthNotesDecoded',
-    ]),
-    ...mapGetters([
-      'currentSettings'
     ]),
     pianoRollSelected() {
       return this.selectedVisualizer === "pianoRoll"
