@@ -1,6 +1,6 @@
 import { createStore } from 'vuex';
 import metaJson from '../../meta.json'
-import { defaultVelocities } from '../client/utilities/IOController'
+import defaultSettings from './default_settings.json'
 
 const minKeyboardNote = 21;
 const maxKeyboardNote = 108;
@@ -97,7 +97,7 @@ const store = createStore({
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
 
-      currentRowVelocities: defaultVelocities,
+      currentKeyboardVelocities: defaultSettings.keyboardRowVelocities,
 
       meta: metaJson
     };
@@ -108,7 +108,7 @@ const store = createStore({
     mfpMidiFile: state => state.mfpMidiFile,
     currentSettings: state => {
       return {
-        keyboardRowVelocities: { ... state.currentRowVelocities }
+        keyboardRowVelocities: { ... state.currentKeyboardVelocities }
       }
     }
   },
@@ -154,7 +154,7 @@ const store = createStore({
     },
 
     updateSettings(state, settings) {
-      state.currentRowVelocities = settings.keyboardRowVelocities
+      state.currentKeyboardVelocities = settings.keyboardRowVelocities
     },
 
     animateNoteOn(state, note) {

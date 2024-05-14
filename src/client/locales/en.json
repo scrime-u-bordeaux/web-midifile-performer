@@ -259,6 +259,13 @@
         "mezzo": "Mezzo row",
         "forte": "Forte row"
       }
+    },
+
+    "buttons": {
+      "reset": "Reset",
+      "default": "Default",
+      "apply": "Apply",
+      "ok": "OK"
     }
   },
   "loading": {

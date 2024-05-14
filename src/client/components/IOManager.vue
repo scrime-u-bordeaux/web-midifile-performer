@@ -44,21 +44,32 @@ import { mapState } from 'vuex';
 
 export default {
   inject: [ 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
+
   computed: {
     ...mapState([
       'inputs',
       'outputs',
       'currentInputId',
       'currentOutputId',
-      'synthNotesDecoded'
+      'synthNotesDecoded',
+      'currentKeyboardVelocities'
     ])
   },
+
+  watch: {
+    currentKeyboardVelocities(newVels, oldVels) {
+      this.ioctl.refreshVelocities(newVels)
+    }
+  },
+
   created() {
     this.ioctl.addListener('command', this.onCommand);
   },
+
   beforeUnmount() {
     this.ioctl.removeListener('command', this.onCommand);
   },
+
   methods: {
     preventUnloadedSynthSelect(output) {
       return output.id === this.DEFAULT_IO_ID && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES

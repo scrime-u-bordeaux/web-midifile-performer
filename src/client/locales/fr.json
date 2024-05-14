@@ -23,7 +23,7 @@
     "current": "Courant",
     "end": "Fin",
     "speed": "Vitesse",
-    "reset": "Réinitialiser"
+    "reset": "Réinit."
   },
   "ioController": {
     "defaultInput": "Clavier d'ordinateur",
@@ -260,6 +260,13 @@
         "mezzo": "Rangée mezzo",
         "forte": "Rangée forte"
       }
+    },
+
+    "buttons": {
+      "reset": "Réinit.",
+      "default": "Défaut",
+      "apply": "Appliquer",
+      "ok": "Confirmer"
     }
   },
   "loading": {

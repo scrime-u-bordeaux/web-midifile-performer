@@ -1,0 +1,8 @@
+{
+  "keyboardRowVelocities": {
+    "forte": 75,
+    "mezzo": 55,
+    "piano": 30,
+    "pianissimo": 15
+  }
+}

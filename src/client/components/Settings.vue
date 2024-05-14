@@ -5,30 +5,54 @@
       <div class="inner-settings-container">
         <h2>{{ $t('settings.title') }}</h2>
 
-        <div class="settings-padder">
+        <div class="settings-and-buttons">
+          <div class="settings-padder">
 
-          <div class="keyboard-velocities">
+            <div class="keyboard-velocities">
 
-            <h4> {{ $t('settings.keyboardVelocities.heading') }} </h4>
+              <h4> {{ $t('settings.keyboardVelocities.heading') }} </h4>
 
-            <div class="sliders-container">
+              <div class="sliders-container">
 
-              <div class="velocity-slider"
-                v-for="(velocity, category) in settingsBuffer.keyboardRowVelocities"
-              >
-                <scroll-bar class="velocity-scroll"
-                  :hasBounds="false"
-                  :start="MIN_VELOCITY"
-                  :end="MAX_VELOCITY"
-                  :index="velocity"
-                  :size="MAX_VELOCITY+1"
-                  :indexLabel="$t('settings.keyboardVelocities.velocitySliders.'+category)"
+                <div class="velocity-slider"
+                  v-for="(velocity, category) in settingsBuffer.keyboardRowVelocities"
+                >
+                  <scroll-bar class="velocity-scroll"
+                    :hasBounds="false"
+                    :start="MIN_VELOCITY"
+                    :end="MAX_VELOCITY"
+                    :index="velocity"
+                    :size="MAX_VELOCITY+1"
+                    :indexLabel="$t('settings.keyboardVelocities.velocitySliders.'+category)"
 
-                  @index="setRowVelocity($event, category)"
-                  @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
-                />
+                    @index="setRowVelocity($event, category)"
+                    @reset="setRowVelocity(currentSettings.keyboardRowVelocities[category], category)"
+                  />
+                </div>
+
               </div>
+            </div>
+          </div>
 
+          <div class="buttons">
+            <div class="reset-buttons">
+              <button @click="resetToCurrent">
+                {{ $t('settings.buttons.reset') }}
+              </button>
+
+              <button @click="resetToDefault">
+                {{ $t('settings.buttons.default') }}
+              </button>
+            </div>
+
+            <div class="confirm-buttons">
+              <button @click="apply">
+                {{ $t('settings.buttons.apply') }}
+              </button>
+
+              <button @click="applyAndClose">
+                {{ $t('settings.buttons.ok') }}
+              </button>
             </div>
           </div>
         </div>
@@ -44,9 +68,18 @@
   min-width: var(--content-width);
   height: 500px;
 }
+
+.settings-and-buttons {
+  height: 85%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
 .settings-padder {
   padding: 0 4em;
 }
+
 h2 {
   color: #666;
   text-align: center;
@@ -59,17 +92,37 @@ h4 {
   padding-bottom: 0.5em;
   border-bottom: 2px solid var(--button-blue);
 }
+
 .velocity-slider {
   padding-bottom: 0.75em;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 1em;
+  padding-right: 1em;
+}
+
+.buttons button {
+  font-size: 1em;
+}
+
+.confirm-buttons, .reset-buttons {
+  display: flex;
+  justify-content: space-between;
 }
 </style>
 
 <script>
 
-import { mapGetters } from 'vuex';
+import { toRaw } from 'vue'
+import { mapGetters, mapMutations } from 'vuex';
 
 import PopUp from './PopUp.vue'
 import ScrollBar from './ScrollBar.vue'
+
+import defaultSettings from '../default_settings.json'
 
 export default {
   components: { PopUp, ScrollBar },
@@ -82,6 +135,7 @@ export default {
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
 
+      defaultSettings: defaultSettings,
       settingsBuffer: {} // computed properties can't be referenced in data.
     }
   },
@@ -92,22 +146,20 @@ export default {
 
   methods: {
 
+    ...mapMutations(['updateSettings']),
+
     // -------------------------------------------------------------------------
     // ------------------------- POPUP MANAGEMENT ------------------------------
     // -------------------------------------------------------------------------
 
     open() {
       this.$refs.popup.open()
-      // A deep clone should not be necessary here.
-      // this.currentSettings is a *getter*. It should return a new object on every call.
-      // This is probably something to do with the inner workings of mapGetters.
-      // Either way, it's extremely fishy.
-      this.settingsBuffer = structuredClone(this.currentSettings)
+      this.resetToCurrent()
     },
 
-    // close() {
-    //   this.$refs.popup.close()
-    // },
+    close() {
+      this.$refs.popup.close()
+    },
 
     closed() {
       // Because closing logic happens in the base popup component,
@@ -119,10 +171,38 @@ export default {
     // ------------------------ SETTINGS MANAGEMENT ----------------------------
     // -------------------------------------------------------------------------
 
+    // -------------------------------------------------------------------------
+    // ------------------------------ GLOBAL -----------------------------------
+    // -------------------------------------------------------------------------
+
+    apply() {
+      this.updateSettings(structuredClone(toRaw(this.settingsBuffer)))
+    },
+
+    applyAndClose() {
+      this.apply()
+      this.close()
+    },
+
+    resetToCurrent() {
+      // A deep clone should not be necessary here.
+      // this.currentSettings is a *getter*. It should return a new object on every call.
+      // This is probably something to do with the inner workings of mapGetters.
+      // Either way, it's extremely fishy.
+      this.settingsBuffer = structuredClone(this.currentSettings)
+    },
+
+    resetToDefault() {
+      this.settingsBuffer = structuredClone(toRaw(this.defaultSettings))
+    },
+
+    // -------------------------------------------------------------------------
+    // --------------------------- FINE-GRAINED --------------------------------
+    // -------------------------------------------------------------------------
+
     setRowVelocity(i, category) {
       this.settingsBuffer.keyboardRowVelocities[category] = i
-      // this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
-    },
+    }
   }
 }
 

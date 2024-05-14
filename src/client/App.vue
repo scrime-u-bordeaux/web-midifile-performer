@@ -170,11 +170,7 @@ export default {
 
     // We can only load the audio context after MIDI access has been requested.
     document.addEventListener('click', this.onUserClick);
-
-    const savedVelocities = JSON.parse(localStorage.getItem("velocities"))
-    const startingVelocities = !!savedVelocities ? savedVelocities : this.defaultKeyboardVelocities
-    this.ioctl.refreshVelocities(startingVelocities)
-
+    
     const savedInput = localStorage.getItem('input');
     if(!!savedInput) this.ioctl.setInput(savedInput);
     const savedOutput = localStorage.getItem('output');

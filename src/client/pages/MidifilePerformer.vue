@@ -278,7 +278,6 @@ export default {
       selectedVisualizer: "pianoRoll",
       loadingFlag: false,
       fileArrayBuffer: null,
-      currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
       spacePressed: false,
       pauseWithRelease: false,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),

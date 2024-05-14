@@ -2,19 +2,14 @@ import EventEmitter from 'events';
 import { i18n } from './I18n.js';
 const { t } = i18n.global
 
+import defaultSettings from '../default_settings.json'
+
 const universalLayout = {
   forte: ["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7","Digit8","Digit9","Digit0"],
   mezzo: ["KeyQ","KeyW","KeyE","KeyR","KeyT","KeyY","KeyU","KeyI","KeyO","KeyP"],
   piano: ["KeyA","KeyS","KeyD","KeyF","KeyG","KeyH","KeyJ","KeyK","KeyL","Semicolon"],
   pianissimo: ["KeyZ","KeyX","KeyC","KeyV","KeyB","KeyN","KeyM","Comma","Period","Slash"]
 }
-
-const defaultVelocities = {
-  forte: 75,
-  mezzo: 55,
-  piano: 30,
-  pianissimo: 15,
-};
 
 const DEFAULT_IO_ID = '0'
 
@@ -59,7 +54,7 @@ class IOController extends EventEmitter {
     // List of input IDs whose event listeners cannot be removed.
     this.inputsAwaitingUnplug = new Set()
 
-    this.refreshVelocities(defaultVelocities)
+    this.refreshVelocities(defaultSettings.keyboardRowVelocities)
   }
 
   setInternalSampler(sampler) {
@@ -286,16 +281,6 @@ class IOController extends EventEmitter {
     })
   }
 
-  getCurrentVelocities() {
-    const velocityTemplate = { ...defaultVelocities }
-
-    Object.keys(velocityTemplate).forEach(category =>
-      velocityTemplate[category] = this.keyCommandsState.get(universalLayout[category][0]).velocity
-    )
-
-    return velocityTemplate
-  }
-
   refreshVelocities(velocities) {
     Object.keys(universalLayout).forEach((k, catIndex) => {
       const velocityCategory = universalLayout[k];
@@ -306,9 +291,6 @@ class IOController extends EventEmitter {
         )
       )
     });
-
-    if(velocities !== defaultVelocities) // Object identity by address ; one rare case where this is useful
-      localStorage.setItem("velocities", JSON.stringify(!!velocities.target ? velocities.target : velocities))
   }
 
   // Update the necessary labels. This is semantically unrelated to the component and looks very ugly here.
@@ -321,4 +303,4 @@ class IOController extends EventEmitter {
 
 const ioctl = new IOController()
 
-export { ioctl as default, defaultInputs, defaultVelocities, DEFAULT_IO_ID }
+export { ioctl as default, defaultInputs, DEFAULT_IO_ID }
