@@ -4,5 +4,10 @@
     "mezzo": 55,
     "piano": 30,
     "pianissimo": 15
+  },
+
+  "io": {
+    "inputId": "0",
+    "outputId": "0"
   }
 }

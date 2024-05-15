@@ -49,8 +49,6 @@ export default {
     ...mapMutations([
       'setInputs',
       'setOutputs',
-      'setCurrentInputId',
-      'setCurrentOutputId',
       // 'setKeyboardState',
       'animateNoteOn',
       'animateNoteOff',
@@ -73,14 +71,7 @@ export default {
       this.setMidiAccessRequested()
       this.setOutputs(outputs);
     },
-    onCurrentInputIdChanged(id) {
-      //this.ioctl.allNotesOff();
-      this.setCurrentInputId(id);
-    },
-    onCurrentOutputIdChanged(id) {
-      //this.ioctl.allNotesOff();
-      this.setCurrentOutputId(id);
-    },
+
     onLocaleChanged(locale) {
       // The IOController, as a pure JS helper, is out of vue-i18n's reach.
       // Even if it uses i18n.global.t for its labels, it will not be updated as the locale changes.
@@ -160,21 +151,13 @@ export default {
     this.ioctl.setInternalSampler(this.synth);
     this.ioctl.addListener('inputs', this.onInputsChanged);
     this.ioctl.addListener('outputs', this.onOutputsChanged);
-    this.ioctl.addListener('currentInputId', this.onCurrentInputIdChanged);
-    this.ioctl.addListener('currentOutputId', this.onCurrentOutputIdChanged);
     this.ioctl.addListener('command', this.onCommand);
     this.ioctl.addListener('noteOn', this.onNoteOn);
     this.ioctl.addListener('noteOff', this.onNoteOff);
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
-    await this.ioctl.updateInputsAndOutputs();
 
     // We can only load the audio context after MIDI access has been requested.
     document.addEventListener('click', this.onUserClick);
-    
-    const savedInput = localStorage.getItem('input');
-    if(!!savedInput) this.ioctl.setInput(savedInput);
-    const savedOutput = localStorage.getItem('output');
-    if(!!savedOutput) this.ioctl.setOutput(savedOutput);
 
     this.synth.addListener('notesFetched', this.onNotesFetched);
     this.synth.addListener('notesDecoded', this.onNotesDecoded);

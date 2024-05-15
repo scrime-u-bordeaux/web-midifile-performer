@@ -8,6 +8,17 @@
         <div class="settings-and-buttons">
           <div class="settings-padder">
 
+            <div class="io-manager-container">
+
+              <h4> {{ $t('settings.iomanager.heading') }} </h4>
+
+              <IOManager class="io-manager"
+                @inputChange="setInput"
+                @outputChange="setOutput"
+              />
+
+            </div>
+
             <div class="keyboard-velocities">
 
               <h4> {{ $t('settings.keyboardVelocities.heading') }} </h4>
@@ -66,11 +77,11 @@
 <style scoped>
 .inner-settings-container {
   min-width: var(--content-width);
-  height: 500px;
+  height: 600px;
 }
 
 .settings-and-buttons {
-  height: 85%;
+  height: 87.5%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -78,6 +89,8 @@
 
 .settings-padder {
   padding: 0 4em;
+  max-height: 85%;
+  overflow: scroll;
 }
 
 h2 {
@@ -91,6 +104,12 @@ h4 {
   color: #888;
   padding-bottom: 0.5em;
   border-bottom: 2px solid var(--button-blue);
+}
+
+.io-manager {
+  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 .velocity-slider {
@@ -121,11 +140,12 @@ import { mapGetters, mapMutations } from 'vuex';
 
 import PopUp from './PopUp.vue'
 import ScrollBar from './ScrollBar.vue'
+import IOManager from '../components/IOManager.vue';
 
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { PopUp, ScrollBar },
+  components: { PopUp, IOManager, ScrollBar },
 
   inject: ['defaultKeyboardVelocities'],
 
@@ -202,6 +222,14 @@ export default {
 
     setRowVelocity(i, category) {
       this.settingsBuffer.keyboardRowVelocities[category] = i
+    },
+
+    setInput(id) {
+      this.settingsBuffer.io.inputId = id
+    },
+
+    setOutput(id) {
+      this.settingsBuffer.io.outputId = id 
     }
   }
 }

@@ -250,6 +250,10 @@
   "settings": {
     "title": "Paramètres",
 
+    "iomanager": {
+      "heading": "Entrée et sortie"
+    },
+
     "keyboardVelocities": {
 
       "heading": "Vélocités du clavier",

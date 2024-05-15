@@ -59,13 +59,26 @@ export default {
   watch: {
     currentKeyboardVelocities(newVels, oldVels) {
       this.ioctl.refreshVelocities(newVels)
+    },
+
+    currentInputId(newId, oldId) {
+      this.onInputChanged(newId)
+    },
+
+    currentOutputId(newId, oldId) {
+      this.onOutputChanged(newId)
     }
   },
 
-  created() {
+  async created() {
+    await this.ioctl.updateInputsAndOutputs();
+
     this.ioctl.addListener('command', this.onCommand);
-    // Writer doesn't trigger on store create
+
+    // Writers don't trigger on store create
     this.ioctl.refreshVelocities(this.currentKeyboardVelocities);
+    this.onInputChanged(this.currentInputId);
+    this.onOutputChanged(this.currentOutputId);
   },
 
   beforeUnmount() {
@@ -73,25 +86,37 @@ export default {
   },
 
   methods: {
+    // With the manager gated behind the sample loading screen, this should never happen again.
+    // Let's still keep it here just in case.
     preventUnloadedSynthSelect(output) {
       return output.id === this.DEFAULT_IO_ID && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
     },
+
     selectedInputChanged(e) {
       const id = e.target.value;
-      this.ioctl.setInput(id);
       this.$emit("inputChange", id)
     },
     selectedOutputChanged(e) {
       const id = e.target.value;
-      this.ioctl.allNotesOff();
-      this.ioctl.setOutput(id);
+      this.$emit("outputChange", id)
     },
+
     refreshInputsAndOutputs(e) {
       this.ioctl.updateInputsAndOutputs();
     },
+
     onCommand(cmd) {
       const { pressed, id, velocity, channel } = cmd;
       //console.log(`received command ${pressed} ${id} ${velocity} ${channel}`);
+    },
+
+    onInputChanged(id) {
+      this.ioctl.setInput(id)
+    },
+
+    onOutputChanged(id) {
+      this.ioctl.allNotesOff();
+      this.ioctl.setOutput(id);
     }
   }
 };

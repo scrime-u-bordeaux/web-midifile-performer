@@ -249,6 +249,10 @@
   "settings": {
     "title": "Settings",
 
+    "iomanager": {
+      "heading": "Input and output"
+    },
+
     "keyboardVelocities": {
 
       "heading": "Keyboard velocities",

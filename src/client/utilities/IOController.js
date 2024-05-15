@@ -165,7 +165,6 @@ class IOController extends EventEmitter {
     }
 
     this.currentInputId = inputId;
-    localStorage.setItem('input', inputId)
 
     if (this.currentInputId !== DEFAULT_IO_ID) {
       this.inputs[this.currentInputId].addEventListener(
@@ -191,7 +190,6 @@ class IOController extends EventEmitter {
     }
 
     this.currentOutputId = outputId;
-    localStorage.setItem('output',outputId)
 
     this.emit('currentOutputId', this.currentOutputId);
   }

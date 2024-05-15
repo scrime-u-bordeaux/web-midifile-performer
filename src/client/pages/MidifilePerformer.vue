@@ -86,51 +86,48 @@
         @speed="onSpeedChange"
         @silence="onSilence"/>
 
-      <div class="file-input-wrapper">
-        <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-          <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
-          <label for="file" class="file-label">
-            {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
-          </label>
-          <div class="file-name-container" v-if="mfpMidiFile.buffer">
-            <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
-            <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
-              {{ $t('midiFilePerformer.noScores.standalone') }}
-            </span>
-          </div>
-          <div class="search-score-hint" v-else>
-            {{ $t('midiFilePerformer.noScores.message') }}
-            <span class="link" @click="$router.push('/look-for-scores')">
-              {{ $t('midiFilePerformer.noScores.link') }}
-            </span>
+      <div class="file-and-control">
+        <div class="file-input-wrapper">
+          <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
+            <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+            <label for="file" class="file-label">
+              {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
+            </label>
+            <div class="file-name-container" v-if="mfpMidiFile.buffer">
+              <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
+              <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
+                {{ $t('midiFilePerformer.noScores.standalone') }}
+              </span>
+            </div>
+            <div class="search-score-hint" v-else>
+              {{ $t('midiFilePerformer.noScores.message') }}
+              <span class="link" @click="$router.push('/look-for-scores')">
+                {{ $t('midiFilePerformer.noScores.link') }}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <IOManager
-        class="manager"
-        v-if="mfpMidiFile.buffer"
-        @inputChange="onInputChange"/>
+        <div v-if="mfpMidiFile.buffer">
+          <div class="control-button-container">
 
-      <div v-if="mfpMidiFile.buffer">
-        <div class="control-button-container">
+            <button
+              @click="$router.push('/guide')">
+              {{ $t("midiFilePerformer.help") }}
+            </button>
 
-          <button
-            @click="$router.push('/guide')">
-            {{ $t("midiFilePerformer.help") }}
-          </button>
+            <button
+              @click="openSettings">
+              {{ $t('midiFilePerformer.settings') }}
+            </button>
 
-          <button
-            @click="openSettings">
-            {{ $t('midiFilePerformer.settings') }}
-          </button>
-
-          <button
-            style="display: none;"
-            @click="onClickExport"
-            :disabled="currentMode !== 'silent'">
-            {{ $t('midiFilePerformer.export') }}
-          </button>
+            <button
+              style="display: none;"
+              @click="onClickExport"
+              :disabled="currentMode !== 'silent'">
+              {{ $t('midiFilePerformer.export') }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -178,10 +175,9 @@
   height: 5%;
   cursor: pointer;
 }
-.manager {
-  width: fit-content;
-  max-width: var(--score-width);
-  padding-bottom: 12px;
+.file-and-control {
+  display: flex;
+  align-items: center;
 }
 .file-input-wrapper {
   width: fit-content;
@@ -254,13 +250,13 @@ span.link {
 }
 .control-button-container {
   padding-bottom: 12px;
+  display: flex;
 }
 </style>
 
 <script>
 import { nextTick } from 'vue';
 import { mapMutations, mapState } from 'vuex';
-import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
@@ -272,7 +268,7 @@ const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic, Settings },
+  components: { Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic, Settings },
   data() {
     return {
       selectedVisualizer: "pianoRoll",
@@ -293,6 +289,7 @@ export default {
       'sequenceEnd',
       'sequenceIndex',
       'sequenceLength',
+      'currentOutputId',
       'synthNotesDecoded',
     ]),
     pianoRollSelected() {
@@ -311,10 +308,11 @@ export default {
       return '.' + this.getFileExtension(this.mfpMidiFile.title)
     },
     displayLoadingScreen() {
-      return ((!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
-        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES)
-        ||
-        this.loadingFlag
+      return (
+        this.currentOutputId === this.DEFAULT_IO_ID &&
+        this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
+      )
+      || this.loadingFlag
     },
     // TODO : we should work towards deprecating mode state duplication.
     currentMode: {
@@ -478,10 +476,6 @@ export default {
     },
     onMusicXmlChannels(channelChanges) {
       this.$refs.sheetMusic.setChannelChanges(channelChanges)
-    },
-
-    onInputChange(input) {
-      // this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
     },
 
     onStartChange(i) {

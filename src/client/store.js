@@ -65,8 +65,6 @@ const store = createStore({
 
       inputs: {},
       outputs: {},
-      currentInputId: 0,
-      currentOutputId: 0,
 
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
       mfpMidiFile: { id: 'mfp', title: '', url: '', isMidi: true, buffer: null },
@@ -101,6 +99,8 @@ const store = createStore({
       synthNotesDecoded: 0,
 
       currentKeyboardVelocities: startingSettings.keyboardRowVelocities,
+      currentInputId: startingSettings.io.inputId,
+      currentOutputId: startingSettings.io.outputId,
 
       meta: metaJson
     };
@@ -111,7 +111,8 @@ const store = createStore({
     mfpMidiFile: state => state.mfpMidiFile,
     currentSettings: state => {
       return {
-        keyboardRowVelocities: { ... state.currentKeyboardVelocities }
+        keyboardRowVelocities: { ... state.currentKeyboardVelocities },
+        io: { inputId: state.currentInputId, outputId: state.currentOutputId }
       }
     }
   },
@@ -119,18 +120,14 @@ const store = createStore({
     setLocale(state, locale) {
       state.locale = locale
     },
+
     setInputs(state, inputs) {
       state.inputs = inputs;
     },
     setOutputs(state, outputs) {
       state.outputs = outputs;
     },
-    setCurrentInputId(state, id) {
-      state.currentInputId = id;
-    },
-    setCurrentOutputId(state, id) {
-      state.currentOutputId = id;
-    },
+
     setFirstStepsMidiFile(state, file) {
       state.firstStepsMidiFile = { ...file };
     },
@@ -157,7 +154,11 @@ const store = createStore({
     },
 
     updateSettings(state, settings) {
+
       state.currentKeyboardVelocities = settings.keyboardRowVelocities
+
+      state.currentInputId = settings.io.inputId
+      state.currentOutputId = settings.io.outputId
 
       localStorage.setItem("settings", JSON.stringify(settings))
     },
