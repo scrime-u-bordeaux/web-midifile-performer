@@ -187,7 +187,7 @@ class IOController extends EventEmitter {
     // outputId = `${outputId}`;
     // send all notes off before clearing ?
 
-    if(this.inputs[outputId] === undefined) return;
+    if(this.outputs[outputId] === undefined) return;
 
     if (this.currentOutputId !== DEFAULT_IO_ID) {
       console.log(this.currentOutputId);
