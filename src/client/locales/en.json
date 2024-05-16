@@ -25,12 +25,10 @@
     "speed": "Speed",
     "reset": "Reset"
   },
-  "ioController": {
-    "defaultInput": "Computer keyboard",
-    "defaultOutput": "Built-in synthesizer"
-  },
   "ioManager": {
-    "input": "Input",
+    "defaultInput": "Computer keyboard",
+    "defaultOutput": "Built-in synthesizer",
+    "input": "Inputs",
     "output": "Output",
     "refresh": "Refresh device list"
   },

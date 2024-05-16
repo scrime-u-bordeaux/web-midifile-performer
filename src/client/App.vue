@@ -9,7 +9,6 @@
       { text: $t('menu.help'), page: 'Guide' },
       { text: $t('menu.credits'),            page: 'Credits'}
     ]"
-    @localeChanged="onLocaleChanged"
   />
 
   <router-view id="app-content" @canPerform="updateCanPerform"/>
@@ -72,13 +71,6 @@ export default {
       this.setOutputs(outputs);
     },
 
-    onLocaleChanged(locale) {
-      // The IOController, as a pure JS helper, is out of vue-i18n's reach.
-      // Even if it uses i18n.global.t for its labels, it will not be updated as the locale changes.
-      // This is a workaround to that problem.
-
-      this.ioctl.changeLocale(this.$t('ioController.defaultInput'), this.$t('ioController.defaultOutput'))
-    },
     // THIS IS WHERE WE ACTUALLY USE THE MIDIFILE PERFORMER STUFF :
     onCommand(cmd) {
       if(this.canPerform) {

@@ -25,12 +25,10 @@
     "speed": "Vitesse",
     "reset": "Réinit."
   },
-  "ioController": {
-    "defaultInput": "Clavier d'ordinateur",
-    "defaultOutput": "Synthétiseur intégré"
-  },
   "ioManager": {
-    "input": "Entrée",
+    "defaultInput": "Clavier d'ordinateur",
+    "defaultOutput": "Synthétiseur intégré",
+    "input": "Entrées",
     "output": "Sortie",
     "refresh": "Rafraîchir les périphériques"
   },

@@ -1,3 +1,4 @@
+import { toRaw } from 'vue'
 import { createStore } from 'vuex';
 import metaJson from '../../meta.json'
 import defaultSettings from './default_settings.json'
@@ -99,7 +100,7 @@ const store = createStore({
       synthNotesDecoded: 0,
 
       currentKeyboardVelocities: startingSettings.keyboardRowVelocities,
-      currentInputId: startingSettings.io.inputId,
+      currentInputIds: startingSettings.io.inputIds,
       currentOutputId: startingSettings.io.outputId,
 
       meta: metaJson
@@ -112,13 +113,14 @@ const store = createStore({
     currentSettings: state => {
       return {
         keyboardRowVelocities: { ... state.currentKeyboardVelocities },
-        io: { inputId: state.currentInputId, outputId: state.currentOutputId }
+        io: { inputIds: toRaw(state.currentInputIds), outputId: state.currentOutputId }
       }
     }
   },
   mutations: {
     setLocale(state, locale) {
       state.locale = locale
+      localStorage.setItem('locale', locale)
     },
 
     setInputs(state, inputs) {
@@ -157,7 +159,7 @@ const store = createStore({
 
       state.currentKeyboardVelocities = settings.keyboardRowVelocities
 
-      state.currentInputId = settings.io.inputId
+      state.currentInputIds = settings.io.inputIds
       state.currentOutputId = settings.io.outputId
 
       localStorage.setItem("settings", JSON.stringify(settings))

@@ -72,3 +72,9 @@ button:disabled {
   cursor: default;
   background-color: lightskyblue;
 }
+
+/* Sadly, for option, this does nothing. */
+
+select, option {
+  font-family: var(--global-font);
+}

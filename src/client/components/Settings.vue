@@ -13,7 +13,8 @@
               <h4> {{ $t('settings.iomanager.heading') }} </h4>
 
               <IOManager class="io-manager"
-                @inputChange="setInput"
+                @inputsChange="setInputs"
+                @delayedInputsChange="queueSetInputs"
                 @outputChange="setOutput"
               />
 
@@ -210,6 +211,16 @@ export default {
       // This is probably something to do with the inner workings of mapGetters.
       // Either way, it's extremely fishy.
       this.settingsBuffer = structuredClone(this.currentSettings)
+
+      // When inputs have been disconnected between sessions, the IOManager will have detected this.
+      // But it does so before resetToCurrent() is called ; so we have queued its list of available inputs.
+      // Now, we update our inputs accordingly, and force-write to the store to mark these inputs as gone in local storage.
+      // (So this will not happen on other reloads)
+      if(!!this.queuedInputIds) {
+        this.setInputs(this.queuedInputIds)
+        this.apply()
+        this.queuedInputIds = null
+      }
     },
 
     resetToDefault() {
@@ -224,12 +235,19 @@ export default {
       this.settingsBuffer.keyboardRowVelocities[category] = i
     },
 
-    setInput(id) {
-      this.settingsBuffer.io.inputId = id
+    setInputs(ids) {
+      this.settingsBuffer.io.inputIds = ids
+    },
+
+    // Queue a list of availble inputs after disconnects between sessions,
+    // Courtesy of the IOManager, which detected the discrepancy.
+
+    queueSetInputs(ids) {
+      this.queuedInputIds = ids
     },
 
     setOutput(id) {
-      this.settingsBuffer.io.outputId = id 
+      this.settingsBuffer.io.outputId = id
     }
   }
 }

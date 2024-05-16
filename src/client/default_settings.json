@@ -7,7 +7,7 @@
   },
 
   "io": {
-    "inputId": "0",
+    "inputIds": ["0"],
     "outputId": "0"
   }
 }
