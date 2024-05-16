@@ -261,10 +261,10 @@
       "heading": "Vélocités du clavier",
 
       "velocitySliders": {
-        "pianissimo": "Rangée pianissimo",
-        "piano": "Rangée piano",
-        "mezzo": "Rangée mezzo",
-        "forte": "Rangée forte"
+        "pianissimo": "Rangée WXCV",
+        "piano": "Rangée QSDF",
+        "mezzo": "Rangée AZERTY",
+        "forte": "Rangée numérique"
       }
     },
 

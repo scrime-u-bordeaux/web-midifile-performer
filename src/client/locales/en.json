@@ -260,10 +260,10 @@
       "heading": "Keyboard velocities",
 
       "velocitySliders": {
-        "pianissimo": "Pianissimo row",
-        "piano": "Piano row",
-        "mezzo": "Mezzo row",
-        "forte": "Forte row"
+        "pianissimo": "XCVB row",
+        "piano": "ASDF row",
+        "mezzo": "QWERTY row",
+        "forte": "Number row"
       }
     },
 
