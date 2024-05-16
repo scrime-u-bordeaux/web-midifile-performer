@@ -248,8 +248,12 @@
   "settings": {
     "title": "Paramètres",
 
+    "tabs": {
+      "io": "Entrée/Sortie"
+    },
+
     "iomanager": {
-      "heading": "Entrée et sortie"
+      "heading": "Entrées et sortie actives"
     },
 
     "keyboardVelocities": {

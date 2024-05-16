@@ -8,6 +8,8 @@
         <div class="settings-and-buttons">
           <div class="settings-padder">
 
+            <OptionTabs class="tabs" ref="tabs" :routerMode="false" :items="tabItems"/>
+
             <div class="io-manager-container">
 
               <h4> {{ $t('settings.iomanager.heading') }} </h4>
@@ -94,6 +96,13 @@
   overflow: scroll;
 }
 
+.tabs {
+  border-bottom: 2px solid var(--button-blue);
+  font-weight: bold;
+  color: #888;
+  width: 100%;
+}
+
 h2 {
   color: #666;
   text-align: center;
@@ -103,8 +112,10 @@ h2 {
 h4 {
   text-align: center;
   color: #888;
+  font-style: italic;
+  font-weight: normal;
   padding-bottom: 0.5em;
-  border-bottom: 2px solid var(--button-blue);
+  border-bottom: 1px solid var(--button-blue);
 }
 
 .io-manager {
@@ -139,6 +150,7 @@ h4 {
 import { toRaw } from 'vue'
 import { mapGetters, mapMutations } from 'vuex';
 
+import OptionTabs from './OptionTabs.vue'
 import PopUp from './PopUp.vue'
 import ScrollBar from './ScrollBar.vue'
 import IOManager from '../components/IOManager.vue';
@@ -146,7 +158,7 @@ import IOManager from '../components/IOManager.vue';
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { PopUp, IOManager, ScrollBar },
+  components: { OptionTabs, PopUp, IOManager, ScrollBar },
 
   inject: ['defaultKeyboardVelocities'],
 
@@ -162,7 +174,14 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['currentSettings'])
+    ...mapGetters(['currentSettings']),
+
+    // Computed because of locale change
+    tabItems() {
+      return [
+        { id: 'io', text: this.$t('settings.tabs.io')}
+      ]
+    }
   },
 
   methods: {
@@ -176,6 +195,7 @@ export default {
     open() {
       this.$refs.popup.open()
       this.resetToCurrent()
+      this.$refs.tabs.select(this.tabItems[0])
     },
 
     close() {

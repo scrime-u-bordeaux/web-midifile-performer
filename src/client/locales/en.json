@@ -247,8 +247,12 @@
   "settings": {
     "title": "Settings",
 
+    "tabs": {
+      "io": "Input/Output"
+    },
+
     "iomanager": {
-      "heading": "Input and output"
+      "heading": "Active inputs and output"
     },
 
     "keyboardVelocities": {
