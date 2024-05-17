@@ -158,7 +158,7 @@
 
         "silent": {
           "h3": "Silent mode",
-          "describe": "<b>Silent mode</b> is the default mode of the application as a file is uploaded. It is also the only mode in which clicking on visualizer notes will play back their sound to help understand them ; this behavior can be disabled in settings."
+          "describe": "<b>Silent mode</b> is the default mode of the application as a file is uploaded. By default, it is also the only mode in which clicking on visualizer notes will play back their sound to help understand them ; this behavior can be modified in settings."
         },
 
         "playback": {
@@ -278,6 +278,12 @@
       "availableVisualizers": {
         "pianoRoll": "Piano roll",
         "sheetMusic": "Sheet music"
+      },
+
+      "clickPlay": {
+        "heading": "Play notes on visualizer click",
+        "silent": "In silent mode",
+        "perform": "In perform mode"
       }
     },
 

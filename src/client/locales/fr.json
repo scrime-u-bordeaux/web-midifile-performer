@@ -159,7 +159,7 @@
 
         "silent": {
           "h3": "Mode silencieux",
-          "describe": "Le <b>mode silencieux</b> est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être désactivé dans les paramètres."
+          "describe": "Le <b>mode silencieux</b> est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Par défaut, il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être modifié dans les paramètres."
         },
 
         "playback": {
@@ -279,6 +279,12 @@
       "availableVisualizers": {
         "pianoRoll": "Piano roll",
         "sheetMusic": "Partition"
+      },
+
+      "clickPlay": {
+        "heading": "Jouer les notes cliquées",
+        "silent": "En mode silencieux",
+        "perform": "En mode interprétation"
       }
     },
 

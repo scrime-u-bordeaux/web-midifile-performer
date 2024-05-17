@@ -36,7 +36,7 @@
                 <div class="sliders-container">
 
                   <div class="velocity-slider"
-                    v-for="(velocity, category) in this.settingsBuffer.io.keyboardRowVelocities"
+                    v-for="(velocity, category) in settingsBuffer.io.keyboardRowVelocities"
                   >
                     <scroll-bar class="velocity-scroll"
                       :hasBounds="false"
@@ -57,15 +57,33 @@
 
             <div class="tab-section" v-show="visibleTab === 'visualizer'">
 
-              <h4>{{ $t('settings.visualizer.preferredVisualizer.heading') }}</h4>
+              <div class="preferred-visualizer">
+                <h4>{{ $t('settings.visualizer.preferredVisualizer.heading') }}</h4>
 
-              <OptionTabs
-                class="tabs minor"
-                :routerMode="false"
-                :fullRound="true"
-                :items="availableVisualizers"
-                v-model="this.settingsBuffer.visualizer.preferredVisualizer"
-              />
+                <OptionTabs
+                  class="tabs minor"
+                  :routerMode="false"
+                  :fullRound="true"
+                  :items="availableVisualizers"
+                  v-model="settingsBuffer.visualizer.preferredVisualizer"
+                />
+              </div>
+
+              <div class="click-play">
+
+                <h4>{{ $t('settings.visualizer.clickPlay.heading') }}</h4>
+
+                <div class="click-play-inner">
+                  <ToggleSwitch
+                    :label="$t('settings.visualizer.clickPlay.silent')"
+                    v-model="settingsBuffer.visualizer.clickPlay.silent"
+                  />
+                  <ToggleSwitch
+                    :label="$t('settings.visualizer.clickPlay.perform')"
+                    v-model="settingsBuffer.visualizer.clickPlay.perform"
+                  />
+                </div>
+              </div>
 
             </div>
           </div>
@@ -152,6 +170,13 @@ h4 {
   padding-bottom: 0.75em;
 }
 
+.click-play-inner {
+  padding: 0 12em;
+}
+.click-play-inner > *:not(:last-child) {
+  padding-bottom: 1em;
+}
+
 .buttons {
   display: flex;
   justify-content: space-between;
@@ -177,12 +202,13 @@ import { mapGetters, mapMutations } from 'vuex';
 import OptionTabs from './OptionTabs.vue'
 import PopUp from './PopUp.vue'
 import ScrollBar from './ScrollBar.vue'
-import IOManager from '../components/IOManager.vue';
+import IOManager from './IOManager.vue';
+import ToggleSwitch from './ToggleSwitch.vue'
 
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { OptionTabs, PopUp, IOManager, ScrollBar },
+  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ScrollBar },
 
   data() {
     return {
@@ -293,7 +319,7 @@ export default {
     // -------------------------------------------------------------------------
 
     // There should only be update logic here where components incompatible with v-model are used.
-    // This should only be the case in the I/O tab. 
+    // This should only be the case in the I/O tab.
 
     setRowVelocity(i, category) {
       this.settingsBuffer.io.keyboardRowVelocities[category] = i
@@ -312,7 +338,7 @@ export default {
 
     setOutput(id) {
       this.settingsBuffer.io.outputId = id
-    },
+    }
   }
 }
 

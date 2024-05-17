@@ -104,6 +104,8 @@ const store = createStore({
       currentKeyboardVelocities: startingSettings.io.keyboardRowVelocities,
 
       preferredVisualizer: startingSettings.visualizer.preferredVisualizer,
+      playOnClickInSilentMode: startingSettings.visualizer.clickPlay.silent,
+      playOnClickInPerformMode: startingSettings.visualizer.clickPlay.perform,
 
       meta: metaJson
     };
@@ -121,7 +123,11 @@ const store = createStore({
         },
 
         visualizer: {
-          preferredVisualizer: state.preferredVisualizer
+          preferredVisualizer: state.preferredVisualizer,
+          clickPlay: {
+            silent: state.playOnClickInSilentMode,
+            perform: state.playOnClickInPerformMode
+          }
         }
       }
     }
@@ -171,6 +177,8 @@ const store = createStore({
       state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
 
       state.preferredVisualizer = settings.visualizer.preferredVisualizer
+      state.playOnClickInSilentMode = settings.visualizer.clickPlay.silent
+      state.playOnClickInPerformMode = settings.visualizer.clickPlay.perform 
 
       localStorage.setItem("settings", JSON.stringify(settings))
     },

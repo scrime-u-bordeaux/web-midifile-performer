@@ -11,6 +11,10 @@
   },
 
   "visualizer": {
-    "preferredVisualizer": "piano"
+    "preferredVisualizer": "piano",
+    "clickPlay": {
+      "silent": true,
+      "perform": false
+    }
   }
 }
