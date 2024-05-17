@@ -99,9 +99,11 @@ const store = createStore({
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
 
-      currentKeyboardVelocities: startingSettings.keyboardRowVelocities,
       currentInputIds: startingSettings.io.inputIds,
       currentOutputId: startingSettings.io.outputId,
+      currentKeyboardVelocities: startingSettings.io.keyboardRowVelocities,
+
+      preferredVisualizer: startingSettings.visualizer.preferredVisualizer,
 
       meta: metaJson
     };
@@ -112,8 +114,15 @@ const store = createStore({
     mfpMidiFile: state => state.mfpMidiFile,
     currentSettings: state => {
       return {
-        keyboardRowVelocities: { ... state.currentKeyboardVelocities },
-        io: { inputIds: toRaw(state.currentInputIds), outputId: state.currentOutputId }
+        io: {
+          inputIds: toRaw(state.currentInputIds),
+          outputId: state.currentOutputId,
+          keyboardRowVelocities: { ... state.currentKeyboardVelocities },
+        },
+
+        visualizer: {
+          preferredVisualizer: state.preferredVisualizer
+        }
       }
     }
   },
@@ -157,10 +166,11 @@ const store = createStore({
 
     updateSettings(state, settings) {
 
-      state.currentKeyboardVelocities = settings.keyboardRowVelocities
-
       state.currentInputIds = settings.io.inputIds
       state.currentOutputId = settings.io.outputId
+      state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
+
+      state.preferredVisualizer = settings.visualizer.preferredVisualizer
 
       localStorage.setItem("settings", JSON.stringify(settings))
     },

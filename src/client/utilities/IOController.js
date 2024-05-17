@@ -48,7 +48,7 @@ class IOController extends EventEmitter {
     // List of input IDs whose event listeners cannot be removed.
     this.inputsAwaitingUnplug = new Set()
 
-    this.refreshVelocities(defaultSettings.keyboardRowVelocities)
+    this.refreshVelocities(defaultSettings.io.keyboardRowVelocities)
   }
 
   setInternalSampler(sampler) {

@@ -30,7 +30,7 @@
             ) :
             'disabled'
           }.png`"
-          @click="selectedVisualizer = 'pianoRoll'"/>
+          @click="selectedVisualizer = 'piano'"/>
         <img :src="`pics/music_notes_icon_${
           sheetMusicSelected ?
             (currentMode === 'silent' ?
@@ -38,7 +38,7 @@
             ) :
             'disabled'
           }.png`"
-          @click="selectedVisualizer = 'sheetMusic'"/>
+          @click="selectedVisualizer = 'sheet'"/>
       </div>
 
       <SheetMusic
@@ -271,7 +271,7 @@ export default {
   components: { Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic, Settings },
   data() {
     return {
-      selectedVisualizer: "pianoRoll",
+      selectedVisualizer: null, // computed properties cannot be accessed in data
       loadingFlag: false,
       fileArrayBuffer: null,
       spacePressed: false,
@@ -291,12 +291,13 @@ export default {
       'sequenceLength',
       'currentOutputId',
       'synthNotesDecoded',
+      'preferredVisualizer'
     ]),
     pianoRollSelected() {
-      return this.selectedVisualizer === "pianoRoll"
+      return this.selectedVisualizer === "piano"
     },
     sheetMusicSelected() {
-      return this.selectedVisualizer === "sheetMusic"
+      return this.selectedVisualizer === "sheet"
     },
     trimmedTitle() {
       return this.mfpMidiFile.title.replace(this.fileExtension, '').length < 45 ?
@@ -331,12 +332,14 @@ export default {
   },
   watch: {
     mfpMidiFile(newFile, oldFile) {
-      if(newFile.isMidi) this.selectedVisualizer = "pianoRoll"
+      if(newFile.isMidi) this.selectedVisualizer = "piano"
+      else this.selectedVisualizer = this.preferredVisualizer
     }
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
+    this.selectedVisualizer = this.preferredVisualizer
   },
   async mounted() {
     this.performer.clear();

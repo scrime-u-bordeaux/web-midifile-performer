@@ -249,22 +249,36 @@
     "title": "Paramètres",
 
     "tabs": {
-      "io": "Entrée/Sortie"
+      "io": "Entrée/Sortie",
+      "visualizer": "Visualiseur"
     },
 
-    "iomanager": {
-      "heading": "Entrées et sortie actives"
+    "io": {
+      "iomanager": {
+        "heading": "Entrées et sortie actives"
+      },
+
+      "keyboardVelocities": {
+
+        "heading": "Vélocités du clavier",
+
+        "velocitySliders": {
+          "pianissimo": "Rangée WXCV",
+          "piano": "Rangée QSDF",
+          "mezzo": "Rangée AZERTY",
+          "forte": "Rangée numérique"
+        }
+      }
     },
 
-    "keyboardVelocities": {
+    "visualizer": {
+      "preferredVisualizer": {
+        "heading": "Visualiseur par défaut"
+      },
 
-      "heading": "Vélocités du clavier",
-
-      "velocitySliders": {
-        "pianissimo": "Rangée WXCV",
-        "piano": "Rangée QSDF",
-        "mezzo": "Rangée AZERTY",
-        "forte": "Rangée numérique"
+      "availableVisualizers": {
+        "pianoRoll": "Piano roll",
+        "sheetMusic": "Partition"
       }
     },
 

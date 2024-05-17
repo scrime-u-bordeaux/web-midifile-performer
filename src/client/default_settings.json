@@ -1,13 +1,16 @@
 {
-  "keyboardRowVelocities": {
-    "forte": 75,
-    "mezzo": 55,
-    "piano": 30,
-    "pianissimo": 15
-  },
-
   "io": {
+    "keyboardRowVelocities": {
+      "forte": 75,
+      "mezzo": 55,
+      "piano": 30,
+      "pianissimo": 15
+    },
     "inputIds": ["0"],
     "outputId": "0"
+  },
+
+  "visualizer": {
+    "preferredVisualizer": "piano"
   }
 }

@@ -8,43 +8,67 @@
         <div class="settings-and-buttons">
           <div class="settings-padder">
 
-            <OptionTabs class="tabs" ref="tabs" :routerMode="false" :items="tabItems"/>
+            <OptionTabs
+              ref="tabs"
+              class="tabs major"
+              :routerMode="false"
+              :items="tabItems"
+              :defaultSelectId="tabItems[0].id"
+              @select="onTabSelect"
+            />
 
-            <div class="io-manager-container">
+            <div class="tab-section" v-show="visibleTab === 'io'">
+              <div class="io-manager-container">
 
-              <h4> {{ $t('settings.iomanager.heading') }} </h4>
+                <h4> {{ $t('settings.io.iomanager.heading') }} </h4>
 
-              <IOManager class="io-manager"
-                @inputsChange="setInputs"
-                @delayedInputsChange="queueSetInputs"
-                @outputChange="setOutput"
-              />
-
-            </div>
-
-            <div class="keyboard-velocities">
-
-              <h4> {{ $t('settings.keyboardVelocities.heading') }} </h4>
-
-              <div class="sliders-container">
-
-                <div class="velocity-slider"
-                  v-for="(velocity, category) in settingsBuffer.keyboardRowVelocities"
-                >
-                  <scroll-bar class="velocity-scroll"
-                    :hasBounds="false"
-                    :start="MIN_VELOCITY"
-                    :end="MAX_VELOCITY"
-                    :index="velocity"
-                    :size="MAX_VELOCITY+1"
-                    :indexLabel="$t('settings.keyboardVelocities.velocitySliders.'+category)"
-
-                    @index="setRowVelocity($event, category)"
-                    @reset="setRowVelocity(currentSettings.keyboardRowVelocities[category], category)"
-                  />
-                </div>
+                <IOManager class="io-manager"
+                  @inputsChange="setInputs"
+                  @delayedInputsChange="queueSetInputs"
+                  @outputChange="setOutput"
+                />
 
               </div>
+
+              <div class="keyboard-velocities">
+
+                <h4> {{ $t('settings.io.keyboardVelocities.heading') }} </h4>
+
+                <div class="sliders-container">
+
+                  <div class="velocity-slider"
+                    v-for="(velocity, category) in keyboardVelocitiesIfAvailable"
+                  >
+                    <scroll-bar class="velocity-scroll"
+                      :hasBounds="false"
+                      :start="MIN_VELOCITY"
+                      :end="MAX_VELOCITY"
+                      :index="velocity"
+                      :size="MAX_VELOCITY+1"
+                      :indexLabel="$t('settings.io.keyboardVelocities.velocitySliders.'+category)"
+
+                      @index="setRowVelocity($event, category)"
+                      @reset="setRowVelocity(currentSettings.io.keyboardRowVelocities[category], category)"
+                    />
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-section" v-show="visibleTab === 'visualizer'">
+
+              <h4>{{ $t('settings.visualizer.preferredVisualizer.heading') }}</h4>
+
+              <OptionTabs
+                class="tabs minor"
+                :routerMode="false"
+                :fullRound="true"
+                :defaultSelectId="currentSettings.visualizer.preferredVisualizer"
+                :items="availableVisualizers"
+                @select="setPreferredVisualizer"
+              />
+
             </div>
           </div>
 
@@ -97,10 +121,12 @@
 }
 
 .tabs {
-  border-bottom: 2px solid var(--button-blue);
-  font-weight: bold;
   color: #888;
   width: 100%;
+}
+.tabs.major {
+  border-bottom: 2px solid var(--button-blue);
+  font-weight: bold;
 }
 
 h2 {
@@ -160,14 +186,13 @@ import defaultSettings from '../default_settings.json'
 export default {
   components: { OptionTabs, PopUp, IOManager, ScrollBar },
 
-  inject: ['defaultKeyboardVelocities'],
-
   data() {
     return {
       // Note : no, using external consts does not work if we want to reference them in the template
       MIN_VELOCITY: 0,
       MAX_VELOCITY: 127,
 
+      visibleTab: 'io',
       defaultSettings: defaultSettings,
       settingsBuffer: {} // computed properties can't be referenced in data.
     }
@@ -176,10 +201,32 @@ export default {
   computed: {
     ...mapGetters(['currentSettings']),
 
+    // This shouldn't be a computed property.
+    // I have to do it because my IDE misinterprets the safe access operator
+    // as a *ternary*, which breaks syntax highlighting.
+
+    // This also cannot be a simple access without null check.
+    // As I found out, Vue crashes if a nested property (more than one level deep)
+    // is undefined at render time.
+    // In other words, "this.settingsBuffer.keyboardRowVelocities"
+    // was fine, even when undefined, but "this.settingsBuffer.io.keyboardRowVelocities" ?
+    // Nope !
+    keyboardVelocitiesIfAvailable() {
+      return this.settingsBuffer.io?.keyboardRowVelocities
+    },
+
     // Computed because of locale change
     tabItems() {
       return [
-        { id: 'io', text: this.$t('settings.tabs.io')}
+        { id: 'io', text: this.$t('settings.tabs.io')},
+        { id: 'visualizer', text: this.$t('settings.tabs.visualizer')}
+      ]
+    },
+
+    availableVisualizers() {
+      return [
+        { id: 'piano', text: this.$t('settings.visualizer.availableVisualizers.pianoRoll')},
+        { id: 'sheet', text: this.$t('settings.visualizer.availableVisualizers.sheetMusic')}
       ]
     }
   },
@@ -195,7 +242,7 @@ export default {
     open() {
       this.$refs.popup.open()
       this.resetToCurrent()
-      this.$refs.tabs.select(this.tabItems[0])
+      this.$refs.tabs.select(this.tabItems[0].id)
     },
 
     close() {
@@ -206,6 +253,10 @@ export default {
       // Because closing logic happens in the base popup component,
       // This one has to painstakingly relay its messages over to the invoking page.
       this.$emit('closed')
+    },
+
+    onTabSelect(tab) {
+      this.visibleTab = tab
     },
 
     // -------------------------------------------------------------------------
@@ -251,8 +302,10 @@ export default {
     // --------------------------- FINE-GRAINED --------------------------------
     // -------------------------------------------------------------------------
 
+    // ------------------------------- I/O -------------------------------------
+
     setRowVelocity(i, category) {
-      this.settingsBuffer.keyboardRowVelocities[category] = i
+      this.settingsBuffer.io.keyboardRowVelocities[category] = i
     },
 
     setInputs(ids) {
@@ -268,6 +321,12 @@ export default {
 
     setOutput(id) {
       this.settingsBuffer.io.outputId = id
+    },
+
+    // ---------------------------- VISUALIZER ---------------------------------
+
+    setPreferredVisualizer(id) {
+      this.settingsBuffer.visualizer.preferredVisualizer = id
     }
   }
 }

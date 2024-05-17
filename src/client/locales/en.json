@@ -248,22 +248,36 @@
     "title": "Settings",
 
     "tabs": {
-      "io": "Input/Output"
+      "io": "Input/Output",
+      "visualizer": "Visualizer"
     },
 
-    "iomanager": {
-      "heading": "Active inputs and output"
+    "io": {
+      "iomanager": {
+        "heading": "Active inputs and output"
+      },
+
+      "keyboardVelocities": {
+
+        "heading": "Keyboard velocities",
+
+        "velocitySliders": {
+          "pianissimo": "XCVB row",
+          "piano": "ASDF row",
+          "mezzo": "QWERTY row",
+          "forte": "Number row"
+        }
+      }
     },
 
-    "keyboardVelocities": {
+    "visualizer": {
+      "preferredVisualizer": {
+        "heading": "Preferred visualizer"
+      },
 
-      "heading": "Keyboard velocities",
-
-      "velocitySliders": {
-        "pianissimo": "XCVB row",
-        "piano": "ASDF row",
-        "mezzo": "QWERTY row",
-        "forte": "Number row"
+      "availableVisualizers": {
+        "pianoRoll": "Piano roll",
+        "sheetMusic": "Sheet music"
       }
     },
 

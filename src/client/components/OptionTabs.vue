@@ -6,8 +6,11 @@
       </router-link>
 
       <div v-else
-        :class="!!selectedItem && selectedItem.id === item.id ? 'selected' : ''"
-        @click="select(item)"
+        :class="[
+          !!selectedItemId && selectedItemId === item.id ? 'selected' : '',
+          !!fullRound ? 'full-round': ''
+        ]"
+        @click="select(item.id)"
       >
         {{ item.text }}
       </div>
@@ -41,6 +44,9 @@
   border-radius: 0.4em 0.4em 0 0;
   transition: all 0.25s;
 }
+.tab > .full-round {
+  border-radius: 1em;
+}
 .tab.router > * {
   color: #555;
   padding: 0.3em 0.5em;
@@ -65,16 +71,19 @@
 
 <script>
 export default {
-  props: ['items', 'routerMode'],
+  props: ['items', 'routerMode', 'fullRound', 'defaultSelectId'],
 
   data() {
-    selectedItem: null
+    return {
+      selectedItemId: this.defaultSelectId
+    }
   },
 
   methods: {
-    select(item) {
-      this.$emit(item.text)
-      this.selectedItem = item
+    select(id) {
+      this.$emit('select', id)
+
+      this.selectedItemId = id
       this.$forceUpdate()
     }
   }
