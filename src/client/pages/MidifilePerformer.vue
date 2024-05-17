@@ -332,14 +332,12 @@ export default {
   },
   watch: {
     mfpMidiFile(newFile, oldFile) {
-      if(newFile.isMidi) this.selectedVisualizer = "piano"
-      else this.selectedVisualizer = this.preferredVisualizer
+      this.setDesiredVisualizer()
     }
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
-    this.selectedVisualizer = this.preferredVisualizer
   },
   async mounted() {
     this.performer.clear();
@@ -363,7 +361,13 @@ export default {
     }
 
     // FIXME : delegate speed to the store so it reacts...
+    // ...or rather, integrate v-model to the scroll-bar !!
     this.$refs.mainScrollBar?.resetSpeedDisplay();
+
+    // Watchers are not called on mount
+    // And we can't do this on create, because otherwise, remounting the page never sets this again
+    // (and so no visualizer is displayed)
+    this.setDesiredVisualizer()
 
     this.$emit("canPerform", true)
   },
@@ -567,6 +571,11 @@ export default {
     // -------------------------------------------------------------------------
     // -------------------------------MISC--------------------------------------
     // -------------------------------------------------------------------------
+
+    setDesiredVisualizer() {
+      if(this.mfpMidiFile.isMidi) this.selectedVisualizer = "piano"
+      else this.selectedVisualizer = this.preferredVisualizer
+    },
 
     preparePerformerForLoad() {
       this.currentMode = 'silent';
