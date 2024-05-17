@@ -13,8 +13,7 @@
               class="tabs major"
               :routerMode="false"
               :items="tabItems"
-              :defaultSelectId="tabItems[0].id"
-              @select="onTabSelect"
+              v-model="visibleTab"
             />
 
             <div class="tab-section" v-show="visibleTab === 'io'">
@@ -22,7 +21,7 @@
 
                 <h4> {{ $t('settings.io.iomanager.heading') }} </h4>
 
-                <IOManager class="io-manager"
+                <IOManager ref="ioManager" class="io-manager"
                   @inputsChange="setInputs"
                   @delayedInputsChange="queueSetInputs"
                   @outputChange="setOutput"
@@ -37,7 +36,7 @@
                 <div class="sliders-container">
 
                   <div class="velocity-slider"
-                    v-for="(velocity, category) in keyboardVelocitiesIfAvailable"
+                    v-for="(velocity, category) in this.settingsBuffer.io.keyboardRowVelocities"
                   >
                     <scroll-bar class="velocity-scroll"
                       :hasBounds="false"
@@ -64,9 +63,8 @@
                 class="tabs minor"
                 :routerMode="false"
                 :fullRound="true"
-                :defaultSelectId="currentSettings.visualizer.preferredVisualizer"
                 :items="availableVisualizers"
-                @select="setPreferredVisualizer"
+                v-model="this.settingsBuffer.visualizer.preferredVisualizer"
               />
 
             </div>
@@ -194,26 +192,15 @@ export default {
 
       visibleTab: 'io',
       defaultSettings: defaultSettings,
-      settingsBuffer: {} // computed properties can't be referenced in data.
+      // Computed properties can't be accessed in data.
+      // Thankfully, the getter is still available through this roundabout path.
+      // (We could also initialize to default settings. I prefer this.)
+      settingsBuffer: this.$store.getters.currentSettings
     }
   },
 
   computed: {
     ...mapGetters(['currentSettings']),
-
-    // This shouldn't be a computed property.
-    // I have to do it because my IDE misinterprets the safe access operator
-    // as a *ternary*, which breaks syntax highlighting.
-
-    // This also cannot be a simple access without null check.
-    // As I found out, Vue crashes if a nested property (more than one level deep)
-    // is undefined at render time.
-    // In other words, "this.settingsBuffer.keyboardRowVelocities"
-    // was fine, even when undefined, but "this.settingsBuffer.io.keyboardRowVelocities" ?
-    // Nope !
-    keyboardVelocitiesIfAvailable() {
-      return this.settingsBuffer.io?.keyboardRowVelocities
-    },
 
     // Computed because of locale change
     tabItems() {
@@ -242,7 +229,6 @@ export default {
     open() {
       this.$refs.popup.open()
       this.resetToCurrent()
-      this.$refs.tabs.select(this.tabItems[0].id)
     },
 
     close() {
@@ -253,10 +239,6 @@ export default {
       // Because closing logic happens in the base popup component,
       // This one has to painstakingly relay its messages over to the invoking page.
       this.$emit('closed')
-    },
-
-    onTabSelect(tab) {
-      this.visibleTab = tab
     },
 
     // -------------------------------------------------------------------------
@@ -276,12 +258,20 @@ export default {
       this.close()
     },
 
-    resetToCurrent() {
-      // A deep clone should not be necessary here.
+    resetCommon(mode) {
+      // A deep clone should not be necessary for current.
       // this.currentSettings is a *getter*. It should return a new object on every call.
       // This is probably something to do with the inner workings of mapGetters.
       // Either way, it's extremely fishy.
-      this.settingsBuffer = structuredClone(this.currentSettings)
+      this.settingsBuffer = structuredClone(
+        mode === "current" ? this.currentSettings : toRaw(this.defaultSettings)
+      )
+
+      this.$refs.ioManager.resetControls(mode)
+    },
+
+    resetToCurrent() {
+      this.resetCommon("current")
 
       // When inputs have been disconnected between sessions, the IOManager will have detected this.
       // But it does so before resetToCurrent() is called ; so we have queued its list of available inputs.
@@ -295,14 +285,15 @@ export default {
     },
 
     resetToDefault() {
-      this.settingsBuffer = structuredClone(toRaw(this.defaultSettings))
+      this.resetCommon("default")
     },
 
     // -------------------------------------------------------------------------
     // --------------------------- FINE-GRAINED --------------------------------
     // -------------------------------------------------------------------------
 
-    // ------------------------------- I/O -------------------------------------
+    // There should only be update logic here where components incompatible with v-model are used.
+    // This should only be the case in the I/O tab. 
 
     setRowVelocity(i, category) {
       this.settingsBuffer.io.keyboardRowVelocities[category] = i
@@ -322,12 +313,6 @@ export default {
     setOutput(id) {
       this.settingsBuffer.io.outputId = id
     },
-
-    // ---------------------------- VISUALIZER ---------------------------------
-
-    setPreferredVisualizer(id) {
-      this.settingsBuffer.visualizer.preferredVisualizer = id
-    }
   }
 }
 

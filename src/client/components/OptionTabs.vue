@@ -7,10 +7,10 @@
 
       <div v-else
         :class="[
-          !!selectedItemId && selectedItemId === item.id ? 'selected' : '',
+          selectedTabId === item.id ? 'selected' : '',
           !!fullRound ? 'full-round': ''
         ]"
-        @click="select(item.id)"
+        @click="selectedTabId = item.id"
       >
         {{ item.text }}
       </div>
@@ -71,20 +71,17 @@
 
 <script>
 export default {
-  props: ['items', 'routerMode', 'fullRound', 'defaultSelectId'],
+  props: ['items', 'routerMode', 'fullRound', 'modelValue'],
+  emits: ['update:modelValue'],
 
-  data() {
-    return {
-      selectedItemId: this.defaultSelectId
-    }
-  },
-
-  methods: {
-    select(id) {
-      this.$emit('select', id)
-
-      this.selectedItemId = id
-      this.$forceUpdate()
+  computed: {
+    selectedTabId: {
+      get() {
+        return this.modelValue
+      },
+      set(value) {
+        this.$emit('update:modelValue', value)
+      }
     }
   }
 }

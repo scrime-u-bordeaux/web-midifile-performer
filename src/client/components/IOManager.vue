@@ -24,7 +24,7 @@
                 :disabled="inputs[input.id] === undefined"
                 @change="selectedInputsChanged"
               >
-              
+
               <!-- Intentional fallback to avoid ternary logic :
               for everything but the default IO, this key won't exist and will just display as-is. -->
               <span>{{ $t(input.name) }}</span>
@@ -41,7 +41,7 @@
         </div>
 
         <div class="control-container">
-          <select @change="selectedOutputChanged">
+          <select ref="outputSelect" @change="selectedOutputChanged">
             <!-- Ugly inline style hack that only works in Chromium family. Yuck ! -->
             <!-- Why in the Lord's holy name can we not just style option normally like any other element ??? -->
             <option
@@ -130,7 +130,8 @@ button {
 </style>
 
 <script>
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
+import defaultSettings from '../default_settings.json'
 
 export default {
   inject: [ 'ioctl', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
@@ -144,6 +145,8 @@ export default {
       'synthNotesDecoded',
       'currentKeyboardVelocities'
     ]),
+
+    ...mapGetters(['currentSettings']),
 
     amountOfInputs() {
       return [...Object.keys(this.inputs)].length
@@ -245,6 +248,23 @@ export default {
     onOutputChanged(id) {
       this.ioctl.allNotesOff();
       this.ioctl.setOutput(id);
+    },
+
+    // Because this is a special component that doesn't use v-model, it provides this reset function instead.
+    // This is specific to this component and should NOT be imitated anywhere.
+
+    resetControls(mode) {
+      const referenceIoState = mode === "current" ? this.currentSettings.io : defaultSettings.io
+
+      // Here, the spread operator causes an unexpected token error.
+      // Why ? I don't know !
+      // Just using Array.from instead.
+      Array.from(this.$refs.inputCheckboxes.children).map(child =>
+        child.firstChild
+      ).forEach(checkbox =>
+        checkbox.checked = referenceIoState.inputIds.includes(checkbox.value)
+      )
+      this.$refs.outputSelect.value = referenceIoState.outputId
     }
   }
 };
