@@ -1,13 +1,18 @@
 <template>
   <div class="tabs-wrapper" :class="routerMode ? 'router' : 'generic'">
-    <div class="tab" :class="routerMode ? 'router' : 'generic'" v-for="(item, index) in items">
+    <div class="tab"
+        :class="[
+          routerMode ? 'router' : 'generic',
+          !routerMode && index === 0 ? 'first-tab' : ''
+        ]"
+        v-for="(item, index) in items"
+    >
       <router-link v-if="routerMode" :to="{ name: item.page }">
         {{ item.text }}
       </router-link>
 
       <div v-else
         :class="[
-          index === 0 ? 'first-tab' : '',
           selectedTabId === item.id ? 'selected' : '',
           !!fullRound ? 'full-round': ''
         ]"

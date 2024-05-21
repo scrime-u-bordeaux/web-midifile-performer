@@ -158,7 +158,7 @@
   border-bottom: 2px solid var(--button-blue);
   font-weight: bold;
 }
-.tabs::v-deep .first-tab {
+.tabs.major::v-deep .first-tab {
   margin-left: -1.9em;
 }
 
