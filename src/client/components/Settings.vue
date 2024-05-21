@@ -105,11 +105,11 @@
 
           <div class="buttons">
             <div class="reset-buttons">
-              <button @click="resetToCurrent">
+              <button @click="resetToCurrent()"> <!-- Use call syntax to specifically transmit "false" default arg val -->
                 {{ $t('settings.buttons.reset') }}
               </button>
 
-              <button @click="resetToDefault">
+              <button @click="resetToDefault()"> <!-- Same -->
                 {{ $t('settings.buttons.default') }}
               </button>
             </div>
@@ -287,7 +287,7 @@ export default {
 
     open() {
       this.$refs.popup.open()
-      this.resetToCurrent()
+      this.resetToCurrent(true)
     },
 
     close() {
@@ -317,20 +317,23 @@ export default {
       this.close()
     },
 
-    resetCommon(mode) {
+    resetCommon(mode, full = false) {
+
+      const settingsToCloneFrom =
+        mode === "current" ? this.currentSettings : toRaw(this.defaultSettings)
+
       // A deep clone should not be necessary for current.
       // this.currentSettings is a *getter*. It should return a new object on every call.
       // This is probably something to do with the inner workings of mapGetters.
       // Either way, it's extremely fishy.
-      this.settingsBuffer = structuredClone(
-        mode === "current" ? this.currentSettings : toRaw(this.defaultSettings)
-      )
+      if(full) this.settingsBuffer = structuredClone(settingsToCloneFrom)
+      else this.settingsBuffer[this.visibleTab] = structuredClone(settingsToCloneFrom[this.visibleTab])
 
-      this.$refs.ioManager.resetControls(mode)
+      if(this.visibleTab === 'io') this.$refs.ioManager.resetControls(mode)
     },
 
-    resetToCurrent() {
-      this.resetCommon("current")
+    resetToCurrent(full = false) {
+      this.resetCommon("current", full)
 
       // When inputs have been disconnected between sessions, the IOManager will have detected this.
       // But it does so before resetToCurrent() is called ; so we have queued its list of available inputs.
