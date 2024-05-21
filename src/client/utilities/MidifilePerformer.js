@@ -326,6 +326,14 @@ class MidifilePerformer extends EventEmitter {
           this.endAlreadyPlayed = false;
         }
       }
+
+      if(
+        !this.#getLooping() &&
+        this.#getCurrentIndex() === this.#getLoopEndIndex() &&
+        this.#areSameEventSets(notesToEmit, noteEventsFromNoteDataVector(this.#getCurrentSetPair().end.events))
+      ) {
+        this.setMode("silent")
+      }
     });
 
     // SET FLAGS ///////////////////////////////////////////////////////////////
@@ -494,7 +502,11 @@ class MidifilePerformer extends EventEmitter {
   // Ensure we stay within bounds at the loop end, even if it's the end of the track
 
   #getNextIndex() {
-    return (this.#getCurrentIndex() + 1) % (this.#getLoopEndIndex() + 1)
+    const currentIndex = this.#getCurrentIndex()
+    const loopEnd = this.#getLoopEndIndex()
+    return this.#getLooping() ?
+      (currentIndex + 1) % (loopEnd + 1) :
+      (currentIndex < loopEnd ? currentIndex : loopEnd)
   }
 
   #getLoopStartIndex() {
@@ -503,6 +515,10 @@ class MidifilePerformer extends EventEmitter {
 
   #getLoopEndIndex() {
     return this.performer.getLoopEndIndex()
+  }
+
+  #getLooping() {
+    return this.performer.getLooping()
   }
 
   // Translate the C++ Chronology into an array of sets,
@@ -642,6 +658,22 @@ class MidifilePerformer extends EventEmitter {
         this.endAlreadyPlayed = false;
       }
     }
+  }
+
+  #areSameEventSets(setA, setB) {
+    if(setA.length === 0) return setB.length === 0 // Don't forget : every() is true for any condition if the array is empty
+    // And actually, can the last ending set even be empty ? I think not.
+    // So we could just write setA.length !== 0 && every ...
+    // ...but better safe than sorry.
+
+    return setA.every((event, index) => {
+      const eventB = setB[index]
+
+      return event.on === eventB.on &&
+        event.pitch === eventB.pitch &&
+        event.velocity === eventB.velocity &&
+        event.channel === eventB.channel
+    })
   }
 }
 

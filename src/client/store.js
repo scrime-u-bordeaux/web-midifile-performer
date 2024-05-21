@@ -107,6 +107,8 @@ const store = createStore({
       playOnClickInSilentMode: startingSettings.visualizer.clickPlay.silent,
       playOnClickInPerformMode: startingSettings.visualizer.clickPlay.perform,
 
+      looping: startingSettings.performer.looping,
+
       meta: metaJson
     };
   },
@@ -128,6 +130,10 @@ const store = createStore({
             silent: state.playOnClickInSilentMode,
             perform: state.playOnClickInPerformMode
           }
+        },
+
+        performer: {
+          looping: state.looping
         }
       }
     }
@@ -178,7 +184,9 @@ const store = createStore({
 
       state.preferredVisualizer = settings.visualizer.preferredVisualizer
       state.playOnClickInSilentMode = settings.visualizer.clickPlay.silent
-      state.playOnClickInPerformMode = settings.visualizer.clickPlay.perform 
+      state.playOnClickInPerformMode = settings.visualizer.clickPlay.perform
+
+      state.looping = settings.performer.looping
 
       localStorage.setItem("settings", JSON.stringify(settings))
     },

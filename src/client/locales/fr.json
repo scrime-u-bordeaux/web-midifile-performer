@@ -250,7 +250,8 @@
 
     "tabs": {
       "io": "Entrée/Sortie",
-      "visualizer": "Visualiseur"
+      "visualizer": "Visualiseur",
+      "performer": "Avancé"
     },
 
     "io": {
@@ -286,6 +287,10 @@
         "silent": "En mode silencieux",
         "perform": "En mode interprétation"
       }
+    },
+
+    "performer": {
+      "looping": "Bouclage"
     },
 
     "buttons": {

@@ -16,73 +16,88 @@
               v-model="visibleTab"
             />
 
-            <div class="tab-section" v-show="visibleTab === 'io'">
-              <div class="io-manager-container">
+            <div class="tab-sections">
 
-                <h4> {{ $t('settings.io.iomanager.heading') }} </h4>
+              <div class="tab-section" v-show="visibleTab === 'io'">
+                <div class="io-manager-container">
 
-                <IOManager ref="ioManager" class="io-manager"
-                  @inputsChange="setInputs"
-                  @delayedInputsChange="queueSetInputs"
-                  @outputChange="setOutput"
-                />
+                  <h4> {{ $t('settings.io.iomanager.heading') }} </h4>
 
+                  <IOManager ref="ioManager" class="io-manager"
+                    @inputsChange="setInputs"
+                    @delayedInputsChange="queueSetInputs"
+                    @outputChange="setOutput"
+                  />
+
+                </div>
+
+                <div class="keyboard-velocities">
+
+                  <h4> {{ $t('settings.io.keyboardVelocities.heading') }} </h4>
+
+                  <div class="sliders-container">
+
+                    <div class="velocity-slider"
+                      v-for="(velocity, category) in settingsBuffer.io.keyboardRowVelocities"
+                    >
+                      <scroll-bar class="velocity-scroll"
+                        :hasBounds="false"
+                        :start="MIN_VELOCITY"
+                        :end="MAX_VELOCITY"
+                        :index="velocity"
+                        :size="MAX_VELOCITY+1"
+                        :indexLabel="$t('settings.io.keyboardVelocities.velocitySliders.'+category)"
+
+                        @index="setRowVelocity($event, category)"
+                        @reset="setRowVelocity(currentSettings.io.keyboardRowVelocities[category], category)"
+                      />
+                    </div>
+
+                  </div>
+                </div>
               </div>
 
-              <div class="keyboard-velocities">
+              <div class="tab-section" v-show="visibleTab === 'visualizer'">
 
-                <h4> {{ $t('settings.io.keyboardVelocities.heading') }} </h4>
+                <div class="preferred-visualizer">
+                  <h4>{{ $t('settings.visualizer.preferredVisualizer.heading') }}</h4>
 
-                <div class="sliders-container">
+                  <OptionTabs
+                    class="tabs minor"
+                    :routerMode="false"
+                    :fullRound="true"
+                    :items="availableVisualizers"
+                    v-model="settingsBuffer.visualizer.preferredVisualizer"
+                  />
+                </div>
 
-                  <div class="velocity-slider"
-                    v-for="(velocity, category) in settingsBuffer.io.keyboardRowVelocities"
-                  >
-                    <scroll-bar class="velocity-scroll"
-                      :hasBounds="false"
-                      :start="MIN_VELOCITY"
-                      :end="MAX_VELOCITY"
-                      :index="velocity"
-                      :size="MAX_VELOCITY+1"
-                      :indexLabel="$t('settings.io.keyboardVelocities.velocitySliders.'+category)"
+                <div class="click-play">
 
-                      @index="setRowVelocity($event, category)"
-                      @reset="setRowVelocity(currentSettings.io.keyboardRowVelocities[category], category)"
+                  <h4>{{ $t('settings.visualizer.clickPlay.heading') }}</h4>
+
+                  <div class="click-play-inner">
+                    <ToggleSwitch
+                      :label="$t('settings.visualizer.clickPlay.silent')"
+                      v-model="settingsBuffer.visualizer.clickPlay.silent"
+                    />
+                    <ToggleSwitch
+                      :label="$t('settings.visualizer.clickPlay.perform')"
+                      v-model="settingsBuffer.visualizer.clickPlay.perform"
                     />
                   </div>
-
                 </div>
-              </div>
-            </div>
 
-            <div class="tab-section" v-show="visibleTab === 'visualizer'">
-
-              <div class="preferred-visualizer">
-                <h4>{{ $t('settings.visualizer.preferredVisualizer.heading') }}</h4>
-
-                <OptionTabs
-                  class="tabs minor"
-                  :routerMode="false"
-                  :fullRound="true"
-                  :items="availableVisualizers"
-                  v-model="settingsBuffer.visualizer.preferredVisualizer"
-                />
               </div>
 
-              <div class="click-play">
+              <div class="tab-section" v-show="visibleTab === 'performer'">
 
-                <h4>{{ $t('settings.visualizer.clickPlay.heading') }}</h4>
-
-                <div class="click-play-inner">
+                <div class="performer-section-inner">
                   <ToggleSwitch
-                    :label="$t('settings.visualizer.clickPlay.silent')"
-                    v-model="settingsBuffer.visualizer.clickPlay.silent"
-                  />
-                  <ToggleSwitch
-                    :label="$t('settings.visualizer.clickPlay.perform')"
-                    v-model="settingsBuffer.visualizer.clickPlay.perform"
+                    :label="$t('settings.performer.looping')"
+                    v-model="settingsBuffer.performer.looping"
                   />
                 </div>
+
               </div>
 
             </div>
@@ -132,8 +147,7 @@
 
 .settings-padder {
   padding: 0 4em;
-  max-height: 85%;
-  overflow: scroll;
+  height: 80%;
 }
 
 .tabs {
@@ -143,6 +157,14 @@
 .tabs.major {
   border-bottom: 2px solid var(--button-blue);
   font-weight: bold;
+}
+.tabs::v-deep .first-tab {
+  margin-left: -1.9em;
+}
+
+.tab-sections {
+  height: 100%;
+  overflow: scroll;
 }
 
 h2 {
@@ -176,6 +198,16 @@ h4 {
 .click-play-inner > *:not(:last-child) {
   padding-bottom: 1em;
 }
+
+.performer-section-inner {
+  margin-top: 2em;
+  padding: 0 16.5em;
+  /* display: grid;
+  grid-template-columns: 50% 50%; */
+}
+/* .performer-section-inner > * {
+  padding: 0.5em 1.25em;
+} */
 
 .buttons {
   display: flex;
@@ -232,7 +264,8 @@ export default {
     tabItems() {
       return [
         { id: 'io', text: this.$t('settings.tabs.io')},
-        { id: 'visualizer', text: this.$t('settings.tabs.visualizer')}
+        { id: 'visualizer', text: this.$t('settings.tabs.visualizer')},
+        { id: 'performer', text: this.$t('settings.tabs.performer')}
       ]
     },
 

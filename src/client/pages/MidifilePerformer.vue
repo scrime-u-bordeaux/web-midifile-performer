@@ -285,6 +285,7 @@ export default {
       'minKeyboardNote',
       'maxKeyboardNote',
       'keyboardState',
+      'looping',
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
@@ -333,11 +334,17 @@ export default {
   watch: {
     mfpMidiFile(newFile, oldFile) {
       this.setDesiredVisualizer()
+    },
+
+    looping(newVal, oldVal) {
+      this.performer.setLooping(newVal)
     }
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
+
+    this.performer.setLooping(this.looping)
   },
   async mounted() {
     this.performer.clear();
@@ -546,8 +553,20 @@ export default {
 
     onIsModeSilent(isIt) {
       this.$refs.keyboard.isModeSilent = isIt
+
       this.$refs.pianoRoll.onIsModeSilent(isIt)
       this.$refs.sheetMusic.onIsModeSilent(isIt)
+
+      // This whole charade is necessary solely because the mode isn't unified.
+      // If it were, all components would read from store and instantly know it changed,
+      // Even if the change came from downwards up (i.e. : MFP.js set itself to silent, because loopEnd was reached with loop off)
+      // But it's not unified. So we have to pass that information all the way through.
+
+      this.$refs.pianoRoll.stop()
+      this.$refs.sheetMusic.stop()
+
+      if(isIt && this.$refs.mainScrollBar.currentMode === 'listen')
+        this.$refs.mainScrollBar.toggleListen()
     },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)

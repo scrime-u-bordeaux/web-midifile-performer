@@ -249,7 +249,8 @@
 
     "tabs": {
       "io": "Input/Output",
-      "visualizer": "Visualizer"
+      "visualizer": "Visualizer",
+      "performer": "Advanced"
     },
 
     "io": {
@@ -285,6 +286,10 @@
         "silent": "In silent mode",
         "perform": "In perform mode"
       }
+    },
+
+    "performer": {
+      "looping": "Looping"
     },
 
     "buttons": {

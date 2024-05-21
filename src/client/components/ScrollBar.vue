@@ -425,10 +425,10 @@ export default {
       this.dragging = null;
     },
     toggleListen(e) {
+      // THIS IS *BAD* and I despise myself for thinking such duplication was acceptable
+      // For the love of all that is good in this world, please let the store deal with this !!!
       const newMode = this.currentMode === 'listen' ? 'silent' : 'listen';
-      this.currentMode = newMode // to avoid such duplication, it's possible to use the store.
-      // however, this induces a lateral workflow between components that will be harder to maintain in the long run.
-      // a little duplication seems preferrable (unless we can find a third, better solution)
+      this.currentMode = newMode
       this.$emit('modeChange', newMode);
     },
     onPlaybackSpeedChanged(e) {
