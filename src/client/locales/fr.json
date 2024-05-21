@@ -298,6 +298,14 @@
       "default": "Défaut",
       "apply": "Appliquer",
       "ok": "Confirmer"
+    },
+
+    "confirm": {
+      "title": "Certaines de vos modifications ne sont pas sauvegardées.",
+      "question": "Souhaitez-vous les sauvegarder ?",
+      "cancel": "Annuler",
+      "save": "Sauvegarder",
+      "nosave": "Ne pas sauvegarder"
     }
   },
   "loading": {

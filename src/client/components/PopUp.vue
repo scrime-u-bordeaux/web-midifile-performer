@@ -4,7 +4,7 @@
 
       <div class="content-and-close">
         <div class="close-button">
-          <svg @click="close" viewBox="0 0 100 100">
+          <svg @click="close()" viewBox="0 0 100 100">
             <line x1="10" y1="10" x2="90" y2="90" />
             <line x1="90" y1="10" x2="10" y2="90" />
           </svg>
@@ -92,9 +92,11 @@ export default {
     open() {
       this.hidden = false;
     },
-    close() {
-      this.hidden = true;
-      this.$emit('closed')
+    close(force = false) {
+      if(force) {
+        this.hidden = true;
+        this.$emit('closed')
+      } else this.$emit('requestClose')
     },
 
     onOutsideClick(event) {
@@ -102,7 +104,7 @@ export default {
         this.hidden // cannot close if already closed
       ) return
 
-      // "outside the popup" means inside its background, which has been set to cover the app 
+      // "outside the popup" means inside its background, which has been set to cover the app
       if(event.target.classList.contains("pop-up-container")) this.close()
     }
   },

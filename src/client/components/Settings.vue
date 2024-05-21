@@ -1,6 +1,19 @@
 <template>
   <div class="settings-container">
-    <PopUp ref="popup" @closed="closed">
+
+    <dialog ref="confirmationDialog" class="confirmation-dialog">
+      <div class="confirm-dialog-message">
+        <p class="confirm-dialog-title">{{ $t('settings.confirm.title') }}</p>
+        <p class="confirm-dialog-question">{{ $t('settings.confirm.question') }}</p>
+      </div>
+      <div class="confirm-dialog-buttons">
+        <button @click="confirmSave">{{ $t('settings.confirm.save') }}</button>
+        <button @click="confirmCancel">{{ $t('settings.confirm.cancel') }}</button>
+        <button @click="confirmNoSave">{{ $t('settings.confirm.nosave') }}</button>
+      </div>
+    </dialog>
+
+    <PopUp ref="popup" @requestClose="onRequestClose" @closed="closed">
 
       <div class="inner-settings-container">
         <h2>{{ $t('settings.title') }}</h2>
@@ -224,12 +237,47 @@ h4 {
   display: flex;
   justify-content: space-between;
 }
+
+.confirmation-dialog {
+  border: 2px solid var(--button-blue);
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.confirm-dialog-message {
+  text-align: center;
+}
+
+.confirm-dialog-message p {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+.confirm-dialog-title {
+  font-size: 1em;
+  font-weight: bold;
+  color: #666;
+}
+
+.confirm-dialog-question {
+  font-style: italic;
+  color: #666;
+}
+
+.confirm-dialog-buttons {
+  font-size: 0.85em;
+  margin: auto;
+  display: flex;
+  justify-content: space-around;
+}
 </style>
 
 <script>
 
 import { toRaw } from 'vue'
 import { mapGetters, mapMutations } from 'vuex';
+const isEqual = require('lodash.isequal') // So apparently Vue supports require-style imports ??
+// Thank God, because this package can't be used with ES6 import syntax.
 
 import OptionTabs from './OptionTabs.vue'
 import PopUp from './PopUp.vue'
@@ -291,7 +339,14 @@ export default {
     },
 
     close() {
-      this.$refs.popup.close()
+      this.$refs.popup.close(true)
+    },
+
+    onRequestClose() {
+      if(!isEqual(this.settingsBuffer, this.currentSettings))
+        this.$refs.confirmationDialog.showModal()
+
+      else this.close()
     },
 
     closed() {
@@ -315,6 +370,20 @@ export default {
     applyAndClose() {
       this.apply()
       this.close()
+    },
+
+    confirmSave() {
+      this.$refs.confirmationDialog.close()
+      this.applyAndClose()
+    },
+
+    confirmNoSave() {
+      this.$refs.confirmationDialog.close()
+      this.close()
+    },
+
+    confirmCancel() {
+      this.$refs.confirmationDialog.close()
     },
 
     resetCommon(mode, full = false) {
