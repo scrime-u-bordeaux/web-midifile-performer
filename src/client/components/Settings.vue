@@ -146,6 +146,11 @@
                     :label="$t('settings.performer.looping')"
                     v-model="settingsBuffer.performer.looping"
                   />
+
+                  <ToggleSwitch
+                    :label="$t('settings.performer.unmeet')"
+                    v-model="settingsBuffer.performer.constructorOptions.unmeet"
+                  />
                 </div>
 
               </div>
@@ -269,13 +274,13 @@ h4 {
 
 .performer-section-inner {
   margin-top: 2em;
-  padding: 0 16.5em;
-  /* display: grid;
-  grid-template-columns: 50% 50%; */
+  padding: 0 12em;
+  display: grid;
+  grid-template-columns: 50% 50%;
 }
-/* .performer-section-inner > * {
+.performer-section-inner > * {
   padding: 0.5em 1.25em;
-} */
+}
 
 .buttons {
   display: flex;

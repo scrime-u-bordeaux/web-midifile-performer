@@ -282,6 +282,7 @@ export default {
   computed: {
     ...mapState([
       'mfpMidiFile',
+      'performerConstructorOptions',
       'minKeyboardNote',
       'maxKeyboardNote',
       'keyboardState',
@@ -332,6 +333,19 @@ export default {
     }
   },
   watch: {
+
+    async performerConstructorOptions(newOptions, oldOptions) {
+      this.performer.constructInnerPerformer(newOptions)
+      if(!!this.mfpMidiFile.buffer) { // Should normally always be the case in this listener.
+        // (Because it means we modified the settings, and they're inaccessible without loading a file)
+        // (...for now.)
+        this.loadingFlag = true;
+        this.preparePerformerForLoad()
+        await this.performer.loadMidifile(this.mfpMidiFile.buffer, this.mfpMidiFile.isMidi);
+        this.loadingFlag = false;
+      }
+    },
+
     mfpMidiFile(newFile, oldFile) {
       this.setDesiredVisualizer()
     },
@@ -345,6 +359,8 @@ export default {
     document.addEventListener('keyup',this.onKeyUp)
 
     this.performer.setLooping(this.looping)
+    // This will override the performer created by index.js.
+    this.performer.constructInnerPerformer(this.performerConstructorOptions)
   },
   async mounted() {
     this.performer.clear();

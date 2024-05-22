@@ -110,6 +110,10 @@ const store = createStore({
 
       looping: startingSettings.performer.looping,
 
+      // These options should always packaged together, even here,
+      // because modifying *any* of them means reconstructing the performer from scratch.
+      performerConstructorOptions: startingSettings.performer.constructorOptions,
+
       meta: metaJson
     };
   },
@@ -121,6 +125,10 @@ const store = createStore({
       return new Set(state.noteSequence.map(note => note.channel)).has(channel)
     },
     currentSettings: state => {
+
+      // Properties that are objects or arrays need to be converted to raw from Vue's Proxy format
+      // because the Settings component needs to clone them, and Proxies cannot be cloned.
+
       return {
         io: {
           inputIds: toRaw(state.currentInputIds),
@@ -138,7 +146,8 @@ const store = createStore({
         },
 
         performer: {
-          looping: state.looping
+          looping: state.looping,
+          constructorOptions: toRaw(state.performerConstructorOptions),
         }
       }
     }
@@ -193,6 +202,7 @@ const store = createStore({
       state.playOnClickInPerformMode = settings.visualizer.clickPlay.perform
 
       state.looping = settings.performer.looping
+      state.performerConstructorOptions = settings.performer.constructorOptions
 
       localStorage.setItem("settings", JSON.stringify(settings))
     },

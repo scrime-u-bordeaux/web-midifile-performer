@@ -295,7 +295,8 @@
     },
 
     "performer": {
-      "looping": "Looping"
+      "looping": "Looping",
+      "unmeet": "Unmeet"
     },
 
     "buttons": {

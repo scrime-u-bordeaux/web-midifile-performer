@@ -20,6 +20,11 @@
   },
 
   "performer": {
+    "constructorOptions": {
+      "unmeet": true,
+      "complete": false,
+      "temporalResolution": 20
+    },
     "looping": true
   }
 }

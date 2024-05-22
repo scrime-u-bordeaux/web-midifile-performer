@@ -234,18 +234,51 @@ class MidifilePerformer extends EventEmitter {
   async initialize() {
     this.mfp = await Performer();
 
-    this.performer = new this.mfp.Performer({
+    this.vanillaPerformer = new this.mfp.Performer({
       unmeet: true,
       complete: false,
       // we can't simply use pitch-only shifting : for unclear reasons, it creates additional staccato
       shiftMode: this.mfp.shiftMode.pitchAndChannel,
       temporalResolution: chordDeltaMsDateThreshold,
     });
-    this.performer.setChordVelocityMappingStrategy(
-      this.mfp.chordStrategy.sameForAll,
-      // this.mfp.chordStrategy.clippedScaledFromMax,
-    );
-    this.performer.setLooping(true);
+
+    this.constructInnerPerformer()
+  }
+
+  constructInnerPerformer(options) {
+
+    let loopingBeforeSet, velocityStrategyBeforeSet
+
+    if(!!options) {
+      loopingBeforeSet = this.#getLooping()
+      switch(this.mode) {
+        case "silent":
+          velocityStrategyBeforeSet = this.mfp.chordStrategy.sameForAll
+          break
+        case "listen":
+          velocityStrategyBeforeSet = this.performVelocitySaved ?
+            this.mfp.chordStrategy.clippedScaledFromMax :
+            this.mfp.chordStrategy.none
+          break
+        case "perform":
+          velocityStrategyBeforeSet = this.mfp.chordStrategy.clippedScaledFromMax
+      }
+
+      this.performer = new this.mfp.Performer({
+        unmeet: options.unmeet,
+        complete: options.complete,
+        shiftMode: this.mfp.shiftMode.pitchAndChannel,
+        temporalResolution: options.temporalResolution,
+      })
+    }
+
+    else {
+      loopingBeforeSet = true
+      velocityStrategyBeforeSet = this.mfp.chordStrategy.sameForAll
+      this.performer = this.vanillaPerformer
+    }
+
+    this.#resetInnerPerformerNonConstructorParameters(loopingBeforeSet, velocityStrategyBeforeSet)
   }
 
   async loadMidifile(jsonOrBuffer, isBuffer = true) {
@@ -486,6 +519,13 @@ class MidifilePerformer extends EventEmitter {
   // ---------------------------------------------------------------------------
   // ---------------------------PRIVATE METHODS---------------------------------
   // ---------------------------------------------------------------------------
+
+  // Util for performer reconstruction
+
+  #resetInnerPerformerNonConstructorParameters(looping, strategy) {
+    this.performer.setChordVelocityMappingStrategy(strategy);
+    this.performer.setLooping(looping);
+  }
 
   // Wrapping methods
   // Most of them are direct returns, but at any point we might want to wrap logic around it

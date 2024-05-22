@@ -13,7 +13,7 @@ import router             from './router';
 import App                from './App.vue';
 
 Promise.all([
-  performer.initialize(),
+  performer.initialize(), // WARNING : this is only the "vanilla" performer and will be overwritten by the MFP page as soon as it's constructed
   // synth.loadSounds(), // not here, we need a user interaction before
 ])
 .then(() => {
