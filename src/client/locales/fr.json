@@ -297,7 +297,9 @@
 
     "performer": {
       "looping": "Bouclage",
-      "unmeet": "Unmeet"
+      "unmeet": "Unmeet",
+      "complete": "Compléter",
+      "temporalResolution": "Résolution d'ensemble"
     },
 
     "buttons": {

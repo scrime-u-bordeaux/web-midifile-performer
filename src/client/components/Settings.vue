@@ -151,6 +151,23 @@
                     :label="$t('settings.performer.unmeet')"
                     v-model="settingsBuffer.performer.constructorOptions.unmeet"
                   />
+
+                  <ToggleSwitch
+                    :label="$t('settings.performer.complete')"
+                    v-model="settingsBuffer.performer.constructorOptions.complete"
+                  />
+
+                  <div class="filler"></div>
+                  <NumberInput
+                    :label="$t('settings.performer.temporalResolution')"
+                    :allowNan="true"
+                    :min="0"
+                    :max="100"
+                    :step="1"
+                    :value="settingsBuffer.performer.constructorOptions.temporalResolution"
+                    @input="settingsBuffer.performer.constructorOptions.temporalResolution = $event.target.valueAsNumber"
+                  />
+                  <div class="filler"></div>
                 </div>
 
               </div>
@@ -274,12 +291,15 @@ h4 {
 
 .performer-section-inner {
   margin-top: 2em;
-  padding: 0 12em;
+  padding: 0 5em;
   display: grid;
-  grid-template-columns: 50% 50%;
+  grid-template-columns: 33% 33% 33%;
 }
 .performer-section-inner > * {
   padding: 0.5em 1.25em;
+}
+.performer-section-inner > *::v-deep {
+  color: #888;
 }
 
 .buttons {
@@ -341,6 +361,7 @@ const isEqual = require('lodash.isequal') // So apparently Vue supports require-
 
 import OptionTabs from './OptionTabs.vue'
 import PopUp from './PopUp.vue'
+import NumberInput from './NumberInput.vue'
 import ScrollBar from './ScrollBar.vue'
 import IOManager from './IOManager.vue';
 import ToggleSwitch from './ToggleSwitch.vue'
@@ -348,7 +369,7 @@ import ToggleSwitch from './ToggleSwitch.vue'
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ScrollBar },
+  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ScrollBar, NumberInput },
 
   data() {
     return {

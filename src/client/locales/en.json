@@ -296,7 +296,9 @@
 
     "performer": {
       "looping": "Looping",
-      "unmeet": "Unmeet"
+      "unmeet": "Unmeet",
+      "complete": "Complete",
+      "temporalResolution": "Set resolution"
     },
 
     "buttons": {
