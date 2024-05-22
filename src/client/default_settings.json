@@ -7,7 +7,8 @@
       "pianissimo": 15
     },
     "inputIds": ["0"],
-    "outputId": "0"
+    "outputId": "0",
+    "channelVelocityGains": [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1]
   },
 
   "visualizer": {

@@ -269,6 +269,12 @@
           "mezzo": "Rangée AZERTY",
           "forte": "Rangée numérique"
         }
+      },
+
+      "channelVelocities": {
+        "heading": "Pourcentage de vélocité des canaux",
+
+        "channel": "Canal "
       }
     },
 

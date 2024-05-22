@@ -48,7 +48,8 @@ class IOController extends EventEmitter {
     // List of input IDs whose event listeners cannot be removed.
     this.inputsAwaitingUnplug = new Set()
 
-    this.refreshVelocities(defaultSettings.io.keyboardRowVelocities)
+    this.refreshKeyboardVelocities(defaultSettings.io.keyboardRowVelocities)
+    this.refreshChannelVelocityGains(defaultSettings.io.channelVelocityGains)
   }
 
   setInternalSampler(sampler) {
@@ -256,6 +257,13 @@ class IOController extends EventEmitter {
   playNoteEvents(events) { // "events" is an array of { on, pitch, velocity, channel } objects
     events.forEach(e => {
       const { on, pitch, velocity, channel } = e;
+      const velocityGain = this.velocityGains[channel-1]
+      if(velocityGain === 0) return // Ignore muted channels ; else their on's would count as off !!
+
+      const adjustedVelocity = velocity > 0 ?
+        Math.min(Math.max(1, velocity * velocityGain), 127) :
+        velocity 
+
       this.emit(on ? "noteOn" : "noteOff", e)
 
       if (this.currentOutputId !== DEFAULT_IO_ID) { // external audio output
@@ -267,20 +275,20 @@ class IOController extends EventEmitter {
           // back to between 0 and 15 here.
           (on ? 0x90 : 0x80) | ((channel - 1) & 0xF),
           pitch & 0x7F, // clip between 0 and 127
-          velocity & 0x7F, // clip between 0 and 127
+          adjustedVelocity & 0x7F, // clip between 0 and 127
         ];
 
         this.outputs[this.currentOutputId].send(note);
       } else { // internal sampler
         // It takes in JS objects without conversion
 
-        if(on) this.sampler.noteOn({noteNumber: pitch, velocity, channel})
-        else this.sampler.noteOff({noteNumber: pitch, velocity, channel})
+        if(on) this.sampler.noteOn({noteNumber: pitch, velocity: adjustedVelocity, channel})
+        else this.sampler.noteOff({noteNumber: pitch, velocity: adjustedVelocity, channel})
       }
     })
   }
 
-  refreshVelocities(velocities) {
+  refreshKeyboardVelocities(velocities) {
     Object.keys(universalLayout).forEach((k, catIndex) => {
       const velocityCategory = universalLayout[k];
 
@@ -290,6 +298,10 @@ class IOController extends EventEmitter {
         )
       )
     });
+  }
+
+  refreshChannelVelocityGains(gains) {
+    this.velocityGains = structuredClone(gains)
   }
 };
 

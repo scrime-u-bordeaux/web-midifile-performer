@@ -68,6 +68,43 @@
 
                   </div>
                 </div>
+
+                <div class="channel-velocities">
+
+                  <h4>{{ $t('settings.io.channelVelocities.heading') }}</h4>
+
+                  <!-- This contorsion with index is some of the stupidest code I've ever written.
+                  But it's the only way. index is a String, so "index+1" becomes a string concatenation.-->
+
+                  <div class="sliders-container">
+                    <div class="slider-and-toggle"
+                         :class="fileIncludes(parseInt(parseInt(index)+1, 10)) ? '' : 'channel-not-present'"
+                         v-for="(velocityGain, index) in settingsBuffer.io.channelVelocityGains">
+                      <ToggleSwitch
+                        class="vertical-toggle"
+                        :modelValue="velocityGain !== 0"
+                        @update:modelValue="setVelocityGain(!$event ? 0 : 1, index)"/>
+
+                      <!--Seriously :
+                      I can't use interpolation for index+1 in the message JSON, because it's a string concatenation.
+                      I can't use $t()+index+1, because it's a string concatenation. (Okay, that one's fair.)
+                      I can't use $t()+parseInt(index+1), because it's a string concatenation.
+                      JavaScript is so amazing.-->
+
+                      <scroll-bar class="velocity-scroll"
+                        :hasBounds="false"
+                        :start="0"
+                        :end="200"
+                        :index="Math.floor(velocityGain * 100)"
+                        :size="201"
+                        :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
+
+                        @index="setVelocityGain($event / 100, index)"
+                        @reset="setVelocityGain(currentSettings.io.channelVelocityGains[index], index)"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="tab-section" v-show="visibleTab === 'visualizer'">
@@ -147,7 +184,7 @@
 
 <style scoped>
 .inner-settings-container {
-  min-width: var(--content-width);
+  min-width: 875px;
   height: 600px;
 }
 
@@ -203,6 +240,24 @@ h4 {
 
 .velocity-slider {
   padding-bottom: 0.75em;
+}
+
+.channel-velocities .sliders-container > *:not(:last-child) {
+  padding-bottom: 1em;
+}
+.channel-velocities .velocity-scroll {
+  width: 100%;
+}
+.slider-and-toggle {
+  display: flex;
+  flex-direction: row;
+  align-content: center;
+}
+.vertical-toggle {
+  transform: rotate(-90deg);
+}
+.channel-not-present {
+  opacity: 0.4
 }
 
 .click-play-inner {
@@ -306,7 +361,7 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['currentSettings']),
+    ...mapGetters(['currentSettings', 'fileIncludes']),
 
     // Computed because of locale change
     tabItems() {
@@ -432,6 +487,10 @@ export default {
 
     setInputs(ids) {
       this.settingsBuffer.io.inputIds = ids
+    },
+
+    setVelocityGain(gain, index) {
+      this.settingsBuffer.io.channelVelocityGains[index] = gain
     },
 
     // Queue a list of availble inputs after disconnects between sessions,

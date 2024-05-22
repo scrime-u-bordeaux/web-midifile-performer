@@ -10,7 +10,7 @@
         :min="hasBounds ? start + 1 : start"
         :max="hasBounds ? end + 1 : end"
         :step="1"
-        :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
+        :value="Math.max(index, start)"
         :allowNaN="true"
         @input="onIndexInput"
       />

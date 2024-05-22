@@ -102,6 +102,7 @@ const store = createStore({
       currentInputIds: startingSettings.io.inputIds,
       currentOutputId: startingSettings.io.outputId,
       currentKeyboardVelocities: startingSettings.io.keyboardRowVelocities,
+      currentChannelVelocityGains: startingSettings.io.channelVelocityGains,
 
       preferredVisualizer: startingSettings.visualizer.preferredVisualizer,
       playOnClickInSilentMode: startingSettings.visualizer.clickPlay.silent,
@@ -116,12 +117,16 @@ const store = createStore({
     // midiBuffers: state => state.midiBuffers,
     firstStepsMidiFile: state => state.firstStepsMidiFile,
     mfpMidiFile: state => state.mfpMidiFile,
+    fileIncludes: (state) => (channel) => {
+      return new Set(state.noteSequence.map(note => note.channel)).has(channel)
+    },
     currentSettings: state => {
       return {
         io: {
           inputIds: toRaw(state.currentInputIds),
           outputId: state.currentOutputId,
           keyboardRowVelocities: { ... state.currentKeyboardVelocities },
+          channelVelocityGains: toRaw(state.currentChannelVelocityGains)
         },
 
         visualizer: {
@@ -181,6 +186,7 @@ const store = createStore({
       state.currentInputIds = settings.io.inputIds
       state.currentOutputId = settings.io.outputId
       state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
+      state.currentChannelVelocityGains = settings.io.channelVelocityGains
 
       state.preferredVisualizer = settings.visualizer.preferredVisualizer
       state.playOnClickInSilentMode = settings.visualizer.clickPlay.silent

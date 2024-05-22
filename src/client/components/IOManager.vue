@@ -130,6 +130,7 @@ button {
 </style>
 
 <script>
+import { toRaw } from 'vue'
 import { mapState, mapGetters } from 'vuex';
 import defaultSettings from '../default_settings.json'
 
@@ -143,7 +144,8 @@ export default {
       'currentInputIds',
       'currentOutputId',
       'synthNotesDecoded',
-      'currentKeyboardVelocities'
+      'currentKeyboardVelocities',
+      'currentChannelVelocityGains'
     ]),
 
     ...mapGetters(['currentSettings']),
@@ -155,7 +157,11 @@ export default {
 
   watch: {
     currentKeyboardVelocities(newVels, oldVels) {
-      this.ioctl.refreshVelocities(newVels)
+      this.ioctl.refreshKeyboardVelocities(newVels)
+    },
+
+    currentChannelVelocityGains(newGains, oldGains) {
+      this.ioctl.refreshChannelVelocityGains(toRaw(newGains))
     },
 
     currentInputIds(newIds, oldIds) {
@@ -176,7 +182,7 @@ export default {
     // So we refresh every property we control when the component is first initiated
     // (Velocities, inputs, and output)
 
-    this.ioctl.refreshVelocities(this.currentKeyboardVelocities);
+    this.ioctl.refreshKeyboardVelocities(this.currentKeyboardVelocities);
 
     // If inputs were disconnected between sessions,
     // Only at this stage can we detect it.
