@@ -264,6 +264,8 @@ import PianoRoll from '../components/PianoRoll.vue'
 import SheetMusic from '../components/SheetMusic.vue'
 import Settings from '../components/Settings.vue'
 
+const isEqual = require('lodash.isequal')
+
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
@@ -335,6 +337,9 @@ export default {
   watch: {
 
     async performerConstructorOptions(newOptions, oldOptions) {
+      if(isEqual(newOptions, oldOptions)) return // necessary because these are objects,
+      // so this listener *will* fire every time settings are applied. 
+
       this.performer.constructInnerPerformer(newOptions)
       if(!!this.mfpMidiFile.buffer) { // Should normally always be the case in this listener.
         // (Because it means we modified the settings, and they're inaccessible without loading a file)
