@@ -318,6 +318,8 @@
     "buttons": {
       "reset": "Reset",
       "default": "Default",
+      "import": "Import",
+      "export": "Export",
       "apply": "Apply",
       "ok": "OK"
     },

@@ -318,6 +318,8 @@
     "buttons": {
       "reset": "Réinit.",
       "default": "Défaut",
+      "import": "Importer",
+      "exporter": "Exporter",
       "apply": "Appliquer",
       "ok": "Confirmer"
     },

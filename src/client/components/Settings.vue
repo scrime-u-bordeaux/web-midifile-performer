@@ -198,6 +198,16 @@
               </button>
             </div>
 
+            <div class="import-export-buttons">
+              <input accept=".json" ref="importSettings" type="file" style="display: none;" @change="importSettings"/>
+              <button @click="$refs.importSettings.click()">
+                {{ $t('settings.buttons.import') }}
+              </button>
+              <button @click="exportSettings">
+                {{ $t('settings.buttons.export') }}
+              </button>
+            </div>
+
             <div class="confirm-buttons">
               <button @click="apply">
                 {{ $t('settings.buttons.apply') }}
@@ -522,6 +532,39 @@ export default {
       this.resetCommon("default")
     },
 
+    async importSettings(event) {
+      const file = event.target.files[0]
+      const fileContents = await file.text()
+      let importedSettings
+
+      try {
+        importedSettings = JSON.parse(fileContents)
+      } catch (e) {
+        console.error("Imported settings were invalid ; import was aborted.")
+        return
+      }
+      
+      if(this.validate(importedSettings)) this.settingsBuffer = importedSettings
+    },
+
+    validate(importedSettings) {
+      return true
+    },
+
+    exportSettings() {
+      const file = new File(
+        [JSON.stringify(this.settingsBuffer)],
+        `MidifilePerformerSettings_${(new Date()).toISOString()}.json`,
+        { type: 'application/json'}
+      )
+      const link = document.createElement('a')
+
+      link.href = URL.createObjectURL(file)
+      link.download = file.name
+
+      link.click()
+    },
+
     // -------------------------------------------------------------------------
     // --------------------------- FINE-GRAINED --------------------------------
     // -------------------------------------------------------------------------
@@ -538,7 +581,6 @@ export default {
     },
 
     setVelocityOffset(offset, index) {
-      console.log("Received offset", offset)
       this.settingsBuffer.io.channelControls.channelVelocityOffsets[index] = offset
     },
 
