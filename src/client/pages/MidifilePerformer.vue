@@ -295,7 +295,8 @@ export default {
       'sequenceLength',
       'currentOutputId',
       'synthNotesDecoded',
-      'preferredVisualizer'
+      'preferredVisualizer',
+      'preferredVelocityStrategy'
     ]),
     pianoRollSelected() {
       return this.selectedVisualizer === "piano"
@@ -338,7 +339,7 @@ export default {
 
     async performerConstructorOptions(newOptions, oldOptions) {
       if(isEqual(newOptions, oldOptions)) return // necessary because these are objects,
-      // so this listener *will* fire every time settings are applied. 
+      // so this listener *will* fire every time settings are applied.
 
       this.performer.constructInnerPerformer(newOptions)
       if(!!this.mfpMidiFile.buffer) { // Should normally always be the case in this listener.
@@ -349,6 +350,10 @@ export default {
         await this.performer.loadMidifile(this.mfpMidiFile.buffer, this.mfpMidiFile.isMidi);
         this.loadingFlag = false;
       }
+    },
+
+    preferredVelocityStrategy(newStrategy, oldStrategy) {
+      this.performer.setPreferredVelocityStrategy(newStrategy)
     },
 
     mfpMidiFile(newFile, oldFile) {
@@ -366,6 +371,7 @@ export default {
     this.performer.setLooping(this.looping)
     // This will override the performer created by index.js.
     this.performer.constructInnerPerformer(this.performerConstructorOptions)
+    this.performer.setPreferredVelocityStrategy(this.preferredVelocityStrategy)
   },
   async mounted() {
     this.performer.clear();

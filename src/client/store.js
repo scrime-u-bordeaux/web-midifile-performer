@@ -109,6 +109,7 @@ const store = createStore({
       playOnClickInPerformMode: startingSettings.visualizer.clickPlay.perform,
 
       looping: startingSettings.performer.looping,
+      preferredVelocityStrategy: startingSettings.performer.preferredVelocityStrategy,
 
       // These options should always packaged together, even here,
       // because modifying *any* of them means reconstructing the performer from scratch.
@@ -147,6 +148,7 @@ const store = createStore({
 
         performer: {
           looping: state.looping,
+          preferredVelocityStrategy: state.preferredVelocityStrategy,
           constructorOptions: toRaw(state.performerConstructorOptions),
         }
       }
@@ -202,6 +204,7 @@ const store = createStore({
       state.playOnClickInPerformMode = settings.visualizer.clickPlay.perform
 
       state.looping = settings.performer.looping
+      state.preferredVelocityStrategy = settings.performer.preferredVelocityStrategy
       state.performerConstructorOptions = settings.performer.constructorOptions
 
       localStorage.setItem("settings", JSON.stringify(settings))

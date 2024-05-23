@@ -295,10 +295,24 @@
     },
 
     "performer": {
+
       "looping": "Looping",
-      "unmeet": "Unmeet",
-      "complete": "Complete",
-      "temporalResolution": "Set resolution"
+
+      "constructorOptions": {
+        "unmeet": "Unmeet",
+        "complete": "Complete",
+        "temporalResolution": "Set resolution"
+      },
+
+      "velocityStrategies": {
+        "heading": "Velocity strategy",
+
+        "none": "None",
+        "sameForAll": "Same",
+        "adjustedScaledFromMean": "Adjust (Mean)",
+        "clippedScaledFromMax": "Clip (Max)",
+        "clippedScaledFromMean": "Clip (Mean)"
+      }
     },
 
     "buttons": {

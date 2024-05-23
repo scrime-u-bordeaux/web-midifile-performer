@@ -141,25 +141,25 @@
 
               <div class="tab-section" v-show="visibleTab === 'performer'">
 
-                <div class="performer-section-inner">
+                <div class="performer-constructor-options">
                   <ToggleSwitch
                     :label="$t('settings.performer.looping')"
                     v-model="settingsBuffer.performer.looping"
                   />
 
                   <ToggleSwitch
-                    :label="$t('settings.performer.unmeet')"
+                    :label="$t('settings.performer.constructorOptions.unmeet')"
                     v-model="settingsBuffer.performer.constructorOptions.unmeet"
                   />
 
                   <ToggleSwitch
-                    :label="$t('settings.performer.complete')"
+                    :label="$t('settings.performer.constructorOptions.complete')"
                     v-model="settingsBuffer.performer.constructorOptions.complete"
                   />
 
                   <div class="filler"></div>
                   <NumberInput
-                    :label="$t('settings.performer.temporalResolution')"
+                    :label="$t('settings.performer.constructorOptions.temporalResolution')"
                     :allowNan="true"
                     :min="0"
                     :max="100"
@@ -168,6 +168,18 @@
                     @input="settingsBuffer.performer.constructorOptions.temporalResolution = $event.target.valueAsNumber"
                   />
                   <div class="filler"></div>
+                </div>
+
+                <div class="velocity-strategies">
+                  <h4>{{ $t('settings.performer.velocityStrategies.heading') }}</h4>
+
+                  <OptionTabs
+                    class="tabs minor"
+                    :routerMode="false"
+                    :fullRound="true"
+                    :items="velocityStrategies"
+                    v-model="settingsBuffer.performer.preferredVelocityStrategy"
+                  />
                 </div>
 
               </div>
@@ -289,16 +301,16 @@ h4 {
   padding-bottom: 1em;
 }
 
-.performer-section-inner {
+.performer-constructor-options {
   margin-top: 2em;
   padding: 0 5em;
   display: grid;
   grid-template-columns: 33% 33% 33%;
 }
-.performer-section-inner > * {
+.performer-constructor-options > * {
   padding: 0.5em 1.25em;
 }
-.performer-section-inner > *::v-deep {
+.performer-constructor-options > *::v-deep {
   color: #888;
 }
 
@@ -402,6 +414,16 @@ export default {
       return [
         { id: 'piano', text: this.$t('settings.visualizer.availableVisualizers.pianoRoll')},
         { id: 'sheet', text: this.$t('settings.visualizer.availableVisualizers.sheetMusic')}
+      ]
+    },
+
+    velocityStrategies() {
+      return [
+        {id: 'none', text: this.$t('settings.performer.velocityStrategies.none')},
+        {id: 'sameForAll', text: this.$t('settings.performer.velocityStrategies.sameForAll')},
+        {id: 'clippedScaledFromMean', text: this.$t('settings.performer.velocityStrategies.clippedScaledFromMean')},
+        {id: 'adjustedScaledFromMean', text: this.$t('settings.performer.velocityStrategies.adjustedScaledFromMean')},
+        {id: 'clippedScaledFromMax', text: this.$t('settings.performer.velocityStrategies.clippedScaledFromMax')}
       ]
     }
   },

@@ -297,9 +297,22 @@
 
     "performer": {
       "looping": "Bouclage",
-      "unmeet": "Unmeet",
-      "complete": "Compléter",
-      "temporalResolution": "Résolution d'ensemble"
+
+      "constructorOptions": {
+        "unmeet": "Unmeet",
+        "complete": "Compléter",
+        "temporalResolution": "Résolution d'ensemble"
+      },
+
+      "velocityStrategies": {
+        "heading": "Stratégie de vélocité",
+
+        "none": "Aucune",
+        "sameForAll": "Uniforme",
+        "adjustedScaledFromMean": "Ajust. (Moy.)",
+        "clippedScaledFromMax": "Tronq. (Max)",
+        "clippedScaledFromMean": "Tronq. (Mean)"
+      }
     },
 
     "buttons": {

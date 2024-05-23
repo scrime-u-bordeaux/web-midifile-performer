@@ -28,6 +28,8 @@
       "complete": false,
       "temporalResolution": 20
     },
-    "looping": true
+
+    "looping": true,
+    "preferredVelocityStrategy": "clippedScaledFromMax"
   }
 }

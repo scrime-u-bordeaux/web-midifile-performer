@@ -226,6 +226,7 @@ class MidifilePerformer extends EventEmitter {
     this.interruptionGuard = new InterruptionGuard() // watcher to avoid cutting an automatic starting set too soon
     this.pendingEndSet = [] // end set for the currently automatically playing starting set ; will be appended to perform mode's first triggered set
 
+    this.preferredVelocityStrategy = "clippedScaledFromMax"
     this.performVelocitySaved = false;
     this.maxVelocities = [];
     this.velocityProfile = [];
@@ -251,18 +252,7 @@ class MidifilePerformer extends EventEmitter {
 
     if(!!options) {
       loopingBeforeSet = this.#getLooping()
-      switch(this.mode) {
-        case "silent":
-          velocityStrategyBeforeSet = this.mfp.chordStrategy.sameForAll
-          break
-        case "listen":
-          velocityStrategyBeforeSet = this.performVelocitySaved ?
-            this.mfp.chordStrategy.clippedScaledFromMax :
-            this.mfp.chordStrategy.none
-          break
-        case "perform":
-          velocityStrategyBeforeSet = this.mfp.chordStrategy.clippedScaledFromMax
-      }
+      velocityStrategyBeforeSet = this.currentVelocityStrategy
 
       this.performer = new this.mfp.Performer({
         unmeet: options.unmeet,
@@ -274,7 +264,7 @@ class MidifilePerformer extends EventEmitter {
 
     else {
       loopingBeforeSet = true
-      velocityStrategyBeforeSet = this.mfp.chordStrategy.sameForAll
+      velocityStrategyBeforeSet = "sameForAll"
       this.performer = this.vanillaPerformer
     }
 
@@ -421,6 +411,12 @@ class MidifilePerformer extends EventEmitter {
     this.playbackSpeed = s
   }
 
+  setPreferredVelocityStrategy(s) {
+    this.preferredVelocityStrategy = s
+    if(this.mode === "perform" || (this.mode === "listen" && this.performVelocitySaved))
+      this.#setChordVelocityMappingStrategy(s)
+  }
+
   setMode(mode) {
     if (mode === this.mode) return;
     const previousMode = this.mode
@@ -437,10 +433,10 @@ class MidifilePerformer extends EventEmitter {
 
     if (this.mode === 'listen') {
 
-      this.performer.setChordVelocityMappingStrategy(
+      this.#setChordVelocityMappingStrategy(
         this.performVelocitySaved ?
-          this.mfp.chordStrategy.clippedScaledFromMax :
-          this.mfp.chordStrategy.none
+          this.preferredVelocityStrategy :
+          "none"
       );
 
       let pair; // carry the pair information between calls ; otherwise delays are shifted
@@ -465,9 +461,7 @@ class MidifilePerformer extends EventEmitter {
         this.timeout = null;
       }
 
-      this.performer.setChordVelocityMappingStrategy(
-        this.mfp.chordStrategy.clippedScaledFromMax
-      );
+      this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy);
     }
 
     if (this.mode === 'silent') {
@@ -523,7 +517,7 @@ class MidifilePerformer extends EventEmitter {
   // Util for performer reconstruction
 
   #resetInnerPerformerNonConstructorParameters(looping, strategy) {
-    this.performer.setChordVelocityMappingStrategy(strategy);
+    this.#setChordVelocityMappingStrategy(strategy);
     this.performer.setLooping(looping);
   }
 
@@ -582,6 +576,11 @@ class MidifilePerformer extends EventEmitter {
     }
 
     return translatedChronology
+  }
+
+  #setChordVelocityMappingStrategy(strategyName) {
+    this.currentVelocityStrategy = strategyName
+    this.performer.setChordVelocityMappingStrategy(this.mfp.chordStrategy[this.currentVelocityStrategy])
   }
 
   /**
