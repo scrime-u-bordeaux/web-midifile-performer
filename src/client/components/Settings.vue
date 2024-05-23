@@ -78,12 +78,11 @@
 
                   <div class="sliders-container">
                     <div class="slider-and-toggle"
-                         :class="fileIncludes(parseInt(parseInt(index)+1, 10)) ? '' : 'channel-not-present'"
-                         v-for="(velocityGain, index) in settingsBuffer.io.channelVelocityGains">
+                         v-show="fileIncludes(parseInt(parseInt(index)+1, 10))"
+                         v-for="(velocityOffset, index) in settingsBuffer.io.channelControls.channelVelocityOffsets">
                       <ToggleSwitch
                         class="vertical-toggle"
-                        :modelValue="velocityGain !== 0"
-                        @update:modelValue="setVelocityGain(!$event ? 0 : 1, index)"/>
+                        v-model="settingsBuffer.io.channelControls.channelActive[index]"/>
 
                       <!--Seriously :
                       I can't use interpolation for index+1 in the message JSON, because it's a string concatenation.
@@ -92,15 +91,16 @@
                       JavaScript is so amazing.-->
 
                       <scroll-bar class="velocity-scroll"
+                        :class="settingsBuffer.io.channelControls.channelActive[index] ? '' : 'muted-channel'"
                         :hasBounds="false"
-                        :start="0"
-                        :end="200"
-                        :index="Math.floor(velocityGain * 100)"
-                        :size="201"
+                        :start="-64"
+                        :end="64"
+                        :index="velocityOffset"
+                        :size="129"
                         :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
 
-                        @index="setVelocityGain($event / 100, index)"
-                        @reset="setVelocityGain(currentSettings.io.channelVelocityGains[index], index)"
+                        @index="setVelocityOffset($event, index)"
+                        @reset="setVelocityOffset(currentSettings.io.channelControls.channelVelocityOffsets[index], index)"
                       />
                     </div>
                   </div>
@@ -278,7 +278,7 @@ h4 {
 .vertical-toggle {
   transform: rotate(-90deg);
 }
-.channel-not-present {
+.muted-channel {
   opacity: 0.4
 }
 
@@ -515,8 +515,9 @@ export default {
       this.settingsBuffer.io.inputIds = ids
     },
 
-    setVelocityGain(gain, index) {
-      this.settingsBuffer.io.channelVelocityGains[index] = gain
+    setVelocityOffset(offset, index) {
+      console.log("Received offset", offset)
+      this.settingsBuffer.io.channelControls.channelVelocityOffsets[index] = offset
     },
 
     // Queue a list of availble inputs after disconnects between sessions,

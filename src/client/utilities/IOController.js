@@ -49,7 +49,7 @@ class IOController extends EventEmitter {
     this.inputsAwaitingUnplug = new Set()
 
     this.refreshKeyboardVelocities(defaultSettings.io.keyboardRowVelocities)
-    this.refreshChannelVelocityGains(defaultSettings.io.channelVelocityGains)
+    this.refreshChannelControls(defaultSettings.io.channelControls)
   }
 
   setInternalSampler(sampler) {
@@ -257,12 +257,13 @@ class IOController extends EventEmitter {
   playNoteEvents(events) { // "events" is an array of { on, pitch, velocity, channel } objects
     events.forEach(e => {
       const { on, pitch, velocity, channel } = e;
-      const velocityGain = this.velocityGains[channel-1]
-      if(velocityGain === 0) return // Ignore muted channels ; else their on's would count as off !!
+      if(!this.channelControls.channelActive[channel-1]) return
+
+      const velocityOffset = this.channelControls.channelVelocityOffsets[channel-1]
 
       const adjustedVelocity = velocity > 0 ?
-        Math.min(Math.max(1, velocity * velocityGain), 127) :
-        velocity 
+        Math.min(Math.max(1, velocity + velocityOffset), 127) :
+        velocity
 
       this.emit(on ? "noteOn" : "noteOff", e)
 
@@ -300,8 +301,8 @@ class IOController extends EventEmitter {
     });
   }
 
-  refreshChannelVelocityGains(gains) {
-    this.velocityGains = structuredClone(gains)
+  refreshChannelControls(controls) {
+    this.channelControls = structuredClone(controls)
   }
 };
 

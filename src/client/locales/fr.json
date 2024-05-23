@@ -272,7 +272,7 @@
       },
 
       "channelVelocities": {
-        "heading": "Pourcentage de vélocité des canaux",
+        "heading": "Offsets de vélocité des canaux",
 
         "channel": "Canal "
       }

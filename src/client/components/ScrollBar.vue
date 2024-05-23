@@ -41,7 +41,7 @@
         class="line-fg"
         x="0"
         :y="(layout.height - layout.barHeight) / 2"
-        :width="(index / (size - 1)) * layout.width"
+        :width="((index - start) / (size - 1)) * layout.width"
         :height="layout.barHeight" />
       <!-- <circle
         class="cursor"
@@ -51,9 +51,9 @@
         :r="layout.cursorSize / 2" /> -->
       <circle
         class="cursor"
-        :cx="(index / (size - 1)) * (layout.width - layout.cursorSize) + layout.cursorSize / 2"
+        :cx="((index - start) / (size - 1)) * (layout.width - layout.cursorSize) + (layout.cursorSize / 2)"
         :cy="layout.height / 2"
-        :r="layout.cursorSize / 2" />
+        :r="layout.cursorSize / 2"/>
       <rect
         v-if="hasBounds"
         ref="loop-start"
@@ -409,9 +409,9 @@ export default {
         return;
       }
 
-      let position = (e.clientX - x - this.cursorRadius) /
+      let position = (e.clientX - x - this.cursorRadius + (this.start / (this.size - 1))*(width - 2 * this.cursorRadius)) /
                      (width - 2 * this.cursorRadius);
-      position = Math.max(Math.min(position, 1), 0);
+                     
       let newIndex = Math.round(position * (this.size - 1));
       newIndex = Math.min(this.end, Math.max(this.start, newIndex));
       // console.log(`new index : ${newIndex}`);
@@ -436,7 +436,7 @@ export default {
     },
     onKeyDown(e) {
       if(this.hasBounds) { // I don't think most users will want to use the arrow keys for velocities or playback speed, so this avoids having to manage focus
-        if(e.code==="ArrowLeft") this.$emit("index",Math.max(this.index - 1, 0))
+        if(e.code==="ArrowLeft") this.$emit("index",this.index - 1)
         if(e.code==="ArrowRight") this.$emit("index",this.index + 1)
       }
     },

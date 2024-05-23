@@ -102,7 +102,7 @@ const store = createStore({
       currentInputIds: startingSettings.io.inputIds,
       currentOutputId: startingSettings.io.outputId,
       currentKeyboardVelocities: startingSettings.io.keyboardRowVelocities,
-      currentChannelVelocityGains: startingSettings.io.channelVelocityGains,
+      currentChannelControls: startingSettings.io.channelControls,
 
       preferredVisualizer: startingSettings.visualizer.preferredVisualizer,
       playOnClickInSilentMode: startingSettings.visualizer.clickPlay.silent,
@@ -134,7 +134,7 @@ const store = createStore({
           inputIds: toRaw(state.currentInputIds),
           outputId: state.currentOutputId,
           keyboardRowVelocities: { ... state.currentKeyboardVelocities },
-          channelVelocityGains: toRaw(state.currentChannelVelocityGains)
+          channelControls: toRaw(state.currentChannelControls)
         },
 
         visualizer: {
@@ -195,7 +195,7 @@ const store = createStore({
       state.currentInputIds = settings.io.inputIds
       state.currentOutputId = settings.io.outputId
       state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
-      state.currentChannelVelocityGains = settings.io.channelVelocityGains
+      state.currentChannelControls = settings.io.channelControls
 
       state.preferredVisualizer = settings.visualizer.preferredVisualizer
       state.playOnClickInSilentMode = settings.visualizer.clickPlay.silent

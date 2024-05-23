@@ -8,7 +8,10 @@
     },
     "inputIds": ["0"],
     "outputId": "0",
-    "channelVelocityGains": [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1]
+    "channelControls": {
+      "channelVelocityOffsets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "channelActive": [true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true]
+    }
   },
 
   "visualizer": {

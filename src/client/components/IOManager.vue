@@ -145,7 +145,7 @@ export default {
       'currentOutputId',
       'synthNotesDecoded',
       'currentKeyboardVelocities',
-      'currentChannelVelocityGains'
+      'currentChannelControls'
     ]),
 
     ...mapGetters(['currentSettings']),
@@ -160,8 +160,8 @@ export default {
       this.ioctl.refreshKeyboardVelocities(newVels)
     },
 
-    currentChannelVelocityGains(newGains, oldGains) {
-      this.ioctl.refreshChannelVelocityGains(toRaw(newGains))
+    currentChannelControls(newControls, oldControls) {
+      this.ioctl.refreshChannelControls(toRaw(newControls))
     },
 
     currentInputIds(newIds, oldIds) {
@@ -180,10 +180,12 @@ export default {
 
     // Writers don't trigger on store create
     // So we refresh every property we control when the component is first initiated
-    // (Velocities, inputs, and output)
+    // (Velocities, inputs, output, and channel controls)
 
     this.ioctl.refreshKeyboardVelocities(this.currentKeyboardVelocities);
+    this.ioctl.refreshChannelControls(toRaw(this.currentChannelControls));
 
+    // But refreshing I/O is not so simple.
     // If inputs were disconnected between sessions,
     // Only at this stage can we detect it.
     // (Because we've run the update, and the store has not)

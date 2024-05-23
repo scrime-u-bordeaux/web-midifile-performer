@@ -271,7 +271,7 @@
       },
 
       "channelVelocities": {
-        "heading": "Channel velocity gains (in percents)",
+        "heading": "Channel velocity offsets",
 
         "channel": "Channel "
       }
