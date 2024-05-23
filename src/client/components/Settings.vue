@@ -540,15 +540,57 @@ export default {
       try {
         importedSettings = JSON.parse(fileContents)
       } catch (e) {
-        console.error("Imported settings were invalid ; import was aborted.")
+        console.error("Imported settings were invalid JSON ; import was aborted.")
         return
       }
-      
+
       if(this.validate(importedSettings)) this.settingsBuffer = importedSettings
+      else console.error("The contents of the imported settings were invalid ; import was aborted.")
     },
 
+    // TODO : there *has* to be a way to automate this, right ?
+    // At the very least, un-inline all these comparison values...
+    // Ah, well, it works for now.
+
     validate(importedSettings) {
-      return true
+      return isEqual(Object.keys(importedSettings), Object.keys(this.settingsBuffer)) &&
+
+      isEqual(Object.keys(importedSettings.io), Object.keys(this.settingsBuffer.io)) &&
+
+      isEqual(Object.keys(importedSettings.io.keyboardRowVelocities), Object.keys(this.settingsBuffer.io.keyboardRowVelocities)) &&
+      Object.values(importedSettings.io.keyboardRowVelocities).every(value => typeof value === "number") &&
+      Object.values(importedSettings.io.keyboardRowVelocities).every(value => value >= 0 && value <= 127) &&
+
+      // TODO : it would also be nice to know if they are valid I/O IDs, but how do we determine this ?
+      importedSettings.io.inputIds.every(id => typeof id === "string") &&
+      typeof importedSettings.io.outputId === "string" &&
+
+      isEqual(Object.keys(importedSettings.io.channelControls), Object.keys(this.settingsBuffer.io.channelControls)) &&
+      importedSettings.io.channelControls.channelVelocityOffsets.length === 16 &&
+      importedSettings.io.channelControls.channelVelocityOffsets.every(offset => typeof offset === "number") &&
+      importedSettings.io.channelControls.channelVelocityOffsets.every(offset => offset >= -64 && offset <= 64) &&
+      importedSettings.io.channelControls.channelActive.length === 16 &&
+      importedSettings.io.channelControls.channelActive.every(flag => typeof flag === "boolean") &&
+
+      isEqual(Object.keys(importedSettings.visualizer), Object.keys(this.settingsBuffer.visualizer)) &&
+
+      this.availableVisualizers.map(tab => tab.id).includes(importedSettings.visualizer.preferredVisualizer) &&
+
+      isEqual(Object.keys(importedSettings.visualizer.clickPlay), Object.keys(this.settingsBuffer.visualizer.clickPlay)) &&
+      typeof importedSettings.visualizer.clickPlay.silent === "boolean" &&
+      typeof importedSettings.visualizer.clickPlay.perform === "boolean" &&
+
+      isEqual(Object.keys(importedSettings.performer), Object.keys(this.settingsBuffer.performer)) &&
+
+      isEqual(Object.keys(importedSettings.performer.constructorOptions), Object.keys(this.settingsBuffer.performer.constructorOptions)) &&
+      typeof importedSettings.performer.constructorOptions.unmeet === "boolean" &&
+      typeof importedSettings.performer.constructorOptions.complete === "boolean" &&
+      typeof importedSettings.performer.constructorOptions.temporalResolution === "number" &&
+      importedSettings.performer.constructorOptions.temporalResolution >= 0 && importedSettings.performer.constructorOptions.temporalResolution <= 100 &&
+
+      typeof importedSettings.performer.looping === "boolean" &&
+
+      this.velocityStrategies.map(strategy => strategy.id).includes(importedSettings.performer.preferredVelocityStrategy)
     },
 
     exportSettings() {
