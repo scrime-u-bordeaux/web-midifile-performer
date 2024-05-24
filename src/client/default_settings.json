@@ -30,6 +30,7 @@
     },
 
     "looping": true,
-    "preferredVelocityStrategy": "clippedScaledFromMax"
+    "preferredVelocityStrategy": "clippedScaledFromMax",
+    "conserveVelocity": true
   }
 }

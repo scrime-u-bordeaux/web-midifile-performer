@@ -110,6 +110,7 @@ const store = createStore({
 
       looping: startingSettings.performer.looping,
       preferredVelocityStrategy: startingSettings.performer.preferredVelocityStrategy,
+      conserveVelocity: startingSettings.performer.conserveVelocity,
 
       // These options should always packaged together, even here,
       // because modifying *any* of them means reconstructing the performer from scratch.
@@ -149,6 +150,7 @@ const store = createStore({
         performer: {
           looping: state.looping,
           preferredVelocityStrategy: state.preferredVelocityStrategy,
+          conserveVelocity: state.conserveVelocity,
           constructorOptions: toRaw(state.performerConstructorOptions),
         }
       }
@@ -205,6 +207,7 @@ const store = createStore({
 
       state.looping = settings.performer.looping
       state.preferredVelocityStrategy = settings.performer.preferredVelocityStrategy
+      state.conserveVelocity = settings.performer.conserveVelocity
       state.performerConstructorOptions = settings.performer.constructorOptions
 
       localStorage.setItem("settings", JSON.stringify(settings))

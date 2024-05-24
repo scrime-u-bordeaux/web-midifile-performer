@@ -180,6 +180,11 @@
                     :items="velocityStrategies"
                     v-model="settingsBuffer.performer.preferredVelocityStrategy"
                   />
+
+                  <ToggleSwitch class="conserve-velocity"
+                    :label="$t('settings.performer.velocityStrategies.conserve')"
+                    v-model="settingsBuffer.performer.conserveVelocity"
+                  />
                 </div>
 
               </div>
@@ -322,6 +327,11 @@ h4 {
 }
 .performer-constructor-options > *::v-deep {
   color: #888;
+}
+
+.conserve-velocity {
+  margin-top: 2em;
+  padding: 0 9.5em;
 }
 
 .buttons {
@@ -590,7 +600,9 @@ export default {
 
       typeof importedSettings.performer.looping === "boolean" &&
 
-      this.velocityStrategies.map(strategy => strategy.id).includes(importedSettings.performer.preferredVelocityStrategy)
+      this.velocityStrategies.map(strategy => strategy.id).includes(importedSettings.performer.preferredVelocityStrategy) &&
+
+      typeof importedSettings.performer.conserveVelocity === "boolean"
     },
 
     exportSettings() {

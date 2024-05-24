@@ -296,7 +296,8 @@ export default {
       'currentOutputId',
       'synthNotesDecoded',
       'preferredVisualizer',
-      'preferredVelocityStrategy'
+      'preferredVelocityStrategy',
+      'conserveVelocity'
     ]),
     pianoRollSelected() {
       return this.selectedVisualizer === "piano"
@@ -356,6 +357,10 @@ export default {
       this.performer.setPreferredVelocityStrategy(newStrategy)
     },
 
+    conserveVelocity(newVal, oldVal) {
+      this.performer.setConserveVelocity(newVal)
+    },
+
     mfpMidiFile(newFile, oldFile) {
       this.setDesiredVisualizer()
     },
@@ -372,6 +377,7 @@ export default {
     // This will override the performer created by index.js.
     this.performer.constructInnerPerformer(this.performerConstructorOptions)
     this.performer.setPreferredVelocityStrategy(this.preferredVelocityStrategy)
+    this.performer.setConserveVelocity(this.conserveVelocity)
   },
   async mounted() {
     this.performer.clear();

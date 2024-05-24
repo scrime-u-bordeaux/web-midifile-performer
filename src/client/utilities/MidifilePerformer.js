@@ -227,6 +227,7 @@ class MidifilePerformer extends EventEmitter {
     this.pendingEndSet = [] // end set for the currently automatically playing starting set ; will be appended to perform mode's first triggered set
 
     this.preferredVelocityStrategy = "clippedScaledFromMax"
+    this.conserveVelocity = true
     this.performVelocitySaved = false;
     this.maxVelocities = [];
     this.velocityProfile = [];
@@ -413,8 +414,16 @@ class MidifilePerformer extends EventEmitter {
 
   setPreferredVelocityStrategy(s) {
     this.preferredVelocityStrategy = s
-    if(this.mode === "perform" || (this.mode === "listen" && this.performVelocitySaved))
+    if(this.mode === "perform" || (this.mode === "listen" && this.conserveVelocity && this.performVelocitySaved))
       this.#setChordVelocityMappingStrategy(s)
+  }
+
+  setConserveVelocity(c) {
+    this.conserveVelocity = c
+    if(this.mode === "listen") {
+      if(c && this.performVelocitySaved) this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy)
+      else this.#setChordVelocityMappingStrategy("none")
+    }
   }
 
   setMode(mode) {
@@ -434,7 +443,7 @@ class MidifilePerformer extends EventEmitter {
     if (this.mode === 'listen') {
 
       this.#setChordVelocityMappingStrategy(
-        this.performVelocitySaved ?
+        this.conserveVelocity && this.performVelocitySaved ?
           this.preferredVelocityStrategy :
           "none"
       );

@@ -311,7 +311,9 @@
         "sameForAll": "Uniforme",
         "adjustedScaledFromMean": "Ajust. (Moy.)",
         "clippedScaledFromMax": "Tronq. (Max)",
-        "clippedScaledFromMean": "Tronq. (Mean)"
+        "clippedScaledFromMean": "Tronq. (Mean)",
+
+        "conserve": "Conserver la vélocité de jeu en mode lecture"
       }
     },
 

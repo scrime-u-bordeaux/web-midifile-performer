@@ -311,7 +311,9 @@
         "sameForAll": "Same",
         "adjustedScaledFromMean": "Adjust (Mean)",
         "clippedScaledFromMax": "Clip (Max)",
-        "clippedScaledFromMean": "Clip (Mean)"
+        "clippedScaledFromMean": "Clip (Mean)",
+
+        "conserve": "Conserve perform velocity in playback mode"
       }
     },
 
