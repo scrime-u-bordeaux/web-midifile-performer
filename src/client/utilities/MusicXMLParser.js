@@ -24,6 +24,13 @@ const MICROSECONDS_PER_MINUTE = 60000000
 const TIE_START = 0
 const TIE_END = 1
 
+const STACCATO_FLAG = 1
+const STACCATISSIMO_FLAG = 2
+const MARCATO_FLAG = 4
+const ACCENT_FLAG = 8
+const DURATION_MASK = 3
+const VELOCITY_MASK = 12
+
 const stepOffsets = new Map(
   [
     ["a", 0],
@@ -93,6 +100,11 @@ export default function parseMusicXml(buffer) {
         // only written values (like mf, f, p, etc), may be provided.
         // These written values are stored here.
         notatedDynamics: null,
+
+        // A binary flag holder. From most to least significant bit :
+        // Accent, marcato, staccatissimo, staccato
+        // Used to carry that information through chords.
+        articulationFlags: 0,
 
         // DT is accumulated per part/track, with backup tags the only way of rewinding it.
         // We convert to relative at the end.
@@ -326,24 +338,28 @@ function getMidiNoteEventPair(xmlNote, partTrack) {
 }
 
 function getMidiNoteOnEvent(xmlNote, partTrack) {
+  manageNoteArticulations(xmlNote, partTrack)
+
   const noteNumber = getMidiNoteNumber(xmlNote)
   return {
     delta: getNoteStartTime(xmlNote, partTrack),
     channel : partTrack.activeChannel,
     noteOn: {
-      velocity: getMidiVelocity(xmlNote, true, partTrack.notatedDynamics),
+      velocity: getMidiVelocity(xmlNote, partTrack),
       noteNumber: noteNumber
     }
   }
 }
 
 function getMidiNoteOffEvent(xmlNote, partTrack) {
+  manageNoteArticulations(xmlNote, partTrack)
+
   const noteNumber = getMidiNoteNumber(xmlNote)
   return {
-    delta: getNoteStartTime(xmlNote, partTrack) + getTrueNoteDuration(xmlNote),
+    delta: getNoteStartTime(xmlNote, partTrack) + getTrueNoteDuration(xmlNote, partTrack),
     channel : partTrack.activeChannel,
     noteOff: {
-      velocity: getMidiVelocity(xmlNote, false),
+      velocity: getMidiVelocity(xmlNote),
       noteNumber: noteNumber
     }
   }
@@ -353,16 +369,30 @@ function getNoteStartTime(xmlNote, partTrack) {
   return xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta
 }
 
-function getTrueNoteDuration(xmlNote) {
-  let duration = xmlNote.duration
+function manageNoteArticulations(xmlNote, partTrack) {
+  if(!xmlNote.chord) {
+    partTrack.articulationFlags = 0
 
-  const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
-  if(articulations) {
-    if(!!articulations.find(articulation => !!articulation.staccato)) duration /= 2
-    else if(!!articulations.find(articulation => !!articulation.staccatissimo)) duration /= 4
+    const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
+
+    if(!articulations) return
+
+    if(!!articulations.find(articulation => !!articulation.staccato))
+      partTrack.articulationFlags |= STACCATO_FLAG
+    else if(!!articulations.find(articulation => !!articulation.staccatissimo))
+      partTrack.articulationFlags |= STACCATISSIMO_FLAG
+
+    if(!!articulations.find(articulation => !!articulation.accent))
+      partTrack.articulationFlags |= ACCENT_FLAG
+    else if(!!articulations.find(articulation => !!articulation.strongAccent))
+      partTrack.articulationFlags |= MARCATO_FLAG
   }
+}
 
-  return duration
+function getTrueNoteDuration(xmlNote, partTrack) {
+  // Divide by 2 (1 << 1) for staccato, by 4 (2 << 1) for staccatissimo.
+  const divisor = (partTrack.articulationFlags & DURATION_MASK) << 1
+  return divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration
 }
 
 // Velocity is defined by the dynamics (for the note on) and end-dynamics (for the note off)
@@ -370,18 +400,22 @@ function getTrueNoteDuration(xmlNote) {
 // When these are not present, dynamics tags are used instead,
 // Whose values are stored in the track metadata.
 
-function getMidiVelocity(xmlNote, on, notatedDynamics = null) {
+function getMidiVelocity(xmlNote, partTrack = null) {
+
+  const on = !!partTrack // This argument is only given for note ons, so a local alias makes more sense.
 
   const relevantDynamics = on ? xmlNote.dynamics : xmlNote.endDynamics
   const relevantDefault = on ? DEFAULT_ON_VELOCITY : DEFAULT_OFF_VELOCITY
 
-  let resultingDynamics
+  // Multiply by 1.25 (1 + (1 / (8 >> 1))) for a normal accent, by 1.5 (1 + (1 / (4 >> 1))) for a marcato.
+  const divisor = ((partTrack?.articulationFlags & VELOCITY_MASK) >> 1)
+  const multiplicator = 1 + (divisor ? 1 / divisor : 0)
 
   // Because of how our parsing lib currently works, there is always a dynamics and endDynamics field on notes.
   // So instead of testing for its existence, we test for a default.
   // Also, note that notatedDynamics can never be 0, so !! works fine here.
-  if(!!notatedDynamics && relevantDynamics === DEFAULT_PROVIDED_DYNAMICS)
-    resultingDynamics = notatedDynamics
+  if(!!partTrack?.notatedDynamics && relevantDynamics === DEFAULT_PROVIDED_DYNAMICS)
+    return multiplicator * partTrack.notatedDynamics
 
   // If the note's own dynamics is not set to the default value,
   // It overrides the staff notation.
@@ -389,15 +423,7 @@ function getMidiVelocity(xmlNote, on, notatedDynamics = null) {
   // Notice that dynamics are expressed as a percentage of velocity 90.
   // For example, dynamics = 71 means 0.71 * 90 ~= 64.
 
-  else resultingDynamics = Math.round((relevantDynamics / 100) * relevantDefault)
-
-  const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
-  if(articulations) {
-    if(!!articulations.find(articulation => !!articulation.accent)) resultingDynamics *= 1.25
-    else if(!!articulations.find(articulation => !!articulation.strongAccent)) resultingDynamics *= 1.5
-  }
-
-  return resultingDynamics
+  return multiplicator * Math.round((relevantDynamics / 100) * relevantDefault)
 }
 
 function getMidiNoteNumber(xmlNote) {
