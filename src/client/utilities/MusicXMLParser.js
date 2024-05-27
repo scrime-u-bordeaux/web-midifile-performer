@@ -203,58 +203,42 @@ export default function parseMusicXml(buffer) {
 
           case "Note":
 
-            // Since we modify these before pushing for factorization purposes,
-            // Store their relevant values here.
+            if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
 
-            const currentDelta = partTrack.currentDelta
-            const lastIncrement = partTrack.lastIncrement
+              // Notes bearing a "ties" attribute are special.
+              // They are notes "tied" beyond measure boundaries.
+              // They begin on the first note of the tie and end on the last.
+              // All tied notes in between only renew their prolongation.
+
+              if(!!event.ties && event.ties.length === 1) { // In other words :
+              // If there is more than one tie for a note, it simply prolongs the note further,
+              // So it should not be pushed.
+
+                if(event.ties[0].type === TIE_START)
+                  partTrack.events.push(
+                    getMidiNoteOnEvent(event, partTrack)
+                  )
+
+                else
+                  partTrack.events.push(
+                    getMidiNoteOffEvent(event, partTrack)
+                  )
+
+              } else if(!event.ties) {
+                partTrack.events.push(
+                  ...getMidiNoteEventPair(event, partTrack)
+                )
+              }
+            }
 
             // Notes bearing a "chord" attribute are synced to the previous pitch that did not bear one.
             // As such, their duration is irrelevant for the accumulator.
 
-            if(!event.chord) {
+            if(!event.chord) { // We want this to happen to rests as well.
               partTrack.currentDelta += event.duration
               partTrack.lastIncrement = event.duration
               if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
             }
-
-            // Rests are not actual pitches, and thus need not be pushed.
-
-            if(!!event.rest) continue
-
-            const channel = partTrack.activeChannel
-
-            // Notes bearing a "ties" attribute are special.
-            // They are notes "tied" beyond measure boundaries.
-            // They begin on the first note of the tie and end on the last.
-            // All tied notes in between only renew their prolongation.
-
-            if(!!event.ties) {
-
-              // In other words,
-              // If there is more than one tie for a note, it simply prolongs the note further,
-              // So it should not be pushed.
-              if(event.ties.length !== 1) continue
-
-              if(event.ties[0].type === TIE_START)
-                partTrack.events.push(
-                  getMidiNoteOnEvent(
-                    event, channel, currentDelta, lastIncrement, partTrack.notatedDynamics
-                  )
-                )
-
-              else
-                partTrack.events.push(
-                  getMidiNoteOffEvent(
-                    event, channel, currentDelta, lastIncrement, event.duration
-                  )
-                )
-
-            } else partTrack.events.push(
-              ...getMidiNoteEventPair(
-                event, channel, currentDelta, lastIncrement, event.duration, partTrack.notatedDynamics
-              )
-            )
 
             break
         }
@@ -334,30 +318,30 @@ function convertToRelative(trackEvents) {
   return trackEvents
 }
 
-function getMidiNoteEventPair(xmlNote, channel, currentDelta, lastIncrement, duration, notatedDynamics) {
+function getMidiNoteEventPair(xmlNote, partTrack) {
   return [
-    getMidiNoteOnEvent(xmlNote, channel, currentDelta, lastIncrement, notatedDynamics),
-    getMidiNoteOffEvent(xmlNote, channel, currentDelta, lastIncrement, duration)
+    getMidiNoteOnEvent(xmlNote, partTrack),
+    getMidiNoteOffEvent(xmlNote, partTrack)
   ]
 }
 
-function getMidiNoteOnEvent(xmlNote, channel, currentDelta, lastIncrement, notatedDynamics) {
+function getMidiNoteOnEvent(xmlNote, partTrack) {
   const noteNumber = getMidiNoteNumber(xmlNote)
   return {
-    delta: xmlNote.chord ? currentDelta - lastIncrement : currentDelta,
-    channel : channel,
+    delta: xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta,
+    channel : partTrack.activeChannel,
     noteOn: {
-      velocity: getMidiVelocity(xmlNote, true, notatedDynamics),
+      velocity: getMidiVelocity(xmlNote, true, partTrack.notatedDynamics),
       noteNumber: noteNumber
     }
   }
 }
 
-function getMidiNoteOffEvent(xmlNote, channel, currentDelta, lastIncrement, duration) {
+function getMidiNoteOffEvent(xmlNote, partTrack) {
   const noteNumber = getMidiNoteNumber(xmlNote)
   return {
-    delta: (xmlNote.chord ? currentDelta - lastIncrement : currentDelta) + duration,
-    channel : channel,
+    delta: (xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta) + xmlNote.duration,
+    channel : partTrack.activeChannel,
     noteOff: {
       velocity: getMidiVelocity(xmlNote, false),
       noteNumber: noteNumber
