@@ -357,10 +357,10 @@ function getTrueNoteDuration(xmlNote) {
   let duration = xmlNote.duration
 
   const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
-  if(!articulations) return duration
-
-  if(!!articulations.find(articulation => !!articulation.staccato)) duration = duration / 2
-  else if(!!articulations.find(articulation => !!articulation.staccatissimo)) duration = duration / 4
+  if(articulations) {
+    if(!!articulations.find(articulation => !!articulation.staccato)) duration /= 2
+    else if(!!articulations.find(articulation => !!articulation.staccatissimo)) duration /= 4
+  }
 
   return duration
 }
@@ -375,11 +375,13 @@ function getMidiVelocity(xmlNote, on, notatedDynamics = null) {
   const relevantDynamics = on ? xmlNote.dynamics : xmlNote.endDynamics
   const relevantDefault = on ? DEFAULT_ON_VELOCITY : DEFAULT_OFF_VELOCITY
 
+  let resultingDynamics
+
   // Because of how our parsing lib currently works, there is always a dynamics and endDynamics field on notes.
   // So instead of testing for its existence, we test for a default.
   // Also, note that notatedDynamics can never be 0, so !! works fine here.
   if(!!notatedDynamics && relevantDynamics === DEFAULT_PROVIDED_DYNAMICS)
-    return notatedDynamics
+    resultingDynamics = notatedDynamics
 
   // If the note's own dynamics is not set to the default value,
   // It overrides the staff notation.
@@ -387,7 +389,15 @@ function getMidiVelocity(xmlNote, on, notatedDynamics = null) {
   // Notice that dynamics are expressed as a percentage of velocity 90.
   // For example, dynamics = 71 means 0.71 * 90 ~= 64.
 
-  return Math.round((relevantDynamics / 100) * relevantDefault)
+  else resultingDynamics = Math.round((relevantDynamics / 100) * relevantDefault)
+
+  const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
+  if(articulations) {
+    if(!!articulations.find(articulation => !!articulation.accent)) resultingDynamics *= 1.25
+    else if(!!articulations.find(articulation => !!articulation.strongAccent)) resultingDynamics *= 1.5
+  }
+
+  return resultingDynamics
 }
 
 function getMidiNoteNumber(xmlNote) {
