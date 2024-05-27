@@ -56,6 +56,37 @@ const velocityMap = new Map(
   ]
 )
 
+// DISCLAIMER : many tempo values are ranges, these ranges often overlap, and sources contradict each other on their bounds.
+// I'm doing my best as a non-musician to create a scale that makes sense :
+// J.H. will probably be able to calibrate it better.
+
+const tempoMap = new Map(
+  [
+    ["Larghissimo", 20],
+    ["Grave", 35],
+    ["Lento", 40],
+    ["Largo", 50],
+    ["Larghetto", 60],
+    ["Adagio", 70],
+    ["Adagietto", 75],
+    ["Andante", 80],
+    ["Tranquillo", 80],
+    ["Andantino", 85],
+    ["Andante moderato", 95],
+    ["Moderato", 110],
+    ["Allegretto", 115],
+    ["Allegro moderato", 120],
+    ["Allegro", 140],
+    ["Molto Allegro", 155],
+    ["Allegro vivace", 155],
+    ["Vivace", 170],
+    ["Vivacissimo", 175],
+    ["Allegrissimo", 175],
+    ["Presto", 190],
+    ["Prestissimo", 210]
+  ]
+)
+
 export default function parseMusicXml(buffer) {
   const xmlScore = parseScore(buffer) // Always returns a timewise score, even from a partwise file.
   const trackMap = new Map()
@@ -162,14 +193,25 @@ export default function parseMusicXml(buffer) {
 
           case "Direction":
             // For some reasons, children of a directionType do not work on the _class system.
-            if(!!event.directionTypes && event.directionTypes.some(direction => direction.hasOwnProperty("dynamics"))) {
-              const dynamics = event.directionTypes.find(direction => direction.hasOwnProperty("dynamics")).dynamics
-              const velocityKeys = Array.from(velocityMap.keys())
-              const dynamicsValue = velocityMap.get(
-                // We're going to assume a dynamics object can only contain one "normal" dynamic tag
-                Object.keys(dynamics).find(key => velocityKeys.includes(key))
-              )
-              partTrack.notatedDynamics = dynamicsValue
+            if(!!event.directionTypes) {
+
+              if(event.directionTypes.some(direction => direction.hasOwnProperty("dynamics"))) {
+                const dynamics = event.directionTypes.find(direction => direction.hasOwnProperty("dynamics")).dynamics
+                const velocityKeys = Array.from(velocityMap.keys())
+                const dynamicsValue = velocityMap.get(
+                  // We're going to assume a dynamics object can only contain one "normal" dynamic tag
+                  Object.keys(dynamics).find(key => velocityKeys.includes(key))
+                )
+                partTrack.notatedDynamics = dynamicsValue
+              }
+
+              if(event.directionTypes.some(direction => direction.hasOwnProperty("words"))) {
+                // Again, I assume there's never going to be *more* than one direction string in a single direction object.
+                const word = event.directionTypes.find(direction => direction.hasOwnProperty("words")).words[0].data
+                const resultingTempo = tempoMap.get(word)
+                if(!!resultingTempo)
+                  partTrack.events.push(getTempoEvent({ tempo : resultingTempo }, partTrack.currentDelta))
+              }
             }
             // intentional fallthrough,
             // because sound tags can occur either directly at measure level or in a direction tag.
