@@ -328,7 +328,7 @@ function getMidiNoteEventPair(xmlNote, partTrack) {
 function getMidiNoteOnEvent(xmlNote, partTrack) {
   const noteNumber = getMidiNoteNumber(xmlNote)
   return {
-    delta: xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta,
+    delta: getNoteStartTime(xmlNote, partTrack),
     channel : partTrack.activeChannel,
     noteOn: {
       velocity: getMidiVelocity(xmlNote, true, partTrack.notatedDynamics),
@@ -340,13 +340,29 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
 function getMidiNoteOffEvent(xmlNote, partTrack) {
   const noteNumber = getMidiNoteNumber(xmlNote)
   return {
-    delta: (xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta) + xmlNote.duration,
+    delta: getNoteStartTime(xmlNote, partTrack) + getTrueNoteDuration(xmlNote),
     channel : partTrack.activeChannel,
     noteOff: {
       velocity: getMidiVelocity(xmlNote, false),
       noteNumber: noteNumber
     }
   }
+}
+
+function getNoteStartTime(xmlNote, partTrack) {
+  return xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta
+}
+
+function getTrueNoteDuration(xmlNote) {
+  let duration = xmlNote.duration
+
+  const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
+  if(!articulations) return duration
+
+  if(!!articulations.find(articulation => !!articulation.staccato)) duration = duration / 2
+  else if(!!articulations.find(articulation => !!articulation.staccatissimo)) duration = duration / 4
+
+  return duration
 }
 
 // Velocity is defined by the dynamics (for the note on) and end-dynamics (for the note off)
