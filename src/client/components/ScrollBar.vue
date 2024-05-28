@@ -41,7 +41,7 @@
         class="line-fg"
         x="0"
         :y="(layout.height - layout.barHeight) / 2"
-        :width="((index - start) / (size - 1)) * layout.width"
+        :width="((index - initialStart) / (size - 1)) * layout.width"
         :height="layout.barHeight" />
       <!-- <circle
         class="cursor"
@@ -51,7 +51,7 @@
         :r="layout.cursorSize / 2" /> -->
       <circle
         class="cursor"
-        :cx="((index - start) / (size - 1)) * (layout.width - layout.cursorSize) + (layout.cursorSize / 2)"
+        :cx="((index - initialStart) / (size - 1)) * (layout.width - layout.cursorSize) + (layout.cursorSize / 2)"
         :cy="layout.height / 2"
         :r="layout.cursorSize / 2"/>
       <rect
@@ -341,6 +341,7 @@ export default {
     document.addEventListener('mousemove', this.drag);
     document.addEventListener('mouseup', this.endDrag);
     document.addEventListener('keydown', this.onKeyDown);
+    this.initialStart = this.start
   },
   beforeUnmount() {
     document.removeEventListener('mousemove', this.drag);
@@ -409,9 +410,9 @@ export default {
         return;
       }
 
-      let position = (e.clientX - x - this.cursorRadius + (this.start / (this.size - 1))*(width - 2 * this.cursorRadius)) /
+      let position = (e.clientX - x - this.cursorRadius + (this.initialStart / (this.size - 1))*(width - 2 * this.cursorRadius)) /
                      (width - 2 * this.cursorRadius);
-                     
+
       let newIndex = Math.round(position * (this.size - 1));
       newIndex = Math.min(this.end, Math.max(this.start, newIndex));
       // console.log(`new index : ${newIndex}`);
