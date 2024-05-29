@@ -31,6 +31,9 @@ const ACCENT_FLAG = 8
 const DURATION_MASK = 3
 const VELOCITY_MASK = 12
 
+const DEFAULT_GRACE_DURATION_DOTTED = 1 / 3
+const DEFAULT_GRACE_DURATION_NORMAL = 1 / 2
+
 const stepOffsets = new Map(
   [
     ["a", 0],
@@ -132,11 +135,6 @@ export default function parseMusicXml(buffer) {
         // These written values are stored here.
         notatedDynamics: null,
 
-        // A binary flag holder. From most to least significant bit :
-        // Accent, marcato, staccatissimo, staccato
-        // Used to carry that information through chords.
-        articulationFlags: 0,
-
         // DT is accumulated per part/track, with backup tags the only way of rewinding it.
         // We convert to relative at the end.
         // This is awkward as we convert back to absolute in the MFP,
@@ -148,10 +146,22 @@ export default function parseMusicXml(buffer) {
         // when dealing with notes in a chord.
         lastIncrement: 0,
 
+        // A binary flag holder. From most to least significant bit :
+        // Accent, marcato, staccatissimo, staccato
+        // Used to carry that information through chords.
+        articulationFlags: 0,
+
+        // Testing for inclusion in this will prevent analyzing the same grace notes multiple times.
+        lastAnalyzedGraceNoteSequence: null,
+
         // Some files may not provide a default tempo event.
         // The MFP.js parser assumes the default tempo anyway,
         // But just to be safe, we provide an event for it to start.
-        events: [getDefaultTempoEvent()]
+        events: [getDefaultTempoEvent()],
+
+        // This is a very heavy, but convenient solution to find the preceding note-off of a grace note.
+        // Sadly, it will just take up space for nothing in most cases.
+        xmlNotesToOffEvents: new Map()
       }
     )
   })
@@ -170,10 +180,10 @@ export default function parseMusicXml(buffer) {
 
     for(const partID in measure.parts) {
       const partTrack = trackMap.get(partID)
-      const partObject = measure.parts[partID]
 
-      for(const eventIndex in partObject) {
-        const event = partObject[eventIndex]
+      const partArray = measure.parts[partID]
+
+      partArray.forEach((event, index) => {
 
         switch(event._class) {
 
@@ -220,7 +230,7 @@ export default function parseMusicXml(buffer) {
             // A sound event can modify the tempo, the channel, or both.
 
             // Not all Direction tags contain a Sound tag, however.
-            if(event._class === "Direction" && !event.sound) continue
+            if(event._class === "Direction" && !event.sound) return
 
             const soundEvent = event._class === "Sound" ? event : event.sound
 
@@ -259,6 +269,12 @@ export default function parseMusicXml(buffer) {
 
             if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
 
+              if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
+                const graceNoteData = gatherGraceNoteData(partArray, index)
+                partTrack.lastAnalyzedGraceNoteSequence = graceNoteData.graceNoteSequence
+                resolveGraceNoteDurations(graceNoteData, partTrack.xmlNotesToOffEvents)
+              }
+
               // Notes bearing a "ties" attribute are special.
               // They are notes "tied" beyond measure boundaries.
               // They begin on the first note of the tie and end on the last.
@@ -278,11 +294,10 @@ export default function parseMusicXml(buffer) {
                     getMidiNoteOffEvent(event, partTrack)
                   )
 
-              } else if(!event.ties) {
-                partTrack.events.push(
-                  ...getMidiNoteEventPair(event, partTrack)
-                )
-              }
+              } else if(!event.ties)
+                  partTrack.events.push(
+                    ...getMidiNoteEventPair(event, partTrack)
+                  )
             }
 
             // Notes bearing a "chord" attribute are synced to the previous pitch that did not bear one.
@@ -296,7 +311,7 @@ export default function parseMusicXml(buffer) {
 
             break
         }
-      }
+      })
 
       // Ensure measures do not encroach on each other,
       // Even if backups end up in the middle of one.
@@ -382,29 +397,33 @@ function getMidiNoteEventPair(xmlNote, partTrack) {
 function getMidiNoteOnEvent(xmlNote, partTrack) {
   manageNoteArticulations(xmlNote, partTrack)
 
-  const noteNumber = getMidiNoteNumber(xmlNote)
-  return {
+  const midiNoteOnEvent = {
     delta: getNoteStartTime(xmlNote, partTrack),
     channel : partTrack.activeChannel,
     noteOn: {
       velocity: getMidiVelocity(xmlNote, partTrack),
-      noteNumber: noteNumber
+      noteNumber: getMidiNoteNumber(xmlNote)
     }
   }
+
+  return midiNoteOnEvent
 }
 
 function getMidiNoteOffEvent(xmlNote, partTrack) {
   manageNoteArticulations(xmlNote, partTrack)
 
-  const noteNumber = getMidiNoteNumber(xmlNote)
-  return {
+  const midiNoteOffEvent = {
     delta: getNoteStartTime(xmlNote, partTrack) + getTrueNoteDuration(xmlNote, partTrack),
     channel : partTrack.activeChannel,
     noteOff: {
       velocity: getMidiVelocity(xmlNote),
-      noteNumber: noteNumber
+      noteNumber: getMidiNoteNumber(xmlNote)
     }
   }
+
+  partTrack.xmlNotesToOffEvents.set(xmlNote, midiNoteOffEvent)
+
+  return midiNoteOffEvent
 }
 
 function getNoteStartTime(xmlNote, partTrack) {
@@ -435,6 +454,62 @@ function getTrueNoteDuration(xmlNote, partTrack) {
   // Divide by 2 (1 << 1) for staccato, by 4 (2 << 1) for staccatissimo.
   const divisor = (partTrack.articulationFlags & DURATION_MASK) << 1
   return divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration
+}
+
+function gatherGraceNoteData(partArray, initialGraceNoteIndex) {
+  const graceNoteSequence = [partArray[initialGraceNoteIndex]]
+
+  let i = initialGraceNoteIndex + 1
+
+  for(; partArray[i].grace ; i++) graceNoteSequence.push(partArray[i])
+
+  const followingXmlNote = partArray[i]
+
+  let j = initialGraceNoteIndex - 1
+
+  for(; j >= 0 && (partArray[j]._class !== "Note" || partArray[j].grace) ; j--) continue
+
+  const previousXmlNote = partArray[j]
+
+  return { graceNoteSequence, followingXmlNote, previousXmlNote }
+}
+
+function resolveGraceNoteDurations({ graceNoteSequence, followingXmlNote, previousXmlNote }, xmlNotesToOffEvents) {
+
+  if(graceNoteSequence.some(graceNote => graceNote.grace.makeTime)) {
+    throw new Error('makeTime property of grace notes not yet supported by parser')
+  }
+
+  const relevantDefaultNext = followingXmlNote.dots ? DEFAULT_GRACE_DURATION_DOTTED : DEFAULT_GRACE_DURATION_NORMAL
+
+  const stealTimePrevious = graceNoteSequence.map(graceNote =>
+    parseInt(graceNote.grace.stealTimePrevious, 10) / 100
+  )
+  const stealTimeFollowing = graceNoteSequence.map(graceNote =>
+    parseInt(graceNote.grace.stealTimeFollowing, 10) / 100
+  )
+
+  // The index has to be used to mutate properly, because these are arrays of primitive values,
+  // Hence forEach passes their entries by copy.
+
+  stealTimePrevious.forEach((amount, index) => {
+    if(isNaN(amount)) stealTimePrevious[index] = 0
+    stealTimePrevious[index] *= graceNoteSequence[index].grace.slash ? 0.25 : 1
+  })
+
+  stealTimeFollowing.forEach((amount, index) => {
+    if(isNaN(amount)) stealTimeFollowing[index] = relevantDefaultNext / graceNoteSequence.length
+    stealTimeFollowing[index] *= graceNoteSequence[index].grace.slash ? 0.25 : 1
+  })
+
+  graceNoteSequence.forEach((graceNote, index) => {
+    graceNote.duration =
+      stealTimePrevious[index] * (previousXmlNote?.duration || 0) + stealTimeFollowing[index] * followingXmlNote.duration
+  })
+
+  followingXmlNote.duration *= 1 - stealTimeFollowing.reduce((acc, curr) => acc + curr, 0)
+
+  // const previousNoteOff = partTrack.xmlNotesToOffEvents.get(previousXmlNote)
 }
 
 // Velocity is defined by the dynamics (for the note on) and end-dynamics (for the note off)
