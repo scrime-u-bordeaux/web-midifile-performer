@@ -272,7 +272,7 @@ export default function parseMusicXml(buffer) {
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
                 const graceNoteData = gatherGraceNoteData(partArray, index)
                 partTrack.lastAnalyzedGraceNoteSequence = graceNoteData.graceNoteSequence
-                resolveGraceNoteDurations(graceNoteData, partTrack.xmlNotesToOffEvents)
+                resolveGraceNoteDurations(partTrack, graceNoteData)
               }
 
               // Notes bearing a "ties" attribute are special.
@@ -319,7 +319,7 @@ export default function parseMusicXml(buffer) {
     }
   })
 
-  // TODO : this isn't very semantically relevant, but it's the best place in the code flow to do so :
+  // This isn't very semantically relevant, but it's the best place in the code flow to do so :
   // The OSMD visualizer is going to require a list of ABSOLUTE DELTA events,
   // And this point is the only place in the entire program where we have absolute delta events at our disposal.
 
@@ -421,7 +421,11 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
     }
   }
 
-  partTrack.xmlNotesToOffEvents.set(xmlNote, midiNoteOffEvent)
+  partTrack.xmlNotesToOffEvents.set(xmlNote, {
+    previousNoteOff: midiNoteOffEvent,
+    start: getNoteStartTime(xmlNote, partTrack),
+    duration: getTrueNoteDuration(xmlNote, partTrack)
+  })
 
   return midiNoteOffEvent
 }
@@ -461,12 +465,17 @@ function gatherGraceNoteData(partArray, initialGraceNoteIndex) {
 
   let i = initialGraceNoteIndex + 1
 
-  for(; partArray[i].grace ; i++) graceNoteSequence.push(partArray[i])
+  // There may be multiple grace notes in a row.
+  // We will only deal with each sequence once, as the first note in it is encountered.
+  for(; i < partArray.length && partArray[i].grace ; i++) graceNoteSequence.push(partArray[i])
 
-  const followingXmlNote = partArray[i]
+  // There may not always be a following non-grace note in the measure.
+  const followingXmlNote = !!partArray[i]?.grace ? null : partArray[i]
 
   let j = initialGraceNoteIndex - 1
 
+  // There may also not be a preceding non-grace note in the measure.
+  // Non-note events (harmony notations, directions...) may also precede the grace cluster.
   for(; j >= 0 && (partArray[j]._class !== "Note" || partArray[j].grace) ; j--) continue
 
   const previousXmlNote = partArray[j]
@@ -474,13 +483,32 @@ function gatherGraceNoteData(partArray, initialGraceNoteIndex) {
   return { graceNoteSequence, followingXmlNote, previousXmlNote }
 }
 
-function resolveGraceNoteDurations({ graceNoteSequence, followingXmlNote, previousXmlNote }, xmlNotesToOffEvents) {
+// Grace notes have no built-in duration.
+// This constructs one for them, so the parser logic can treat them just like other notes.
 
+function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlNote, previousXmlNote }) {
+
+  // It is unclear what the make-time attribute does.
+  // No example for it exists in the MusicXML standard, nor in the Lilypond or OSMD test suites.
+  // OSMD devs seem not to know what to make of it either.
+  // Hence, it is ignored for now.
   if(graceNoteSequence.some(graceNote => graceNote.grace.makeTime)) {
-    throw new Error('makeTime property of grace notes not yet supported by parser')
+    console.warn('makeTime property of grace notes not yet supported by parser ; grace notes with make-time will be treated identically to other grace notes.')
   }
 
-  const relevantDefaultNext = followingXmlNote.dots ? DEFAULT_GRACE_DURATION_DOTTED : DEFAULT_GRACE_DURATION_NORMAL
+  // By default, a grace note precedes its principal.
+  // However, even if a following non-grace note exists in the measure,
+  // A grace note with steal-time-previous set relates to its preceding note.
+  const principalNotes = graceNoteSequence.map(graceNote =>
+    !!followingXmlNote && !graceNote.grace.stealTimePrevious ? followingXmlNote : previousXmlNote
+  )
+
+  const relatedToFollowing = principalNotes.filter(pnote => pnote === followingXmlNote).length
+  const relatedToPrevious = graceNoteSequence.length - relatedToFollowing
+
+  const relevantDefaults = principalNotes.map(principalNote =>
+    principalNote.dots ? DEFAULT_GRACE_DURATION_DOTTED : DEFAULT_GRACE_DURATION_NORMAL
+  )
 
   const stealTimePrevious = graceNoteSequence.map(graceNote =>
     parseInt(graceNote.grace.stealTimePrevious, 10) / 100
@@ -492,24 +520,48 @@ function resolveGraceNoteDurations({ graceNoteSequence, followingXmlNote, previo
   // The index has to be used to mutate properly, because these are arrays of primitive values,
   // Hence forEach passes their entries by copy.
 
-  stealTimePrevious.forEach((amount, index) => {
-    if(isNaN(amount)) stealTimePrevious[index] = 0
-    stealTimePrevious[index] *= graceNoteSequence[index].grace.slash ? 0.25 : 1
-  })
+  function assignStealValue(amount, index, steal) {
+    const relatedPrincipal = (steal === stealTimePrevious ? previousXmlNote : followingXmlNote)
 
-  stealTimeFollowing.forEach((amount, index) => {
-    if(isNaN(amount)) stealTimeFollowing[index] = relevantDefaultNext / graceNoteSequence.length
-    stealTimeFollowing[index] *= graceNoteSequence[index].grace.slash ? 0.25 : 1
-  })
+    if(isNaN(amount)) steal[index] =
+      principalNotes[index] === relatedPrincipal ?
+      relevantDefaults[index] / (
+        relatedPrincipal === previousXmlNote ? relatedToPrevious : relatedToFollowing
+      ) : 0
 
+    // Slashed grace notes, or acciaccature, are of very short duration.
+    // Four times as short as appoggiature seems like a good rule of thumb.
+    steal[index] *= graceNoteSequence[index].grace.slash ?
+      0.25 : 1
+  }
+
+  stealTimePrevious.forEach(assignStealValue)
+  stealTimeFollowing.forEach(assignStealValue)
+
+  // Normally, there should never be a case where both of these steal percentages are non-zero.
+  // Still, better to allow it if it happens.
   graceNoteSequence.forEach((graceNote, index) => {
     graceNote.duration =
-      stealTimePrevious[index] * (previousXmlNote?.duration || 0) + stealTimeFollowing[index] * followingXmlNote.duration
+      stealTimePrevious[index] * (previousXmlNote?.duration || 0)
+      + stealTimeFollowing[index] * (followingXmlNote?.duration || 0)
   })
 
-  followingXmlNote.duration *= 1 - stealTimeFollowing.reduce((acc, curr) => acc + curr, 0)
+  // Since the following note hasn't been parsed yet, its duration can simply be changed in place.
+  if(!!followingXmlNote)
+    followingXmlNote.duration *= 1 - stealTimeFollowing.reduce((acc, curr) => acc + curr, 0)
 
-  // const previousNoteOff = partTrack.xmlNotesToOffEvents.get(previousXmlNote)
+  // However, the previous note has already been parsed.
+  // Hence, it's the MIDI note off event that must be modified.
+  const { previousNoteOff, start, duration } = { ...partTrack.xmlNotesToOffEvents.get(previousXmlNote) }
+  if(!!previousNoteOff) {
+    const stolenPrevious = stealTimePrevious.reduce((acc, curr) => acc + curr, 0)
+    previousNoteOff.delta = start + duration * (1 - stolenPrevious)
+
+    // Because we always process grace note clusters when encountering the *first* of their members,
+    // The accumulator is always exactly where it was when this note off event was pushed.
+    // Hence, it can simply be rewound like so.
+    partTrack.currentDelta -= duration * stolenPrevious
+  }
 }
 
 // Velocity is defined by the dynamics (for the note on) and end-dynamics (for the note off)
