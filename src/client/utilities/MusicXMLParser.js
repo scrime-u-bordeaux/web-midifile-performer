@@ -194,9 +194,9 @@ export default function parseMusicXml(buffer) {
           // -------------------------------------------------------------------
 
           // Attribute tags can carry the division.
-          // If so, it is found in the first measure. Every part restates it, but it's of no consequence.
-          // Sound events may change divisions along the way, but supposedly, this is only after codas.
-          // For now, we won't worry about it.
+          // If so, it is found in the first measure for every part.
+          // However, *the specified divisions for every part may be different.*
+          // TODO : handle this, converting them all to one single division value for the resulting MIDI
 
           case "Attributes":
 
@@ -243,6 +243,9 @@ export default function parseMusicXml(buffer) {
               partTrack.activeChannel = soundEvent.midiInstrument.channel - 1
               partTrack.channelHistory.push(getChannelChangePseudoEvent(partTrack.activeChannel - 1, partTrack.currentDelta))
             }
+
+            // TODO :  Sound events may also change divisions along the way, but supposedly, this is only after codas.
+            // For now, we won't worry about it. It's less urgent than the multiple initial division problem.
 
             break
 
