@@ -135,6 +135,8 @@ export default function parseMusicXml(buffer) {
         // These written values are stored here.
         notatedDynamics: null,
 
+        transpose: 0,
+
         // DT is accumulated per part/track, with backup tags the only way of rewinding it.
         // We convert to relative at the end.
         // This is awkward as we convert back to absolute in the MFP,
@@ -199,6 +201,7 @@ export default function parseMusicXml(buffer) {
           case "Attributes":
 
             if(!!event.divisions) divisions = event.divisions
+            if(!!event.transposes) partTrack.transpose = parseInt(event.transposes[0].chromatic, 10)
             break
 
           case "Direction":
@@ -402,7 +405,7 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
     channel : partTrack.activeChannel,
     noteOn: {
       velocity: getMidiVelocity(xmlNote, partTrack),
-      noteNumber: getMidiNoteNumber(xmlNote)
+      noteNumber: getMidiNoteNumber(xmlNote, partTrack)
     }
   }
 
@@ -417,7 +420,7 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
     channel : partTrack.activeChannel,
     noteOff: {
       velocity: getMidiVelocity(xmlNote),
-      noteNumber: getMidiNoteNumber(xmlNote)
+      noteNumber: getMidiNoteNumber(xmlNote, partTrack)
     }
   }
 
@@ -595,13 +598,13 @@ function getMidiVelocity(xmlNote, partTrack = null) {
   return multiplicator * Math.round((relevantDynamics / 100) * relevantDefault)
 }
 
-function getMidiNoteNumber(xmlNote) {
+function getMidiNoteNumber(xmlNote, partTrack) {
   const { step, octave, alter } = xmlNote.pitch
   const stepOffset = stepOffsets.get(step)
   const realOctave = step === "a" || step === "b" ? octave : octave - 1
   const definedAlter = !!alter ? alter : 0
 
-  return (BASE_MIDI_PITCH + stepOffset) + (STEPS_PER_OCTAVE * realOctave) + definedAlter
+  return (BASE_MIDI_PITCH + stepOffset) + (STEPS_PER_OCTAVE * realOctave) + definedAlter + partTrack.transpose
 }
 
 function getTempoEvent(xmlSound, currentDelta) {
