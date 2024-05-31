@@ -163,7 +163,13 @@ export default function parseMusicXml(buffer) {
 
         // This is a very heavy, but convenient solution to find the preceding note-off of a grace note.
         // Sadly, it will just take up space for nothing in most cases.
-        xmlNotesToOffEvents: new Map()
+        xmlNotesToOffEvents: new Map(),
+
+        // Conversely, these two hacks are necessary to bypass OSMD's inability to position its cursor over grace notes.
+        // By using it, we can know at which deltas grace notes are encountered...
+        noteOnEventsToXmlNotes: new Map(),
+        // ... and where their principals are
+        xmlNotesToNoteOnEvents: new Map()
       }
     )
   })
@@ -363,6 +369,28 @@ export default function parseMusicXml(buffer) {
     }))
   })
 
+  // Third (and this is only due to an OSMD limitation), we need to identify every grace note in the score.
+  // This is so they can be ignored when assigning cursor positions and notehead equivalents.
+
+  const graceNotes = Array.from(trackMap.values()).flatMap(partTrack =>
+    partTrack.events.filter(
+      event => !!event.noteOn && !!partTrack.noteOnEventsToXmlNotes.get(event).grace
+    ).map(
+      event => {
+        const { delta, ...allOthers } = partTrack.xmlNotesToNoteOnEvents.get(
+          partTrack.noteOnEventsToXmlNotes.get(event).principal
+        )
+        event.principal = { delta: delta / (4 * divisions), ...allOthers }
+        return structuredClone(event)
+      }
+    ).map(
+      clonedEvent => {
+        const { delta, ...allOthers } = clonedEvent
+        return { delta: delta / (4 * divisions), ...allOthers }
+      }
+    )
+  )
+
   // Worse yet : we can't emit from there, because this isn't a class
   // (and it has no reason to be ! This isn't a sufficient reason to change that)
   // So instead, we pass this data along in the midiJson, for transmission by MFP.js.
@@ -372,7 +400,8 @@ export default function parseMusicXml(buffer) {
     format: 1,
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
     tempoEvents: tempoEvents,
-    channelChanges: channelChanges
+    channelChanges: channelChanges,
+    graceNotes: graceNotes
   }
 
   return midiJson
@@ -411,6 +440,9 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
       noteNumber: getMidiNoteNumber(xmlNote, partTrack)
     }
   }
+
+  partTrack.noteOnEventsToXmlNotes.set(midiNoteOnEvent, xmlNote)
+  partTrack.xmlNotesToNoteOnEvents.set(xmlNote, midiNoteOnEvent)
 
   return midiNoteOnEvent
 }
@@ -508,6 +540,11 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
   const principalNotes = graceNoteSequence.map(graceNote =>
     !!followingXmlNote && !graceNote.grace.stealTimePrevious ? followingXmlNote : previousXmlNote
   )
+
+  // Store this information for OSMD...
+  graceNoteSequence.forEach((graceNote, index) => {
+    graceNote.principal = principalNotes[index]
+  })
 
   const relatedToFollowing = principalNotes.filter(pnote => pnote === followingXmlNote).length
   const relatedToPrevious = graceNoteSequence.length - relatedToFollowing

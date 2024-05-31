@@ -107,6 +107,8 @@ export default {
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
       tempoEvents: [],
       channelChanges: new Map(),
+      graceNotes: [], // Only needed because of an OSMD cursor limitation
+      // (inability to position cursor over grace notes) when they are adjacent to their principal
 
       // The list of dates covered by the cursor that correspond to each set.
       // Used to move cursors during refresh.
@@ -170,6 +172,70 @@ export default {
 
     sequenceEnd(newEnd, oldEnd) {
       if(this.drawn) this.moveCursorToSet(newEnd + 1, "end")
+    },
+
+    noteSequence(newSequence, oldSequence) {
+      // This is called AFTER setGraceNotes !!
+
+      // This watcher maps the grace notes received from the parser in setGraceNotes
+      // into noteSequence notes for later use by reference equality.
+
+      // FIXME : this is duplicated from findNearestCursorDate...
+      // just without the search index optimization because it's not usable as the search array keeps changing
+
+      this.graceNotes = this.graceNotes.map(graceNote => {
+        let difference = Infinity;
+        let prevDifference = difference
+        let filteredNoteSequence = newSequence.filter(note =>
+          note.channel - 1 === graceNote.channel &&
+          note.pitch === graceNote.noteOn.noteNumber
+        )
+
+        let matchingNoteSequenceNote
+
+        for(let i = 0 ; i < filteredNoteSequence.length ; i++) {
+
+          difference = Math.abs(graceNote.delta - filteredNoteSequence[i].startTime)
+
+          if(difference > prevDifference) {
+            matchingNoteSequenceNote = filteredNoteSequence[i-1]
+            break
+          }
+          else prevDifference = difference
+        }
+
+        if(!matchingNoteSequenceNote)
+          matchingNoteSequenceNote = filteredNoteSequence[filteredNoteSequence.length - 1]
+
+        matchingNoteSequenceNote.principal = graceNote.principal
+
+        return matchingNoteSequenceNote
+      })
+
+      // There is no need to search the entire sequence to identify grace note principals.
+      // This is because they always differ in pitch from the grace notes themselves
+      // (that's what grace notes are for)
+      // and so, they can simply be encountered by running in the appropriate direction
+      // (forwards or backwards depending on if this is an after-grace)
+
+      this.graceNotes.forEach(graceNote => {
+        if(!graceNote.principal.noteOn) return // grace note shares principal with a previous grace note,
+        // hence it's already been converted to a noteSequence equivalent
+
+        const searchStartIndex = newSequence.indexOf(graceNote)
+        const step = graceNote.principal.delta > graceNote.startTime ? 1 : -1
+
+        let i = searchStartIndex
+        for(;
+          newSequence[i].pitch !== graceNote.principal.noteOn.noteNumber &&
+          newSequence[i].channel !== graceNote.principal.noteOn.channel;
+          i += step
+        );
+
+        graceNote.principal = newSequence[i]
+      });
+
+      console.log(this.graceNotes)
     },
 
     // TODO : implement zoom on wheel like the piano roll.
@@ -361,9 +427,6 @@ export default {
     onNoteClick(event) {
       const noteHeads = this.getNoteHeadsFromNoteSvgFamily(event.target)
       // There shouldn't be more than one set assigned to noteheads sharing the same stem...
-      // ...in practice, there is, because of a noteSequence bug,
-      // (see issue #77)
-      // but only the actual set matters, and it's that of the first valid index.
       const noteIndex = this.getFirstValidNoteIndex(noteHeads)
       if(noteIndex < 0 ) return
 
@@ -488,13 +551,14 @@ export default {
       // and to do that, we need an object.
       // I miss int references.
 
-      const cursorDatesAndSearchIndex = {
+      const searchData = {
         searchIndex: 0,
-        dates: allCursorDates
+        dates: allCursorDates,
+        upcomingPrincipal: null
       }
 
       this.cursorAnchors = this.setStarts.map(startIndex =>
-        this.findNearestCursorDate(startIndex, cursorDatesAndSearchIndex)
+        this.findNearestCursorDate(startIndex, searchData)
       ).concat([endDate]) // push() returns the length instead
 
       // I'm not very happy with this double array iteration.
@@ -508,11 +572,11 @@ export default {
       this.setOsmdCursorAnchors(this.cursorAnchors)
       this.setOsmdSetCoordinates(this.setCoordinates)
 
-      // console.log("All possible positions : ", allCursorPositions)
+      console.log("All possible positions : ", allCursorDates)
       // console.log("Full note sequence : ", this.noteSequence)
       //
-      // console.log("Retained anchors : ", this.cursorAnchors)
-      // console.log("Actual set start times : ", this.setStarts.map(startIndex => this.noteSequence[startIndex].startTime))
+      console.log("Retained anchors : ", this.cursorAnchors)
+      console.log("Actual set start times : ", this.setStarts.map(startIndex => this.noteSequence[startIndex].startTime))
     },
 
     setupCursors() {
@@ -556,8 +620,7 @@ export default {
     setupNoteHeads() {
 
       this.setStarts.forEach((start, setIndex) => {
-        const end = this.setEnds[setIndex]
-        const set = this.noteSequence.slice(start, end+1)
+        const set = this.getSet(setIndex)
 
         const usedNotesOfSet = []
 
@@ -611,6 +674,8 @@ export default {
               gnote.parentVoiceEntry.parentVoiceEntry.parentVoice.parent.idString
             )
 
+            // console.log(pitch, channel)
+
             // Normally, there should only be one note on of a given pitch and channel in each set.
             // However, due to how the MusicXML parser currently works, this might not be the case.
             // (When files with multiple voices set identical pitches on these voices without using separate channels)
@@ -621,9 +686,9 @@ export default {
               && !usedNotesOfSet.includes(candidate)
             )
 
-            if(!noteSequenceEquivalent) throw new Error(
-              `Could not find equivalent for graphical note in set ${setIndex}`
-            )
+            if(!noteSequenceEquivalent) return null// throw new Error(
+            //   `Could not find equivalent for graphical note in set ${setIndex}`
+            // )
 
             usedNotesOfSet.push(noteSequenceEquivalent)
 
@@ -694,6 +759,25 @@ export default {
       this.channelChanges = channelChanges
     },
 
+    setGraceNotes(graceNotes) {
+      // This assignment is only temporary.
+      // The noteSequence listener will map these values
+      // To their corresponding noteSequence notes.
+
+      this.graceNotes = graceNotes.map((note, index) => {
+        const { delta, principal, ...allOthers } = note
+
+        return {
+          delta: this.wholeNotesToSeconds(delta),
+          principal: {
+            delta: this.wholeNotesToSeconds(principal.delta),
+            noteOn: principal.noteOn
+          },
+          ...allOthers
+        }
+      })
+    },
+
     getNearestTempoEvent(timeStampInWholeNotes) {
       return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes)
     },
@@ -702,18 +786,62 @@ export default {
       return this.channelChanges.get(partId).findLast(event => event.delta <= timeStampInWholeNotes)
     },
 
-    findNearestCursorDate(setStartIndex, cursorDatesAndSearchIndex) {
+    // FIXME : last commit of mission on 31/05/2024 may have broken this function
+    // Though it should only be the case in files with grace notes...
+    // Should
+
+    findNearestCursorDate(setStartIndex, searchData) {
+      const set = this.getSet(this.setStarts.indexOf(setStartIndex))
+
+      // If we're dealing with a grace note cluster, determine its principal.
+
+      if(set.includes(searchData.upcomingPrincipal)) searchData.upcomingPrincipal = null
+      else if(this.includesGraceNote(set)) {
+        const principals = set.filter(
+          note => !!note.principal
+        ).map(
+          graceNote => graceNote.principal
+        ).sort(
+          (principalA, principalB) => principalA.startTime - principalB.startTime
+        )
+
+        // The chosen principal is the latest-occurring one.
+        // Just in case we have after-graces and graces with following principal
+        // back to back in the same cluster.
+        // (Yes, it can actually happen.)
+        searchData.upcomingPrincipal = principals[principals.length - 1]
+      }
+
       const referenceStartTime = this.noteSequence[setStartIndex].startTime
-      const allCursorDates = cursorDatesAndSearchIndex.dates
+      const allCursorDates = searchData.dates
 
       let difference = Infinity;
       let prevDifference = difference
 
-      for(let i = cursorDatesAndSearchIndex.searchIndex ; i < allCursorDates.length ; i++) {
+      for(let i = searchData.searchIndex ; i < allCursorDates.length ; i++) {
         difference = Math.abs(referenceStartTime - allCursorDates[i])
 
         if(difference > prevDifference) { // since we only ever move forwards in time, once the difference increases it will never decrease again.
-          cursorDatesAndSearchIndex.searchIndex = i;
+          // The cursor may need to remain in the same position if there was a grace note involved.
+          // However, in other cases, having it remain in place can lead to false positives,
+          // hence it must keeping moving forward.
+          // FIXME : actually, false positives can happen even in the case of grace notes...
+          // perhaps the whole idea of date approximation should be thrown out the window
+          // but how ?
+
+          const nextSet = this.getSet(this.setStarts.indexOf(setStartIndex)+1)
+
+          searchData.searchIndex =
+          !this.includesNonPrincipalNonGraceNote(
+            this.getGraceNotesInSet(set),
+            nextSet
+          ) &&
+          (
+            (!!searchData.upcomingPrincipal &&
+              this.includesGraceNote(nextSet))
+              ||
+            this.includesGraceNote(set)
+          ) ? i-1 : i;
           return allCursorDates[i-1] // this will never trigger at i = 0, because nothing will be larger than Infinity
         }
         else prevDifference = difference
@@ -756,6 +884,24 @@ export default {
       return !note.isRest() // MFP doesn't acknowledge rests
       &&
       (!ignoreTied || !this.isNoteTieProlongation(note)) // and ties, aside from starts, are not actual notes
+    },
+
+    includesGraceNote(set) {
+      return set.some(note => this.graceNotes.includes(note))
+    },
+
+    getGraceNotesInSet(set) {
+      return set.filter(note => !!note.principal)
+    },
+
+    includesNonPrincipalNonGraceNote(graceNotes, set) {
+      const principals = graceNotes.map(graceNote => graceNote.principal)
+      const nonGraceNotes = set.filter(note => !note.principal)
+      return nonGraceNotes.some(note => !principals.includes(note))
+    },
+
+    isFullGraceNoteSet(set) {
+      return set.every(note => this.graceNotes.includes(note))
     },
 
     // -------------------------------------------------------------------------
@@ -840,15 +986,18 @@ export default {
     // ---------------------------SHARED UTILS----------------------------------
     // -------------------------------------------------------------------------
 
-    currentCursorDate(providedCursor = undefined) {
-      const cursor = !!providedCursor ? providedCursor : this.cursor
-
-      const tempo = this.getNearestTempoEvent(cursor.iterator.currentTimeStamp.realValue)
+    wholeNotesToSeconds(wholeNoteTimeStamp) {
+      const tempo = this.getNearestTempoEvent(wholeNoteTimeStamp)
       return (
         tempo.usDate +
-        4 * (cursor.iterator.currentTimeStamp.realValue - tempo.delta)
+        4 * (wholeNoteTimeStamp - tempo.delta)
           * tempo.setTempo.microsecondsPerQuarter
       ) * 0.000001
+    },
+
+    currentCursorDate(providedCursor = undefined) {
+      const cursor = !!providedCursor ? providedCursor : this.cursor
+      return this.wholeNotesToSeconds(cursor.iterator.currentTimeStamp.realValue)
     },
 
     // When clicking on a note, multiple elements can be the target.
