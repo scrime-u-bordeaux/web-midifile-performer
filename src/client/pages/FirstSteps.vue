@@ -82,11 +82,12 @@ export default {
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
+      'currentOutputId',
       'synthNotesDecoded'
     ]),
     displayLoadingScreen() {
-      return (!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
-        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
+      return this.currentOutputId === this.DEFAULT_IO_ID &&
+      this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
     }
   },
   data() {

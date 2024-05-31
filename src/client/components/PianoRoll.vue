@@ -104,7 +104,8 @@ export default {
     ...mapState([
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'minKeyboardNote', 'keyboardState',
-      'highlightPalette'
+      'highlightPalette',
+      'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
 
     activeNoteRGB() {
@@ -117,6 +118,13 @@ export default {
       return this.highlightPalette.get(
         this.isModeSilent ? "darkBlue" : "darkGreen"
       )
+    },
+
+    // TODO : fix this when mode is unified into store, and make it a store getter. 
+    // Right now this is gonna work in both perform and play because we can't distinguish them...
+    playOnClick() {
+      return (this.isModeSilent && this.playOnClickInSilentMode) ||
+             (!this.isModeSilent && this.playOnClickInPerformMode)
     }
   },
 
@@ -297,14 +305,14 @@ export default {
 
       this.paintSetOrNote(rect)
 
-      // TODO : switch this when mode is unified into store.
-      if(this.isModeSilent) {
+      if(this.playOnClick) {
         this.$emit('play',
           this.ctrlKey ? // if control key is held down, only play the one note the mouse is highlighting
             [this.noteSequence[noteIndex]] :
             this.getSet(setIndex) // otherwise send the sets
             // nsNotes are compatible with the rest of the app, so this works
         )
+        this.clickPlayed = true
       }
     },
 
@@ -322,7 +330,11 @@ export default {
     onNoteLeave(event) {
       if(!!event) this.rectUnderCursor = null
       this.unfillActiveRects()
-      if(this.isModeSilent) this.$emit('stop')
+
+      if(this.clickPlayed) {
+        this.$emit('stop')
+        this.clickPlayed = false
+      }
     },
 
     onBoundaryDragStart(event) {

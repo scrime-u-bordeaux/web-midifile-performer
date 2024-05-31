@@ -25,12 +25,10 @@
     "speed": "Speed",
     "reset": "Reset"
   },
-  "ioController": {
-    "defaultInput": "Computer keyboard",
-    "defaultOutput": "Built-in synthesizer"
-  },
   "ioManager": {
-    "input": "Input",
+    "defaultInput": "Computer keyboard",
+    "defaultOutput": "Built-in synthesizer",
+    "input": "Inputs",
     "output": "Output",
     "refresh": "Refresh device list"
   },
@@ -58,23 +56,14 @@
       "first": "Upload a MIDI/MusicXML file",
       "change": "Upload a different file"
     },
-    "keyboardVelocity": {
-      "display": "Adjust keyboard velocities",
-      "hide": "Hide"
-    },
-    "velocitySliders": {
-      "pianissimo": "Pianissimo row",
-      "piano": "Piano row",
-      "mezzo": "Mezzo row",
-      "forte": "Forte row"
-    },
     "export": "Export",
     "noScores": {
       "message": "Looking for scores? You can find some",
       "link": "here!",
       "standalone": "Find more scores"
     },
-    "help": "Help"
+    "help": "? Help",
+    "settings": "⚙ Settings"
   },
   "credits": {
     "metapiano": "Metapiano demonstration video",
@@ -169,7 +158,7 @@
 
         "silent": {
           "h3": "Silent mode",
-          "describe": "<b>Silent mode</b> is the default mode of the application as a file is uploaded. It is also the only mode in which clicking on visualizer notes will play back their sound to help understand them ; this behavior can be disabled in settings."
+          "describe": "<b>Silent mode</b> is the default mode of the application as a file is uploaded. By default, it is also the only mode in which clicking on visualizer notes will play back their sound to help understand them ; this behavior can be modified in settings."
         },
 
         "playback": {
@@ -253,6 +242,96 @@
     "export": {
       "heading": "Export an interpretation",
       "content": "The \"Export\" button will download a MIDI file containing your last interpretation of the piece or sequence. You can then make use of it through the software of your choice."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+
+    "tabs": {
+      "io": "Input/Output",
+      "visualizer": "Visualizer",
+      "performer": "Advanced"
+    },
+
+    "io": {
+      "iomanager": {
+        "heading": "Active inputs and output"
+      },
+
+      "keyboardVelocities": {
+
+        "heading": "Keyboard velocities",
+
+        "velocitySliders": {
+          "pianissimo": "XCVB row",
+          "piano": "ASDF row",
+          "mezzo": "QWERTY row",
+          "forte": "Number row"
+        }
+      },
+
+      "channelVelocities": {
+        "heading": "Channel velocity offsets",
+
+        "channel": "Channel "
+      }
+    },
+
+    "visualizer": {
+      "preferredVisualizer": {
+        "heading": "Preferred visualizer"
+      },
+
+      "availableVisualizers": {
+        "pianoRoll": "Piano roll",
+        "sheetMusic": "Sheet music"
+      },
+
+      "clickPlay": {
+        "heading": "Play notes on visualizer click",
+        "silent": "In silent mode",
+        "perform": "In perform mode"
+      }
+    },
+
+    "performer": {
+
+      "looping": "Looping",
+
+      "constructorOptions": {
+        "unmeet": "Unmeet",
+        "complete": "Complete",
+        "temporalResolution": "Set resolution"
+      },
+
+      "velocityStrategies": {
+        "heading": "Velocity strategy",
+
+        "none": "None",
+        "sameForAll": "Same",
+        "adjustedScaledFromMean": "Adjust (Mean)",
+        "clippedScaledFromMax": "Clip (Max)",
+        "clippedScaledFromMean": "Clip (Mean)",
+
+        "conserve": "Conserve perform velocity in playback mode"
+      }
+    },
+
+    "buttons": {
+      "reset": "Reset",
+      "default": "Default",
+      "import": "Import",
+      "export": "Export",
+      "apply": "Apply",
+      "ok": "OK"
+    },
+
+    "confirm": {
+      "title": "You have unsaved changes in your settings.",
+      "question": "Would you like to save them ?",
+      "cancel": "Cancel",
+      "save": "Save",
+      "nosave": "Don't save"
     }
   },
   "loading": {

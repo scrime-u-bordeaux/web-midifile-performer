@@ -1,5 +1,7 @@
+import { toRaw } from 'vue'
 import { createStore } from 'vuex';
 import metaJson from '../../meta.json'
+import defaultSettings from './default_settings.json'
 
 const minKeyboardNote = 21;
 const maxKeyboardNote = 108;
@@ -54,6 +56,9 @@ const highlightPalette = new Map([
   ["darkGreen", "#1eae56"] // Basic app green 60% darker
 ]);
 
+const savedSettings = localStorage.getItem('settings')
+const startingSettings = !!savedSettings ? JSON.parse(savedSettings) : defaultSettings
+
 const store = createStore({
   state() {
     return {
@@ -61,8 +66,6 @@ const store = createStore({
 
       inputs: {},
       outputs: {},
-      currentInputId: 0,
-      currentOutputId: 0,
 
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
       mfpMidiFile: { id: 'mfp', title: '', url: '', isMidi: true, buffer: null },
@@ -96,6 +99,23 @@ const store = createStore({
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
 
+      currentInputIds: startingSettings.io.inputIds,
+      currentOutputId: startingSettings.io.outputId,
+      currentKeyboardVelocities: startingSettings.io.keyboardRowVelocities,
+      currentChannelControls: startingSettings.io.channelControls,
+
+      preferredVisualizer: startingSettings.visualizer.preferredVisualizer,
+      playOnClickInSilentMode: startingSettings.visualizer.clickPlay.silent,
+      playOnClickInPerformMode: startingSettings.visualizer.clickPlay.perform,
+
+      looping: startingSettings.performer.looping,
+      preferredVelocityStrategy: startingSettings.performer.preferredVelocityStrategy,
+      conserveVelocity: startingSettings.performer.conserveVelocity,
+
+      // These options should always packaged together, even here,
+      // because modifying *any* of them means reconstructing the performer from scratch.
+      performerConstructorOptions: startingSettings.performer.constructorOptions,
+
       meta: metaJson
     };
   },
@@ -103,23 +123,52 @@ const store = createStore({
     // midiBuffers: state => state.midiBuffers,
     firstStepsMidiFile: state => state.firstStepsMidiFile,
     mfpMidiFile: state => state.mfpMidiFile,
+    fileIncludes: (state) => (channel) => {
+      return new Set(state.noteSequence.map(note => note.channel)).has(channel)
+    },
+    currentSettings: state => {
+
+      // Properties that are objects or arrays need to be converted to raw from Vue's Proxy format
+      // because the Settings component needs to clone them, and Proxies cannot be cloned.
+
+      return {
+        io: {
+          inputIds: toRaw(state.currentInputIds),
+          outputId: state.currentOutputId,
+          keyboardRowVelocities: { ... state.currentKeyboardVelocities },
+          channelControls: toRaw(state.currentChannelControls)
+        },
+
+        visualizer: {
+          preferredVisualizer: state.preferredVisualizer,
+          clickPlay: {
+            silent: state.playOnClickInSilentMode,
+            perform: state.playOnClickInPerformMode
+          }
+        },
+
+        performer: {
+          looping: state.looping,
+          preferredVelocityStrategy: state.preferredVelocityStrategy,
+          conserveVelocity: state.conserveVelocity,
+          constructorOptions: toRaw(state.performerConstructorOptions),
+        }
+      }
+    }
   },
   mutations: {
     setLocale(state, locale) {
       state.locale = locale
+      localStorage.setItem('locale', locale)
     },
+
     setInputs(state, inputs) {
       state.inputs = inputs;
     },
     setOutputs(state, outputs) {
       state.outputs = outputs;
     },
-    setCurrentInputId(state, id) {
-      state.currentInputId = id;
-    },
-    setCurrentOutputId(state, id) {
-      state.currentOutputId = id;
-    },
+
     setFirstStepsMidiFile(state, file) {
       state.firstStepsMidiFile = { ...file };
     },
@@ -144,6 +193,26 @@ const store = createStore({
     setOsmdSetCoordinates(state, coords) {
       state.osmdSetCoordinates = coords;
     },
+
+    updateSettings(state, settings) {
+
+      state.currentInputIds = settings.io.inputIds
+      state.currentOutputId = settings.io.outputId
+      state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
+      state.currentChannelControls = settings.io.channelControls
+
+      state.preferredVisualizer = settings.visualizer.preferredVisualizer
+      state.playOnClickInSilentMode = settings.visualizer.clickPlay.silent
+      state.playOnClickInPerformMode = settings.visualizer.clickPlay.perform
+
+      state.looping = settings.performer.looping
+      state.preferredVelocityStrategy = settings.performer.preferredVelocityStrategy
+      state.conserveVelocity = settings.performer.conserveVelocity
+      state.performerConstructorOptions = settings.performer.constructorOptions
+
+      localStorage.setItem("settings", JSON.stringify(settings))
+    },
+
     animateNoteOn(state, note) {
       if (note.pitch >= state.minKeyboardNote &&
           note.pitch <= state.maxKeyboardNote) {

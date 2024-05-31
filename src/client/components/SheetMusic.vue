@@ -26,7 +26,8 @@ export default {
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
       'noteSequence', 'setStarts', 'setEnds', 'activeNotes', 'highlightPalette',
-      'osmdCursorAnchors', 'osmdSetCoordinates'
+      'osmdCursorAnchors', 'osmdSetCoordinates',
+      'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
 
     activeNoteRGB() {
@@ -47,6 +48,13 @@ export default {
 
     containerHeight() {
       return this.$refs.container.getBoundingClientRect().height
+    },
+
+    // TODO : fix this when mode is unified into store, and make it a store getter.
+    // Right now this is gonna work in both perform and play because we can't distinguish them...
+    playOnClick() {
+      return (this.isModeSilent && this.playOnClickInSilentMode) ||
+             (!this.isModeSilent && this.playOnClickInPerformMode)
     }
   },
 
@@ -367,12 +375,13 @@ export default {
 
       this.paintSetOrNote(noteIndex, "mouse")
 
-      if(this.isModeSilent) {
+      if(this.playOnClick) {
         this.$emit('play',
           this.ctrlKey ?
             [this.noteSequence[noteIndex]] :
             this.getSet(setIndex)
         )
+        this.clickPlayed = true
       }
     },
 
@@ -407,7 +416,11 @@ export default {
       const setIndex = this.getSetIndex(noteIndex)
 
       this.unpaint()
-      if(this.isModeSilent) this.$emit('stop')
+
+      if(this.clickPlayed) {
+        this.$emit('stop')
+        this.clickPlayed = false
+      }
     },
 
     // TODO : Can we factorize these ?

@@ -1,8 +1,25 @@
 <template>
+
 <div class="scroll-bar-container" :class="!hasBounds ? 'horizontal-layout' : 'vertical-layout'" >
-  <div :class="!hasBounds ? 'with-reset' : 'full-width'">
+
+  <div class="indices" v-if="!hasBounds">
+    <div class="no-bounds-indice">
+      <NumberInput
+        ref="index-input"
+        :label="capitalizedIndexLabel || $t('scrollBar.current')"
+        :min="hasBounds ? start + 1 : start"
+        :max="hasBounds ? end + 1 : end"
+        :step="1"
+        :value="Math.max(index, start)"
+        :allowNaN="true"
+        @input="onIndexInput"
+      />
+    </div>
+  </div>
+
+  <div :class="!hasBounds ? 'reduced-width' : 'full-width'">
     <!-- @mousedown="startDrag"> -->
-    <span v-if="!hasBounds" class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
+
     <svg
       style="/*display: none;*/"
       ref="scroll-bar"
@@ -24,7 +41,7 @@
         class="line-fg"
         x="0"
         :y="(layout.height - layout.barHeight) / 2"
-        :width="(index / (size - 1)) * layout.width"
+        :width="((index - initialStart) / (size - 1)) * layout.width"
         :height="layout.barHeight" />
       <!-- <circle
         class="cursor"
@@ -34,9 +51,9 @@
         :r="layout.cursorSize / 2" /> -->
       <circle
         class="cursor"
-        :cx="(index / (size - 1)) * (layout.width - layout.cursorSize) + layout.cursorSize / 2"
+        :cx="((index - initialStart) / (size - 1)) * (layout.width - layout.cursorSize) + (layout.cursorSize / 2)"
         :cy="layout.height / 2"
-        :r="layout.cursorSize / 2" />
+        :r="layout.cursorSize / 2"/>
       <rect
         v-if="hasBounds"
         ref="loop-start"
@@ -74,15 +91,15 @@
     </svg>
   </div>
 
-  <div class="indices">
-    <div v-if="hasBounds" class="play-button-container">
+  <div class="indices" v-if="hasBounds">
+    <div class="play-button-container">
       <div class="play-button"
        :class="currentMode === 'listen' ? 'pause-icon' : 'play-icon'"
        @click="toggleListen">
       </div>
     </div>
 
-    <div v-if="hasBounds" class="speed-input">
+    <div class="speed-input">
       <NumberInput
         ref="speed-input"
         :label="$t('scrollBar.speed')"
@@ -95,7 +112,7 @@
       />
     </div>
 
-    <div v-if="hasBounds">
+    <div>
       <NumberInput
         ref="start-input"
         :label="$t('scrollBar.start')"
@@ -108,7 +125,7 @@
       />
     </div>
 
-    <div :class="!hasBounds ? 'no-padding-indice' : ''">
+    <div>
       <NumberInput
         ref="index-input"
         :label="capitalizedIndexLabel || $t('scrollBar.current')"
@@ -121,7 +138,7 @@
       />
     </div>
 
-    <div v-if="hasBounds">
+    <div>
       <NumberInput
         ref="end-input"
         :label="$t('scrollBar.end')"
@@ -134,10 +151,12 @@
       />
     </div>
 
-    <div v-if="hasBounds" class="stop-button-container">
+    <div class="stop-button-container">
       <div class="stop-button" @click="silence()"></div>
     </div>
   </div>
+
+  <span v-else class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
 </div>
 </template>
 
@@ -150,24 +169,22 @@
 .scroll-bar-container.vertical-layout .full-width{
   width: var(--score-width)
 }
-.scroll-bar-container.horizontal-layout {
+.horizontal-layout {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center; /* Actually, this is useless on Firefox (because the elements on the same size) and doesn't work on Chrome (because native Chrome inputs are different sizes and thus misaligned anyway)*/
+  justify-content: space-between;
 }
-.scroll-bar-container.horizontal-layout .with-reset {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  margin-top: 12px;
-  width: 85%;
+.horizontal-layout .reduced-width {
+  margin-top: 2em;
+  width: 60%;
 }
 .pseudo-link {
   font-style: italic;
   color: var(--hint-blue);
   text-decoration: underline;
   cursor: pointer;
+  margin-top: 1.5em;
 }
 /* diable pointer events on all children : */
 rect, circle {
@@ -179,7 +196,7 @@ rect, circle {
 .line-bg {
   /*stroke: black;*/
   /* fill: black; */
-  fill: #555;
+  fill: #666;
 }
 .line-fg {
   /*stroke: var(--button-blue);*/
@@ -235,10 +252,12 @@ rect, circle {
   height: 1.875rem;
   background-color: red;
 }
-.indices .no-padding-indice {
+.indices .no-bounds-indice {
   padding-right: 0;
   padding-top: 0;
   padding-bottom: 0;
+
+  width: 11.25em;
 }
 .event-number {
   font-size: 2em;
@@ -322,6 +341,7 @@ export default {
     document.addEventListener('mousemove', this.drag);
     document.addEventListener('mouseup', this.endDrag);
     document.addEventListener('keydown', this.onKeyDown);
+    this.initialStart = this.start
   },
   beforeUnmount() {
     document.removeEventListener('mousemove', this.drag);
@@ -390,9 +410,9 @@ export default {
         return;
       }
 
-      let position = (e.clientX - x - this.cursorRadius) /
+      let position = (e.clientX - x - this.cursorRadius + (this.initialStart / (this.size - 1))*(width - 2 * this.cursorRadius)) /
                      (width - 2 * this.cursorRadius);
-      position = Math.max(Math.min(position, 1), 0);
+
       let newIndex = Math.round(position * (this.size - 1));
       newIndex = Math.min(this.end, Math.max(this.start, newIndex));
       // console.log(`new index : ${newIndex}`);
@@ -406,10 +426,10 @@ export default {
       this.dragging = null;
     },
     toggleListen(e) {
+      // THIS IS *BAD* and I despise myself for thinking such duplication was acceptable
+      // For the love of all that is good in this world, please let the store deal with this !!!
       const newMode = this.currentMode === 'listen' ? 'silent' : 'listen';
-      this.currentMode = newMode // to avoid such duplication, it's possible to use the store.
-      // however, this induces a lateral workflow between components that will be harder to maintain in the long run.
-      // a little duplication seems preferrable (unless we can find a third, better solution)
+      this.currentMode = newMode
       this.$emit('modeChange', newMode);
     },
     onPlaybackSpeedChanged(e) {
@@ -417,7 +437,7 @@ export default {
     },
     onKeyDown(e) {
       if(this.hasBounds) { // I don't think most users will want to use the arrow keys for velocities or playback speed, so this avoids having to manage focus
-        if(e.code==="ArrowLeft") this.$emit("index",Math.max(this.index - 1, 0))
+        if(e.code==="ArrowLeft") this.$emit("index",this.index - 1)
         if(e.code==="ArrowRight") this.$emit("index",this.index + 1)
       }
     },

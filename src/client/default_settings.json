@@ -1,0 +1,36 @@
+{
+  "io": {
+    "keyboardRowVelocities": {
+      "forte": 75,
+      "mezzo": 55,
+      "piano": 30,
+      "pianissimo": 15
+    },
+    "inputIds": ["0"],
+    "outputId": "0",
+    "channelControls": {
+      "channelVelocityOffsets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "channelActive": [true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true]
+    }
+  },
+
+  "visualizer": {
+    "preferredVisualizer": "piano",
+    "clickPlay": {
+      "silent": true,
+      "perform": false
+    }
+  },
+
+  "performer": {
+    "constructorOptions": {
+      "unmeet": true,
+      "complete": false,
+      "temporalResolution": 20
+    },
+
+    "looping": true,
+    "preferredVelocityStrategy": "clippedScaledFromMax",
+    "conserveVelocity": true
+  }
+}

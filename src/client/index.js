@@ -1,7 +1,7 @@
 import { createApp }      from 'vue';
 import { i18n } from './utilities/I18n'
 
-import ioctl, { defaultInputs, defaultVelocities, DEFAULT_IO_ID } from './utilities/IOController';
+import ioctl, { defaultInputs, DEFAULT_IO_ID } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth, { NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }  from './utilities/Synth';
 
@@ -13,7 +13,7 @@ import router             from './router';
 import App                from './App.vue';
 
 Promise.all([
-  performer.initialize(),
+  performer.initialize(), // WARNING : this is only the "vanilla" performer and will be overwritten by the MFP page as soon as it's constructed
   // synth.loadSounds(), // not here, we need a user interaction before
 ])
 .then(() => {
@@ -34,8 +34,6 @@ Promise.all([
   // Default variables
 
   app.provide('defaultMidiInput', defaultInputs);
-  app.provide('defaultKeyboardVelocities', defaultVelocities);
-
 
   // Utilities
 

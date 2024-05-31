@@ -1,4 +1,10 @@
 <template>
+
+  <Settings
+    ref="settings"
+    @closed="onSettingsClosed"
+  />
+
   <div class="mfp-and-loading-container">
     <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
@@ -24,7 +30,7 @@
             ) :
             'disabled'
           }.png`"
-          @click="selectedVisualizer = 'pianoRoll'"/>
+          @click="selectedVisualizer = 'piano'"/>
         <img :src="`pics/music_notes_icon_${
           sheetMusicSelected ?
             (currentMode === 'silent' ?
@@ -32,7 +38,7 @@
             ) :
             'disabled'
           }.png`"
-          @click="selectedVisualizer = 'sheetMusic'"/>
+          @click="selectedVisualizer = 'sheet'"/>
       </div>
 
       <SheetMusic
@@ -80,65 +86,47 @@
         @speed="onSpeedChange"
         @silence="onSilence"/>
 
-      <div class="file-input-wrapper">
-        <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-          <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
-          <label for="file" class="file-label">
-            {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
-          </label>
-          <div class="file-name-container" v-if="mfpMidiFile.buffer">
-            <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
-            <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
-              {{ $t('midiFilePerformer.noScores.standalone') }}
-            </span>
-          </div>
-          <div class="search-score-hint" v-else>
-            {{ $t('midiFilePerformer.noScores.message') }}
-            <span class="link" @click="$router.push('/look-for-scores')">
-              {{ $t('midiFilePerformer.noScores.link') }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <IOManager
-        class="manager"
-        v-if="mfpMidiFile.buffer"
-        @inputChange="onInputChange"/>
-
-      <div v-if="mfpMidiFile.buffer">
-        <div class="control-button-container">
-
-          <button
-            @click="$router.push('/guide')">
-            {{ $t("midiFilePerformer.help") }}
-          </button>
-
-          <button
-            style="display: none;"
-            @click="onClickExport"
-            :disabled="currentMode !== 'silent'">
-            {{ $t('midiFilePerformer.export') }}
-          </button>
-        </div>
-
-        <div v-if="isInputKeyboard">
-          <span class="settings-toggle pseudo-link" @click="displayKeyboardSettings = !displayKeyboardSettings">
-            {{ $t('midiFilePerformer.keyboardVelocity.' + (!displayKeyboardSettings ? 'display' : 'hide')) }}
-          </span>
-          <div v-if="displayKeyboardSettings">
-            <div v-for="(velocity, category) in currentKeyboardVelocities" class="velocity-slider">
-              <scroll-bar class="velocity-scroll"
-                :hasBounds="false"
-                :start="MIN_VELOCITY"
-                :end="MAX_VELOCITY"
-                :index="velocity"
-                :size="MAX_VELOCITY+1"
-                :indexLabel="$t('midiFilePerformer.velocitySliders.'+category)"
-                @index="setRowVelocity($event, category)"
-                @reset="setRowVelocity(defaultKeyboardVelocities[category], category)"
-                />
+      <div class="file-and-control">
+        <div class="file-input-wrapper">
+          <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
+            <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+            <label for="file" class="file-label">
+              {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
+            </label>
+            <div class="file-name-container" v-if="mfpMidiFile.buffer">
+              <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
+              <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
+                {{ $t('midiFilePerformer.noScores.standalone') }}
+              </span>
             </div>
+            <div class="search-score-hint" v-else>
+              {{ $t('midiFilePerformer.noScores.message') }}
+              <span class="link" @click="$router.push('/look-for-scores')">
+                {{ $t('midiFilePerformer.noScores.link') }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="mfpMidiFile.buffer">
+          <div class="control-button-container">
+
+            <button
+              @click="$router.push('/guide')">
+              {{ $t("midiFilePerformer.help") }}
+            </button>
+
+            <button
+              @click="openSettings">
+              {{ $t('midiFilePerformer.settings') }}
+            </button>
+
+            <button
+              style="display: none;"
+              @click="onClickExport"
+              :disabled="currentMode !== 'silent'">
+              {{ $t('midiFilePerformer.export') }}
+            </button>
           </div>
         </div>
       </div>
@@ -151,6 +139,7 @@
   display: flex;
   justify-content: center;
   align-content: center;
+  text-align: center;
 }
 .mfp-container {
   position: absolute;
@@ -186,10 +175,9 @@
   height: 5%;
   cursor: pointer;
 }
-.manager {
-  width: fit-content;
-  max-width: var(--score-width);
-  padding-bottom: 12px;
+.file-and-control {
+  display: flex;
+  align-items: center;
 }
 .file-input-wrapper {
   width: fit-content;
@@ -254,15 +242,6 @@ span.link {
 .keyboard {
   max-width: var(--score-width);
 }
-.velocity-slider {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 12px;
-}
-.velocity-scroll {
-  display: inline-block;
-  width: var(--score-width);
-}
 .pseudo-link {
   font-style: italic;
   color: var(--hint-blue);
@@ -271,56 +250,60 @@ span.link {
 }
 .control-button-container {
   padding-bottom: 12px;
+  display: flex;
 }
 </style>
 
 <script>
 import { nextTick } from 'vue';
 import { mapMutations, mapState } from 'vuex';
-import IOManager from '../components/IOManager.vue';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
 import PianoRoll from '../components/PianoRoll.vue'
 import SheetMusic from '../components/SheetMusic.vue'
+import Settings from '../components/Settings.vue'
+
+const isEqual = require('lodash.isequal')
 
 const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { IOManager, Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic },
+  components: { Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic, Settings },
   data() {
     return {
-      selectedVisualizer: "pianoRoll",
+      selectedVisualizer: null, // computed properties cannot be accessed in data
       loadingFlag: false,
       fileArrayBuffer: null,
-      currentKeyboardVelocities: { ...this.ioctl.getCurrentVelocities() },
-      isInputKeyboard: true,
-      displayKeyboardSettings: false,
       spacePressed: false,
       pauseWithRelease: false,
-      MIN_VELOCITY: 0,
-      MAX_VELOCITY: 127,
       MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
     };
   },
   computed: {
     ...mapState([
       'mfpMidiFile',
+      'performerConstructorOptions',
       'minKeyboardNote',
       'maxKeyboardNote',
       'keyboardState',
+      'looping',
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
       'sequenceLength',
-      'synthNotesDecoded'
+      'currentOutputId',
+      'synthNotesDecoded',
+      'preferredVisualizer',
+      'preferredVelocityStrategy',
+      'conserveVelocity'
     ]),
     pianoRollSelected() {
-      return this.selectedVisualizer === "pianoRoll"
+      return this.selectedVisualizer === "piano"
     },
     sheetMusicSelected() {
-      return this.selectedVisualizer === "sheetMusic"
+      return this.selectedVisualizer === "sheet"
     },
     trimmedTitle() {
       return this.mfpMidiFile.title.replace(this.fileExtension, '').length < 45 ?
@@ -332,10 +315,11 @@ export default {
       return '.' + this.getFileExtension(this.mfpMidiFile.title)
     },
     displayLoadingScreen() {
-      return ((!localStorage.getItem('output') || localStorage.getItem('output') === this.DEFAULT_IO_ID)
-        && this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES)
-        ||
-        this.loadingFlag
+      return (
+        this.currentOutputId === this.DEFAULT_IO_ID &&
+        this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
+      )
+      || this.loadingFlag
     },
     // TODO : we should work towards deprecating mode state duplication.
     currentMode: {
@@ -353,13 +337,47 @@ export default {
     }
   },
   watch: {
+
+    async performerConstructorOptions(newOptions, oldOptions) {
+      if(isEqual(newOptions, oldOptions)) return // necessary because these are objects,
+      // so this listener *will* fire every time settings are applied.
+
+      this.performer.constructInnerPerformer(newOptions)
+      if(!!this.mfpMidiFile.buffer) { // Should normally always be the case in this listener.
+        // (Because it means we modified the settings, and they're inaccessible without loading a file)
+        // (...for now.)
+        this.loadingFlag = true;
+        this.preparePerformerForLoad()
+        await this.performer.loadMidifile(this.mfpMidiFile.buffer, this.mfpMidiFile.isMidi);
+        this.loadingFlag = false;
+      }
+    },
+
+    preferredVelocityStrategy(newStrategy, oldStrategy) {
+      this.performer.setPreferredVelocityStrategy(newStrategy)
+    },
+
+    conserveVelocity(newVal, oldVal) {
+      this.performer.setConserveVelocity(newVal)
+    },
+
     mfpMidiFile(newFile, oldFile) {
-      if(newFile.isMidi) this.selectedVisualizer = "pianoRoll"
+      this.setDesiredVisualizer()
+    },
+
+    looping(newVal, oldVal) {
+      this.performer.setLooping(newVal)
     }
   },
   created() {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
+
+    this.performer.setLooping(this.looping)
+    // This will override the performer created by index.js.
+    this.performer.constructInnerPerformer(this.performerConstructorOptions)
+    this.performer.setPreferredVelocityStrategy(this.preferredVelocityStrategy)
+    this.performer.setConserveVelocity(this.conserveVelocity)
   },
   async mounted() {
     this.performer.clear();
@@ -383,7 +401,13 @@ export default {
     }
 
     // FIXME : delegate speed to the store so it reacts...
+    // ...or rather, integrate v-model to the scroll-bar !!
     this.$refs.mainScrollBar?.resetSpeedDisplay();
+
+    // Watchers are not called on mount
+    // And we can't do this on create, because otherwise, remounting the page never sets this again
+    // (and so no visualizer is displayed)
+    this.setDesiredVisualizer()
 
     this.$emit("canPerform", true)
   },
@@ -501,10 +525,6 @@ export default {
       this.$refs.sheetMusic.setChannelChanges(channelChanges)
     },
 
-    onInputChange(input) {
-      // this.isInputKeyboard = (input === this.DEFAULT_IO_ID)
-    },
-
     onStartChange(i) {
       this.performer.setSequenceBounds(i, this.sequenceEnd);
     },
@@ -566,8 +586,20 @@ export default {
 
     onIsModeSilent(isIt) {
       this.$refs.keyboard.isModeSilent = isIt
+
       this.$refs.pianoRoll.onIsModeSilent(isIt)
       this.$refs.sheetMusic.onIsModeSilent(isIt)
+
+      // This whole charade is necessary solely because the mode isn't unified.
+      // If it were, all components would read from store and instantly know it changed,
+      // Even if the change came from downwards up (i.e. : MFP.js set itself to silent, because loopEnd was reached with loop off)
+      // But it's not unified. So we have to pass that information all the way through.
+
+      this.$refs.pianoRoll.stop()
+      this.$refs.sheetMusic.stop()
+
+      if(isIt && this.$refs.mainScrollBar?.currentMode === 'listen')
+        this.$refs.mainScrollBar.toggleListen()
     },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
@@ -580,9 +612,22 @@ export default {
       this.ioctl.allNotesOff()
     },
 
+    openSettings() {
+      this.$refs.settings.open()
+      this.$emit("canPerform", false)
+    },
+    onSettingsClosed() {
+      this.$emit("canPerform", true)
+    },
+
     // -------------------------------------------------------------------------
     // -------------------------------MISC--------------------------------------
     // -------------------------------------------------------------------------
+
+    setDesiredVisualizer() {
+      if(this.mfpMidiFile.isMidi) this.selectedVisualizer = "piano"
+      else this.selectedVisualizer = this.preferredVisualizer
+    },
 
     preparePerformerForLoad() {
       this.currentMode = 'silent';
@@ -590,11 +635,6 @@ export default {
       this.performer.setMode(this.currentMode);
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
-    },
-
-    setRowVelocity(i, category) {
-      this.currentKeyboardVelocities[category] = i
-      this.ioctl.refreshVelocities(this.currentKeyboardVelocities) // maybe we'd want to delegate this to the IOManager instead of injecting the ioctl here ?
     },
 
     getFileExtension(fileName) {

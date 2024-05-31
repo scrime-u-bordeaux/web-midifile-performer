@@ -19,6 +19,7 @@
 <style scoped>
 input {
   user-select: none;
+  width: 100%;
 }
 input::selection {
   caret-color: transparent;
@@ -27,6 +28,7 @@ input::selection {
 }
 .input-label {
   margin-bottom: 8px;
+  text-align: center;
 }
 .number-container {
   display: flex;

@@ -23,14 +23,12 @@
     "current": "Courant",
     "end": "Fin",
     "speed": "Vitesse",
-    "reset": "Réinitialiser"
-  },
-  "ioController": {
-    "defaultInput": "Clavier d'ordinateur",
-    "defaultOutput": "Synthétiseur intégré"
+    "reset": "Réinit."
   },
   "ioManager": {
-    "input": "Entrée",
+    "defaultInput": "Clavier d'ordinateur",
+    "defaultOutput": "Synthétiseur intégré",
+    "input": "Entrées",
     "output": "Sortie",
     "refresh": "Rafraîchir les périphériques"
   },
@@ -58,23 +56,14 @@
       "first": "Charger un fichier MIDI/MusicXML",
       "change": "Changer de fichier"
     },
-    "keyboardVelocity": {
-      "display": "Régler les vélocités du clavier",
-      "hide": "Minimiser"
-    },
-    "velocitySliders": {
-      "pianissimo": "Rangée pianissimo",
-      "piano": "Rangée piano",
-      "mezzo": "Rangée mezzo",
-      "forte": "Rangée forte"
-    },
     "export": "Exporter",
     "noScores": {
       "message": "Vous n'avez pas de partitions ? Trouvez-en de nouvelles",
       "link": "ici !",
       "standalone": "Trouver d'autres partitions"
     },
-    "help": "Aide"
+    "help": "? Aide",
+    "settings": "⚙ Paramètres"
   },
   "credits": {
     "metapiano": "Métapiano et vidéo de interprétation",
@@ -170,7 +159,7 @@
 
         "silent": {
           "h3": "Mode silencieux",
-          "describe": "Le <b>mode silencieux</b> est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être désactivé dans les paramètres."
+          "describe": "Le <b>mode silencieux</b> est le mode par défaut de cette application, qu'elle adopte lors du chargement d'un nouveau fichier. Par défaut, il s'agit également du seul mode où, lors d'un clic sur les notes des visualiseurs, celles-ci résonneront en retour ; ce comportement peut être modifié dans les paramètres."
         },
 
         "playback": {
@@ -254,6 +243,95 @@
     "export": {
       "heading": "Enregistrer votre interprétation",
       "content": "Vous pouvez enregistrer vos interprétations depuis le MidiFile Performer en cliquant sur le bouton « Exporter ». Ceci produira un fichier MIDI que vous pourrez ensuite exploiter à l’aide de l'outil de votre choix."
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+
+    "tabs": {
+      "io": "Entrée/Sortie",
+      "visualizer": "Visualiseur",
+      "performer": "Avancé"
+    },
+
+    "io": {
+      "iomanager": {
+        "heading": "Entrées et sortie actives"
+      },
+
+      "keyboardVelocities": {
+
+        "heading": "Vélocités du clavier",
+
+        "velocitySliders": {
+          "pianissimo": "Rangée WXCV",
+          "piano": "Rangée QSDF",
+          "mezzo": "Rangée AZERTY",
+          "forte": "Rangée numérique"
+        }
+      },
+
+      "channelVelocities": {
+        "heading": "Offsets de vélocité des canaux",
+
+        "channel": "Canal "
+      }
+    },
+
+    "visualizer": {
+      "preferredVisualizer": {
+        "heading": "Visualiseur par défaut"
+      },
+
+      "availableVisualizers": {
+        "pianoRoll": "Piano roll",
+        "sheetMusic": "Partition"
+      },
+
+      "clickPlay": {
+        "heading": "Jouer les notes cliquées",
+        "silent": "En mode silencieux",
+        "perform": "En mode interprétation"
+      }
+    },
+
+    "performer": {
+      "looping": "Bouclage",
+
+      "constructorOptions": {
+        "unmeet": "Unmeet",
+        "complete": "Compléter",
+        "temporalResolution": "Résolution d'ensemble"
+      },
+
+      "velocityStrategies": {
+        "heading": "Stratégie de vélocité",
+
+        "none": "Aucune",
+        "sameForAll": "Uniforme",
+        "adjustedScaledFromMean": "Ajust. (Moy.)",
+        "clippedScaledFromMax": "Tronq. (Max)",
+        "clippedScaledFromMean": "Tronq. (Mean)",
+
+        "conserve": "Conserver la vélocité de jeu en mode lecture"
+      }
+    },
+
+    "buttons": {
+      "reset": "Réinit.",
+      "default": "Défaut",
+      "import": "Importer",
+      "exporter": "Exporter",
+      "apply": "Appliquer",
+      "ok": "Confirmer"
+    },
+
+    "confirm": {
+      "title": "Certaines de vos modifications ne sont pas sauvegardées.",
+      "question": "Souhaitez-vous les sauvegarder ?",
+      "cancel": "Annuler",
+      "save": "Sauvegarder",
+      "nosave": "Ne pas sauvegarder"
     }
   },
   "loading": {

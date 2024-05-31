@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
-import { i18n } from './I18n.js';
-const { t } = i18n.global
+
+import defaultSettings from '../default_settings.json'
 
 const universalLayout = {
   forte: ["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7","Digit8","Digit9","Digit0"],
@@ -8,13 +8,6 @@ const universalLayout = {
   piano: ["KeyA","KeyS","KeyD","KeyF","KeyG","KeyH","KeyJ","KeyK","KeyL","Semicolon"],
   pianissimo: ["KeyZ","KeyX","KeyC","KeyV","KeyB","KeyN","KeyM","Comma","Period","Slash"]
 }
-
-const defaultVelocities = {
-  forte: 75,
-  mezzo: 55,
-  piano: 30,
-  pianissimo: 15,
-};
 
 const DEFAULT_IO_ID = '0'
 
@@ -24,16 +17,12 @@ const MIDI_CHANNEL_MASK = 0x0F
 const MIDI_NOTE_ON_COMMAND = 144
 const MIDI_NOTE_OFF_COMMAND = 128
 
-// Using vue-i18n t here is sadly not sufficient for it to change on locale change
-// A separate method deals with updating these labels
-// TODO : should we just put them elsewhere and inject them ?
-
 const defaultInputs = {
-  0: { id: DEFAULT_IO_ID, name: t('ioController.defaultInput') }
+  0: { id: DEFAULT_IO_ID, name: 'ioManager.defaultInput' }
 };
 
 const defaultOutputs = {
-  0: { id: DEFAULT_IO_ID, name: t('ioController.defaultOutput') }
+  0: { id: DEFAULT_IO_ID, name: 'ioManager.defaultOutput' }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -44,7 +33,7 @@ class IOController extends EventEmitter {
 
     this.midiAccess = null;
 
-    this.currentInputId = DEFAULT_IO_ID;
+    this.currentInputIds = [DEFAULT_IO_ID];
     this.currentOutputId = DEFAULT_IO_ID;
 
     document.addEventListener('keydown', this.onKeyDown.bind(this));
@@ -59,7 +48,8 @@ class IOController extends EventEmitter {
     // List of input IDs whose event listeners cannot be removed.
     this.inputsAwaitingUnplug = new Set()
 
-    this.refreshVelocities(defaultVelocities)
+    this.refreshKeyboardVelocities(defaultSettings.io.keyboardRowVelocities)
+    this.refreshChannelControls(defaultSettings.io.channelControls)
   }
 
   setInternalSampler(sampler) {
@@ -67,8 +57,7 @@ class IOController extends EventEmitter {
   }
 
   onKeyDown(e) {
-    if (this.currentInputId !== DEFAULT_IO_ID
-        || e.repeat)
+    if (!this.currentInputIds.includes(DEFAULT_IO_ID) || e.repeat)
       return;
 
     if (this.keyCommandsState.has(e.code)) {
@@ -88,7 +77,7 @@ class IOController extends EventEmitter {
   }
 
   onKeyUp(e) {
-    if (this.currentInputId !== DEFAULT_IO_ID) return;
+    if (!this.currentInputIds.includes(DEFAULT_IO_ID)) return;
 
     if (this.keyCommandsState.has(e.code)) {
       let { pressed, id, velocity } = this.keyCommandsState.get(e.code);
@@ -123,8 +112,8 @@ class IOController extends EventEmitter {
           )
       })
 
-      if(!!this.inputs && this.inputs[this.currentInputId] === undefined)
-        this.currentInputId = DEFAULT_IO_ID
+      // if(!!this.inputs && this.currentInputIds.every(inputId => this.inputs[inputId] === undefined))
+      //   this.currentInputId = DEFAULT_IO_ID
       if(!!this.outputs && this.outputs[this.currentOutputId] === undefined)
         this.currentOutputId = DEFAULT_IO_ID
     }
@@ -156,30 +145,37 @@ class IOController extends EventEmitter {
     this.emit('outputs', this.outputs);
   }
 
-  setInput(inputId) {
-    if(this.inputs[inputId] === undefined) return;
+  setInputs(inputIds) {
+    if(
+      inputIds.length > 0 && // Array.every(foo) is always true for an empty array
+      inputIds.every(inputId => this.inputs[inputId] === undefined)
+    ) return
 
-    if (this.currentInputId !== DEFAULT_IO_ID) {
-      if(this.inputs[this.currentInputId] !== undefined)
-        this.inputs[this.currentInputId].removeEventListener(
+    this.currentInputIds.forEach(inputId => {
+      if(inputId === DEFAULT_IO_ID) return
+
+      if(this.inputs[inputId] !== undefined) {
+        console.log("Removing listener for", this.inputs[inputId])
+        this.inputs[inputId].removeEventListener(
           'midimessage',
-          this.boundOnMidiListener,
-        );
+          this.boundOnMidiListener
+      )}
+      else this.inputsAwaitingUnplug.add(inputId)
+    })
 
-      else this.inputsAwaitingUnplug.add(this.currentInputId)
-    }
+    this.currentInputIds = [...inputIds];
 
-    this.currentInputId = inputId;
-    localStorage.setItem('input', inputId)
+    this.currentInputIds.forEach(inputId => {
+      if(inputId === DEFAULT_IO_ID) return
 
-    if (this.currentInputId !== DEFAULT_IO_ID) {
-      this.inputs[this.currentInputId].addEventListener(
+      this.inputs[inputId].addEventListener(
         'midimessage',
         this.boundOnMidiListener,
-      );
-    }
+      )
+    })
 
-    this.emit('currentInputId', this.currentInputId);
+    // This is probably vestigial
+    this.emit('currentInputIds', this.currentInputIds);
   }
 
   setOutput(outputId) {
@@ -196,7 +192,6 @@ class IOController extends EventEmitter {
     }
 
     this.currentOutputId = outputId;
-    localStorage.setItem('output',outputId)
 
     this.emit('currentOutputId', this.currentOutputId);
   }
@@ -262,6 +257,14 @@ class IOController extends EventEmitter {
   playNoteEvents(events) { // "events" is an array of { on, pitch, velocity, channel } objects
     events.forEach(e => {
       const { on, pitch, velocity, channel } = e;
+      if(!this.channelControls.channelActive[channel-1]) return
+
+      const velocityOffset = this.channelControls.channelVelocityOffsets[channel-1]
+
+      const adjustedVelocity = velocity > 0 ?
+        Math.min(Math.max(1, velocity + velocityOffset), 127) :
+        velocity
+
       this.emit(on ? "noteOn" : "noteOff", e)
 
       if (this.currentOutputId !== DEFAULT_IO_ID) { // external audio output
@@ -273,30 +276,20 @@ class IOController extends EventEmitter {
           // back to between 0 and 15 here.
           (on ? 0x90 : 0x80) | ((channel - 1) & 0xF),
           pitch & 0x7F, // clip between 0 and 127
-          velocity & 0x7F, // clip between 0 and 127
+          adjustedVelocity & 0x7F, // clip between 0 and 127
         ];
 
         this.outputs[this.currentOutputId].send(note);
       } else { // internal sampler
         // It takes in JS objects without conversion
 
-        if(on) this.sampler.noteOn({noteNumber: pitch, velocity, channel})
-        else this.sampler.noteOff({noteNumber: pitch, velocity, channel})
+        if(on) this.sampler.noteOn({noteNumber: pitch, velocity: adjustedVelocity, channel})
+        else this.sampler.noteOff({noteNumber: pitch, velocity: adjustedVelocity, channel})
       }
     })
   }
 
-  getCurrentVelocities() {
-    const velocityTemplate = { ...defaultVelocities }
-
-    Object.keys(velocityTemplate).forEach(category =>
-      velocityTemplate[category] = this.keyCommandsState.get(universalLayout[category][0]).velocity
-    )
-
-    return velocityTemplate
-  }
-
-  refreshVelocities(velocities) {
+  refreshKeyboardVelocities(velocities) {
     Object.keys(universalLayout).forEach((k, catIndex) => {
       const velocityCategory = universalLayout[k];
 
@@ -306,19 +299,13 @@ class IOController extends EventEmitter {
         )
       )
     });
-
-    if(velocities !== defaultVelocities) // Object identity by address ; one rare case where this is useful
-      localStorage.setItem("velocities", JSON.stringify(!!velocities.target ? velocities.target : velocities))
   }
 
-  // Update the necessary labels. This is semantically unrelated to the component and looks very ugly here.
-
-  changeLocale(defaultInputLabel, defaultOutputLabel) {
-    defaultInputs[0].name = defaultInputLabel;
-    defaultOutputs[0].name = defaultOutputLabel;
+  refreshChannelControls(controls) {
+    this.channelControls = structuredClone(controls)
   }
 };
 
 const ioctl = new IOController()
 
-export { ioctl as default, defaultInputs, defaultVelocities, DEFAULT_IO_ID }
+export { ioctl as default, defaultInputs, DEFAULT_IO_ID }

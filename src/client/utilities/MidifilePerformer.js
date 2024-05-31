@@ -226,6 +226,8 @@ class MidifilePerformer extends EventEmitter {
     this.interruptionGuard = new InterruptionGuard() // watcher to avoid cutting an automatic starting set too soon
     this.pendingEndSet = [] // end set for the currently automatically playing starting set ; will be appended to perform mode's first triggered set
 
+    this.preferredVelocityStrategy = "clippedScaledFromMax"
+    this.conserveVelocity = true
     this.performVelocitySaved = false;
     this.maxVelocities = [];
     this.velocityProfile = [];
@@ -234,18 +236,40 @@ class MidifilePerformer extends EventEmitter {
   async initialize() {
     this.mfp = await Performer();
 
-    this.performer = new this.mfp.Performer({
+    this.vanillaPerformer = new this.mfp.Performer({
       unmeet: true,
       complete: false,
       // we can't simply use pitch-only shifting : for unclear reasons, it creates additional staccato
       shiftMode: this.mfp.shiftMode.pitchAndChannel,
       temporalResolution: chordDeltaMsDateThreshold,
     });
-    this.performer.setChordVelocityMappingStrategy(
-      this.mfp.chordStrategy.sameForAll,
-      // this.mfp.chordStrategy.clippedScaledFromMax,
-    );
-    this.performer.setLooping(true);
+
+    this.constructInnerPerformer()
+  }
+
+  constructInnerPerformer(options) {
+
+    let loopingBeforeSet, velocityStrategyBeforeSet
+
+    if(!!options) {
+      loopingBeforeSet = this.#getLooping()
+      velocityStrategyBeforeSet = this.currentVelocityStrategy
+
+      this.performer = new this.mfp.Performer({
+        unmeet: options.unmeet,
+        complete: options.complete,
+        shiftMode: this.mfp.shiftMode.pitchAndChannel,
+        temporalResolution: options.temporalResolution,
+      })
+    }
+
+    else {
+      loopingBeforeSet = true
+      velocityStrategyBeforeSet = "sameForAll"
+      this.performer = this.vanillaPerformer
+    }
+
+    this.#resetInnerPerformerNonConstructorParameters(loopingBeforeSet, velocityStrategyBeforeSet)
   }
 
   async loadMidifile(jsonOrBuffer, isBuffer = true) {
@@ -326,6 +350,14 @@ class MidifilePerformer extends EventEmitter {
           this.endAlreadyPlayed = false;
         }
       }
+
+      if(
+        !this.#getLooping() &&
+        this.#getCurrentIndex() === this.#getLoopEndIndex() &&
+        this.#areSameEventSets(notesToEmit, noteEventsFromNoteDataVector(this.#getCurrentSetPair().end.events))
+      ) {
+        this.setMode("silent")
+      }
     });
 
     // SET FLAGS ///////////////////////////////////////////////////////////////
@@ -380,6 +412,20 @@ class MidifilePerformer extends EventEmitter {
     this.playbackSpeed = s
   }
 
+  setPreferredVelocityStrategy(s) {
+    this.preferredVelocityStrategy = s
+    if(this.mode === "perform" || (this.mode === "listen" && this.conserveVelocity && this.performVelocitySaved))
+      this.#setChordVelocityMappingStrategy(s)
+  }
+
+  setConserveVelocity(c) {
+    this.conserveVelocity = c
+    if(this.mode === "listen") {
+      if(c && this.performVelocitySaved) this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy)
+      else this.#setChordVelocityMappingStrategy("none")
+    }
+  }
+
   setMode(mode) {
     if (mode === this.mode) return;
     const previousMode = this.mode
@@ -396,10 +442,10 @@ class MidifilePerformer extends EventEmitter {
 
     if (this.mode === 'listen') {
 
-      this.performer.setChordVelocityMappingStrategy(
-        this.performVelocitySaved ?
-          this.mfp.chordStrategy.clippedScaledFromMax :
-          this.mfp.chordStrategy.none
+      this.#setChordVelocityMappingStrategy(
+        this.conserveVelocity && this.performVelocitySaved ?
+          this.preferredVelocityStrategy :
+          "none"
       );
 
       let pair; // carry the pair information between calls ; otherwise delays are shifted
@@ -424,9 +470,7 @@ class MidifilePerformer extends EventEmitter {
         this.timeout = null;
       }
 
-      this.performer.setChordVelocityMappingStrategy(
-        this.mfp.chordStrategy.clippedScaledFromMax
-      );
+      this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy);
     }
 
     if (this.mode === 'silent') {
@@ -479,6 +523,13 @@ class MidifilePerformer extends EventEmitter {
   // ---------------------------PRIVATE METHODS---------------------------------
   // ---------------------------------------------------------------------------
 
+  // Util for performer reconstruction
+
+  #resetInnerPerformerNonConstructorParameters(looping, strategy) {
+    this.#setChordVelocityMappingStrategy(strategy);
+    this.performer.setLooping(looping);
+  }
+
   // Wrapping methods
   // Most of them are direct returns, but at any point we might want to wrap logic around it
   // (such as the #getNextIndex() method)
@@ -494,7 +545,11 @@ class MidifilePerformer extends EventEmitter {
   // Ensure we stay within bounds at the loop end, even if it's the end of the track
 
   #getNextIndex() {
-    return (this.#getCurrentIndex() + 1) % (this.#getLoopEndIndex() + 1)
+    const currentIndex = this.#getCurrentIndex()
+    const loopEnd = this.#getLoopEndIndex()
+    return this.#getLooping() ?
+      (currentIndex + 1) % (loopEnd + 1) :
+      (currentIndex < loopEnd ? currentIndex : loopEnd)
   }
 
   #getLoopStartIndex() {
@@ -503,6 +558,10 @@ class MidifilePerformer extends EventEmitter {
 
   #getLoopEndIndex() {
     return this.performer.getLoopEndIndex()
+  }
+
+  #getLooping() {
+    return this.performer.getLooping()
   }
 
   // Translate the C++ Chronology into an array of sets,
@@ -526,6 +585,11 @@ class MidifilePerformer extends EventEmitter {
     }
 
     return translatedChronology
+  }
+
+  #setChordVelocityMappingStrategy(strategyName) {
+    this.currentVelocityStrategy = strategyName
+    this.performer.setChordVelocityMappingStrategy(this.mfp.chordStrategy[this.currentVelocityStrategy])
   }
 
   /**
@@ -642,6 +706,22 @@ class MidifilePerformer extends EventEmitter {
         this.endAlreadyPlayed = false;
       }
     }
+  }
+
+  #areSameEventSets(setA, setB) {
+    if(setA.length === 0) return setB.length === 0 // Don't forget : every() is true for any condition if the array is empty
+    // And actually, can the last ending set even be empty ? I think not.
+    // So we could just write setA.length !== 0 && every ...
+    // ...but better safe than sorry.
+
+    return setA.every((event, index) => {
+      const eventB = setB[index]
+
+      return event.on === eventB.on &&
+        event.pitch === eventB.pitch &&
+        event.velocity === eventB.velocity &&
+        event.channel === eventB.channel
+    })
   }
 }
 
