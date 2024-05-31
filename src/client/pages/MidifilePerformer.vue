@@ -598,7 +598,7 @@ export default {
       this.$refs.pianoRoll.stop()
       this.$refs.sheetMusic.stop()
 
-      if(isIt && this.$refs.mainScrollBar.currentMode === 'listen')
+      if(isIt && this.$refs.mainScrollBar?.currentMode === 'listen')
         this.$refs.mainScrollBar.toggleListen()
     },
     onVisualizerRefresh(refreshState) {
