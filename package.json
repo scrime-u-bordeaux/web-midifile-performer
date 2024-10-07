@@ -32,7 +32,7 @@
     "midi-player-js": "^2.0.16",
     "midifile-performer": "^0.4.4",
     "musicxml-interfaces": "^0.0.21",
-    "opensheetmusicdisplay": "^1.8.8",
+    "opensheetmusicdisplay": "^1.8.9",
     "vue": "^3.2.23",
     "vue-i18n": "^9.5.0",
     "vue-router": "^4.0.12",
