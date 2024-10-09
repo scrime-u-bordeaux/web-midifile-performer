@@ -564,6 +564,10 @@ export default {
 
     setupNoteHeads() {
 
+      // Grace notes and their principals may be left unadressed as the cursor moves forward.
+      // They must then be dealt with across set borders.
+      const graceAdjacentsLeftBehind = new Map()
+
       this.setStarts.forEach((start, setIndex) => {
         const set = this.getSet(setIndex)
 
@@ -631,27 +635,56 @@ export default {
               && !usedNotesOfSet.includes(candidate)
             )
 
-            if(!noteSequenceEquivalent) return null// throw new Error(
-            //   `Could not find equivalent for graphical note in set ${setIndex}`
-            // )
-
-            usedNotesOfSet.push(noteSequenceEquivalent)
-
             const gNoteHeads = this.getNoteHeadsFromNoteSvgFamily(svgRootBuffer)
             const gNoteHead = gNoteHeads[indexInBuffer]
 
-            // Testing leftover
-            // (this should not happen, even in cases of OSMD hiccups)
+            if(!noteSequenceEquivalent) {
 
-            if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
-              console.error("Duplicate registration for", gNoteHead)
-            } else if(gNoteHead === undefined) {
-              console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
+              if(this.includesGraceNote(set) || graceAdjacentsLeftBehind.size > 0) {
+                graceAdjacentsLeftBehind.set(
+                  `p${pitch}c${channel}`,
+                  gNoteHead
+                )
+              }
+
+              else throw new Error(
+                `Could not find equivalent for graphical note in set ${setIndex}`
+              )
+
             }
 
-            this.gNoteHeadsToNsNotes.set(gNoteHead, noteSequenceEquivalent)
-            this.nsNotesToGNoteHeads.set(noteSequenceEquivalent, gNoteHead)
+            else {
+              usedNotesOfSet.push(noteSequenceEquivalent)
+
+              // Testing leftover
+              // (this should not happen, even in cases of OSMD hiccups)
+
+              if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
+                console.error("Duplicate registration for", gNoteHead)
+              } else if(gNoteHead === undefined) {
+                console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
+              }
+
+              this.gNoteHeadsToNsNotes.set(gNoteHead, noteSequenceEquivalent)
+              this.nsNotesToGNoteHeads.set(noteSequenceEquivalent, gNoteHead)
+            }
         })
+
+        if(usedNotesOfSet.length != set.length && graceAdjacentsLeftBehind.size > 0) {
+          const unaddressedNotes = set.filter(note => !usedNotesOfSet.includes(note))
+
+          unaddressedNotes.forEach(note => {
+            const mapKey = `p${note.pitch}c${note.channel}`
+
+            const equivalentNoteHead = graceAdjacentsLeftBehind.get(mapKey)
+            if(!!equivalentNoteHead) {
+              this.gNoteHeadsToNsNotes.set(equivalentNoteHead, note)
+              this.nsNotesToGNoteHeads.set(note, equivalentNoteHead)
+
+              graceAdjacentsLeftBehind.delete(mapKey)
+            }
+          })
+        }
       })
 
       if(this.gNoteHeadsToNsNotes.size !== this.nsNotesToGNoteHeads.size) {
@@ -730,7 +763,7 @@ export default {
       if(set.includes(searchData.upcomingPrincipal)) searchData.upcomingPrincipal = null
       else if(this.includesGraceNote(set)) {
         const principals = set.filter(
-          note => !!note.principal // Filter out non-grace notes
+          note => this.isGraceNote(note)
         ).map(
           graceNote => graceNote.principal
         ).sort(
@@ -832,17 +865,25 @@ export default {
       (!ignoreTied || !this.isNoteTieProlongation(note)) // and ties, aside from starts, are not actual notes
     },
 
+    // Applies to a noteSequence note.
+    // Should rather be relocated to the noteSequence util file when it's made,
+    // But has no semantic place in PianoRoll.vue,
+    // because a note can only be a grace note on the basic of sheet music notation
+    isGraceNote(note) {
+      return !!note.principal
+    },
+
     includesGraceNote(set) {
-      return set.some(note => !!note.principal)
+      return set.some(note => this.isGraceNote(note))
     },
 
     getGraceNotesInSet(set) {
-      return set.filter(note => !!note.principal)
+      return set.filter(note => this.isGraceNote(note))
     },
 
     includesNonPrincipalNonGraceNote(graceNotes, set) {
       const principals = graceNotes.map(graceNote => graceNote.principal)
-      const nonGraceNotes = set.filter(note => !note.principal)
+      const nonGraceNotes = set.filter(note => !this.isGraceNote(note))
       return nonGraceNotes.some(note => !principals.includes(note))
     },
 
