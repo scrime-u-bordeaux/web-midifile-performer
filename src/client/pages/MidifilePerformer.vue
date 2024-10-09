@@ -385,7 +385,7 @@ export default {
     this.performer.addListener('chronology', this.onChronology)
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.addListener('musicXmlChannels', this.onMusicXmlChannels)
-    this.performer.addListener('musicXmlGraceNotes', this.onMusicXmlGraceNotes)
+    this.performer.addListener('musicXmlGraceNoteInfo', this.onMusicXmlGraceNoteInfo)
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
     // temporary !!
@@ -423,7 +423,7 @@ export default {
     this.performer.removeListener('chronology', this.onChronology)
     this.performer.removeListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.removeListener('musicXmlChannels', this.onMusicXmlChannels)
-    this.performer.removeListener('musicXmlGraceNotes', this.onMusicXmlGraceNotes)
+    this.performer.removeListener('musicXmlGraceNoteInfo', this.onMusicXmlGraceNoteInfo)
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
     this.performer.removeListener('isModeSilent', this.onIsModeSilent)
@@ -526,8 +526,8 @@ export default {
     onMusicXmlChannels(channelChanges) {
       this.$refs.sheetMusic.setChannelChanges(channelChanges)
     },
-    onMusicXmlGraceNotes(graceNotes) {
-      this.$refs.sheetMusic.setGraceNotes(graceNotes)
+    onMusicXmlGraceNoteInfo(graceNoteInfo) {
+      this.$refs.sheetMusic.setGraceNoteInfo(graceNoteInfo)
     },
 
     onStartChange(i) {

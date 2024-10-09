@@ -221,6 +221,7 @@ export default function parseMusicXml(buffer) {
                   // We're going to assume a dynamics object can only contain one "normal" dynamic tag
                   Object.keys(dynamics).find(key => velocityKeys.includes(key))
                 )
+                // FIXME : No nullcheck ?
                 partTrack.notatedDynamics = dynamicsValue
               }
 
@@ -370,25 +371,54 @@ export default function parseMusicXml(buffer) {
   })
 
   // Third (and this is only due to an OSMD limitation), we need to identify every grace note in the score.
-  // This is so they can be ignored when assigning cursor positions and notehead equivalents.
+  // This is so they can be dealt with properly when assigning cursor positions and notehead equivalents.
 
-  const graceNotes = Array.from(trackMap.values()).flatMap(partTrack =>
-    partTrack.events.filter(
-      event => !!event.noteOn && !!partTrack.noteOnEventsToXmlNotes.get(event).grace
-    ).map(
-      event => {
-        const { delta, ...allOthers } = partTrack.xmlNotesToNoteOnEvents.get(
-          partTrack.noteOnEventsToXmlNotes.get(event).principal
-        )
-        event.principal = { delta: delta / (4 * divisions), ...allOthers }
-        return structuredClone(event)
-      }
-    ).map(
-      clonedEvent => {
-        const { delta, ...allOthers } = clonedEvent
-        return { delta: delta / (4 * divisions), ...allOthers }
-      }
+  // To do this, we first need to merge the relevant maps for all tracks.
+
+  const mergedOnToXml = new Map(
+    Array.from(trackMap.values()).flatMap(
+      partTrack => Array.from(partTrack.noteOnEventsToXmlNotes.entries())
     )
+  )
+
+  const mergedXmlToOn = new Map(
+    Array.from(trackMap.values()).flatMap(
+      partTrack => Array.from(partTrack.xmlNotesToNoteOnEvents.entries())
+    )
+  )
+
+  // We can then get all note ons, the same way they're gathered in the noteSequence.
+  // IMPORTANT : the in-set order might still vary.
+  // But what really matters is that the indexes we're getting will point to the right set.
+
+  const allNoteOns = Array.from(trackMap.values()).flatMap(partTrack =>
+    partTrack.events.filter(
+      event => !!event.noteOn
+    )
+  ).sort(
+    (noteA, noteB) => noteA.delta - noteB.delta
+  )
+
+  // So, finally, we can get the noteSequence-compatible index of every grace note,
+  // And its principal.
+
+  const graceNoteInfo = allNoteOns.map(
+    (note, index) => {
+      if(!mergedOnToXml.get(note).grace) return null
+
+      const principalIndex = allNoteOns.indexOf(
+          mergedXmlToOn.get(
+            mergedOnToXml.get(note).principal
+          )
+      )
+
+      return {
+        graceIndex: index,
+        principalIndex: principalIndex
+      }
+    }
+  ).filter(
+    note => !!note
   )
 
   // Worse yet : we can't emit from there, because this isn't a class
@@ -401,7 +431,7 @@ export default function parseMusicXml(buffer) {
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
     tempoEvents: tempoEvents,
     channelChanges: channelChanges,
-    graceNotes: graceNotes
+    graceNoteInfo: graceNoteInfo
   }
 
   return midiJson
