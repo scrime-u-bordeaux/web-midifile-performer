@@ -5,6 +5,13 @@
 This is a VueJS implementation of the Midifile
 Performer software, as described in [Serpette, Haury et al.](https://dl.acm.org/doi/10.1145/3471872.3472968).
 
+### Usage
+
+The server can be start using the following env vars :
+* `NODE_ENV` : e.g. "development" or "production" (default : "development")
+* `PORT` : the port express will listen to (default : 8000)
+* `PUBLIC_PATH` : e.g. if the app is run behind a reverse proxy server (default : "/")
+
 ### Setup
 
 The application keeps track of the current date on every git commit, and displays it.
