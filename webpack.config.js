@@ -4,7 +4,7 @@ const { VueLoaderPlugin } = require('vue-loader');
 const webpack = require('webpack');
 const express = require('express');
 const path = require('path');
-const config = require('./config');
+// const config = require('./config');
 // console.log(env == 'production' || env == 'none' ? env : 'development',);
 
 // for multiple html files generation, see :
@@ -12,16 +12,11 @@ const config = require('./config');
 
 module.exports = {
   performance: { hints: false }, // AVOID MAX ASSETS SIZE WARNING
-  mode: process.env.NODE_ENV == 'production' ? 'production' : 'development',
+  mode: process.env.NODE_ENV || 'development',
   entry: [ './src/client/index' ],
   output: {
-    publicPath: config.publicPath,
+    publicPath: process.env.PUBLIC_PATH || '/',
   },
-  // entry: {
-  //   'home':               './src/client/home',
-  //   'first-steps':        './src/client/first-steps',
-  //   'midifile-performer': './src/client/midifile-performer',
-  // },
   module: {
     rules: [
       {
