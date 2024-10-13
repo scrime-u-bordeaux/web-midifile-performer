@@ -7,7 +7,7 @@ Performer software, as described in [Serpette, Haury et al.](https://dl.acm.org/
 
 ### Usage
 
-The server can be start using the following env vars :
+The server can be started with the following env vars :
 * `NODE_ENV` : e.g. "development" or "production" (default : "development")
 * `PORT` : the port express will listen to (default : 8000)
 * `PUBLIC_PATH` : e.g. if the app is run behind a reverse proxy server (default : "/")

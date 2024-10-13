@@ -11,7 +11,9 @@ const path = require('path');
 // https://stackoverflow.com/questions/39798095/multiple-html-files-using-webpack
 
 module.exports = {
-  performance: { hints: false }, // AVOID MAX ASSETS SIZE WARNING
+  // AVOID MAX ASSETS SIZE WARNING :
+  performance: { hints: false },
+  // tell webpack to do its stuff for production or development :
   mode: process.env.NODE_ENV || 'development',
   entry: [ './src/client/index' ],
   output: {
