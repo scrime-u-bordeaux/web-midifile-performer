@@ -803,7 +803,8 @@ export default {
           // Otherwise, staying in place risks missing these non-principal notes
           !this.includesNonPrincipalNonGraceNote(
             this.getGraceNotesInSet(set),
-            nextSet
+            nextSet,
+            searchData.upcomingPrincipal
           ) && // and
           (
             // The current set includes a grace note,
@@ -815,9 +816,7 @@ export default {
             // (which may interlace with a non-grace bearing voice)
             // in which case we should wait for it
             // (e.g. : K279-1 m. 17)
-            (!!searchData.upcomingPrincipal &&
-              this.includesGraceNote(nextSet)
-            )
+            !!searchData.upcomingPrincipal
           ) ? i-1 : i; // ...else move forward
 
           //console.log(`${searchData.searchIndex == i - 1 ? "Stay in place" : "Move forward"} for next set`)
@@ -881,8 +880,8 @@ export default {
       return set.filter(note => this.isGraceNote(note))
     },
 
-    includesNonPrincipalNonGraceNote(graceNotes, set) {
-      const principals = graceNotes.map(graceNote => graceNote.principal)
+    includesNonPrincipalNonGraceNote(graceNotes, set, upcomingPrincipal) {
+      const principals = [...graceNotes.map(graceNote => graceNote.principal), upcomingPrincipal]
       const nonGraceNotes = set.filter(note => !this.isGraceNote(note))
       return nonGraceNotes.some(note => !principals.includes(note))
     },
