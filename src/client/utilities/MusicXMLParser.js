@@ -133,7 +133,7 @@ export default function parseMusicXml(buffer) {
         // In fact, for "high-level" notation (distanced from MIDI),
         // only written values (like mf, f, p, etc), may be provided.
         // These written values are stored here.
-        notatedDynamics: null,
+        notatedDynamics: [],
 
         transpose: 0,
 
@@ -222,7 +222,10 @@ export default function parseMusicXml(buffer) {
                   Object.keys(dynamics).find(key => velocityKeys.includes(key))
                 )
                 // FIXME : No nullcheck ?
-                partTrack.notatedDynamics = dynamicsValue
+                partTrack.notatedDynamics.push({
+                  delta: partTrack.currentDelta,
+                  value: dynamicsValue
+                })
               }
 
               if(event.directionTypes.some(direction => direction.hasOwnProperty("words"))) {
@@ -462,11 +465,13 @@ function getMidiNoteEventPair(xmlNote, partTrack) {
 function getMidiNoteOnEvent(xmlNote, partTrack) {
   manageNoteArticulations(xmlNote, partTrack)
 
+  const startTime = getNoteStartTime(xmlNote, partTrack)
+
   const midiNoteOnEvent = {
-    delta: getNoteStartTime(xmlNote, partTrack),
+    delta: startTime,
     channel : partTrack.activeChannel,
     noteOn: {
-      velocity: getMidiVelocity(xmlNote, partTrack),
+      velocity: getMidiVelocity(xmlNote, partTrack, startTime),
       noteNumber: getMidiNoteNumber(xmlNote, partTrack)
     }
   }
@@ -637,12 +642,18 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
   }
 }
 
+function getRelevantNotatedDynamics(partTrack, startTime) {
+  return partTrack?.notatedDynamics.findLast(
+    dynamics => dynamics.delta <= startTime
+  )?.value
+}
+
 // Velocity is defined by the dynamics (for the note on) and end-dynamics (for the note off)
 // attributes of note tags.
 // When these are not present, dynamics tags are used instead,
 // Whose values are stored in the track metadata.
 
-function getMidiVelocity(xmlNote, partTrack = null) {
+function getMidiVelocity(xmlNote, partTrack = null, startTime = null) {
 
   const on = !!partTrack // This argument is only given for note ons, so a local alias makes more sense.
 
@@ -656,8 +667,11 @@ function getMidiVelocity(xmlNote, partTrack = null) {
   // Because of how our parsing lib currently works, there is always a dynamics and endDynamics field on notes.
   // So instead of testing for its existence, we test for a default.
   // Also, note that notatedDynamics can never be 0, so !! works fine here.
-  if(!!partTrack?.notatedDynamics && relevantDynamics === DEFAULT_PROVIDED_DYNAMICS)
-    return multiplicator * partTrack.notatedDynamics
+
+  const notatedDynamics = getRelevantNotatedDynamics(partTrack, startTime)
+
+  if(!!notatedDynamics && relevantDynamics === DEFAULT_PROVIDED_DYNAMICS)
+    return multiplicator * notatedDynamics
 
   // If the note's own dynamics is not set to the default value,
   // It overrides the staff notation.
