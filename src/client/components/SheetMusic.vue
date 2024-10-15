@@ -232,7 +232,6 @@ export default {
       } catch(e) {
         console.error("Error during setup of notehead event listeners.")
         console.error(e.message)
-        console.error("This is probably due to an OSMD cursor bug : see issue 67")
         console.error("Sheet music notes after this index will not react to click and hover.")
 
         this.cursor.reset()
@@ -758,6 +757,8 @@ export default {
       const set = this.getSet(this.setStarts.indexOf(setStartIndex))
       // console.log("Set in question is : ", set)
 
+      const referenceStartTime = this.noteSequence[setStartIndex].startTime
+
       // If we're dealing with a grace note cluster, determine its principal.
 
       if(set.includes(searchData.upcomingPrincipal)) searchData.upcomingPrincipal = null
@@ -774,10 +775,19 @@ export default {
         // Just in case we have after-graces and graces with following principal
         // back to back in the same cluster.
         // (Yes, it can actually happen.)
-        searchData.upcomingPrincipal = principals[principals.length - 1]
+        
+        const relevantPrincipal = principals[principals.length - 1]
+
+        // and if we have only after-graces,
+        // (i.e. : the latest-occurring principal is still before this set),
+        // then there's no need to consider their principal, since it's behind us.
+
+        if(relevantPrincipal.startTime < referenceStartTime)
+          searchData.upcomingPrincipal = null
+
+        else searchData.upcomingPrincipal = relevantPrincipal
       }
 
-      const referenceStartTime = this.noteSequence[setStartIndex].startTime
       const allCursorDates = searchData.dates
 
       let difference = Infinity;
@@ -805,21 +815,10 @@ export default {
             this.getGraceNotesInSet(set),
             nextSet,
             searchData.upcomingPrincipal
-          ) && // and
-          (
-            // The current set includes a grace note,
-            // and the next set might well be its principal,
-            // hence we stay in place to wait for it
-            this.includesGraceNote(set)
-              ||
-            // A grace note is coming from an unfinished cluster
-            // (which may interlace with a non-grace bearing voice)
-            // in which case we should wait for it
-            // (e.g. : K279-1 m. 17)
-            !!searchData.upcomingPrincipal
-          ) ? i-1 : i; // ...else move forward
+          ) && // and the cluster is not resolved.
+          !!searchData.upcomingPrincipal ? i-1 : i; // ...else move forward
 
-          //console.log(`${searchData.searchIndex == i - 1 ? "Stay in place" : "Move forward"} for next set`)
+          // console.log(`${searchData.searchIndex == i - 1 ? "Stay in place" : "Move forward"} for next set`)
           return allCursorDates[i-1] // this will never trigger at i = 0, because nothing will be larger than Infinity
         }
         else prevDifference = difference
