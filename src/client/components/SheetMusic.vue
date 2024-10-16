@@ -569,8 +569,9 @@ export default {
 
       this.setStarts.forEach((start, setIndex) => {
         const set = this.getSet(setIndex)
+        // console.log(`Set ${setIndex} :`, set)
 
-        const usedNotesOfSet = []
+        const usedNotesOfSet = new Set()
 
         // Separate GNotes can share the same stem.
         // In this case, getSVGGElement will return the same root node.
@@ -583,12 +584,21 @@ export default {
 
         // As well, since listeners cannot be set on every new root node
         // (since some will only contain tie-prolonging noteheads)
-        // a flag is used to keep track of whether they have been set.
+        // a set is used to keep track of whether they have been set.
         // As soon as a non-tie-prolonging note is encountered in a buffer,
-        // the listeners are set, and the flag is reset.
-        let listenersSetForBuffer = null
+        // the listeners are set, and the root note enters the set.
+        const buffersWithListeners = new Set()
 
         this.moveCursorToSet(setIndex)
+
+        // console.log(
+        //   "All notes under cursor :",
+        //   this.cursor.GNotesUnderCursor()
+        //     .filter(gnote =>
+        //       this.isEligibleMfpNote(gnote.sourceNote, false) &&
+        //       gnote.clef.clefType !== TAB_CLEF // There's probably a way to test this with the sourceNote in isEligibleMfpNote instead
+        //     )
+        // )
 
         this.cursor.GNotesUnderCursor()
           .filter(gnote =>
@@ -596,26 +606,33 @@ export default {
             gnote.clef.clefType !== TAB_CLEF // There's probably a way to test this with the sourceNote in isEligibleMfpNote instead
           ).forEach(gnote => {
 
+            // console.log("Examining gnote", gnote)
+
             const gNoteSVGRoot = gnote.getSVGGElement()
 
             if(gNoteSVGRoot !== svgRootBuffer) {
               svgRootBuffer = gNoteSVGRoot
               indexInBuffer = 0
-
-              listenersSetForBuffer = false
             } else indexInBuffer++
+
+            // Tie prolongations are necessary for the indexInBuffer to make sense,
+            // But they have no ns equivalent, so they are skipped.
 
             const isTieProlongation = this.isNoteTieProlongation(gnote.sourceNote)
             if(isTieProlongation) return
 
-            if(!listenersSetForBuffer) {
+            // If listeners had not yet been set for this root, set them.
+
+            if(!buffersWithListeners.has(svgRootBuffer)) {
               gNoteSVGRoot.addEventListener("mousedown", this.onNoteClick)
               gNoteSVGRoot.addEventListener("mouseover", this.onNoteHover)
               gNoteSVGRoot.addEventListener("mouseup", this.onNoteUnClick)
               gNoteSVGRoot.addEventListener("mouseleave", this.onNoteLeave)
 
-              listenersSetForBuffer = true
+              buffersWithListeners.add(svgRootBuffer)
             }
+
+            // Determine the information needed to spot the equivalent in the set.
 
             const pitch = gnote.sourceNote.halfTone + 12
             const channel = this.currentChannel(
@@ -631,20 +648,48 @@ export default {
 
             const noteSequenceEquivalent = set.find(candidate =>
               candidate.pitch === pitch && candidate.channel === channel
-              && !usedNotesOfSet.includes(candidate)
+              && !usedNotesOfSet.has(candidate)
             )
+
+            // console.log("Equivalent for gnote :", noteSequenceEquivalent)
 
             const gNoteHeads = this.getNoteHeadsFromNoteSvgFamily(svgRootBuffer)
             const gNoteHead = gNoteHeads[indexInBuffer]
 
+            // This precaution is necessary now (16/10/2024)
+            // that the left-behind adjacents are considered :
+            // indeed, they are deleted from graceAdjacentsLeftBehind on registration (see below),
+            // but even if they HAVE already been registered,
+            // they may still be found AGAIN, this time with no ns equivalent,
+            // since the cursor stays in the same position with different ns sets.
+            // But since they were already registered, they should not be tracked as "left behind".
+
+            // This early exit means that the "duplicate registration" message should never appear anymore.
+
+            if(this.gNoteHeadsToNsNotes.has(gNoteHead)) return
+
+            // TODO : this should definitely be a shared function of SheetMusic and PianoRoll.
+            const mapKey = `p${pitch}c${channel}`
+
             if(!noteSequenceEquivalent) {
 
+              // It is normal for a grace cluster to behave strangely.
+              // The cursor may indeed stay in place for multiple sets,
+              // Over which the gnotes will not biject.
+              // This is where we keep track of this occurrence.
+
               if(this.includesGraceNote(set) || graceAdjacentsLeftBehind.size > 0) {
+                const otherAdjacentsForKey = graceAdjacentsLeftBehind.get(mapKey)
+
                 graceAdjacentsLeftBehind.set(
-                  `p${pitch}c${channel}`,
-                  gNoteHead
+                  mapKey,
+                  !!otherAdjacentsForKey ?
+                    otherAdjacentsForKey.add(gNoteHead) : new Set([gNoteHead])
                 )
               }
+
+              // Outside of grace clusters, however, this is an error,
+              // which should halt the whole process.
 
               else throw new Error(
                 `Could not find equivalent for graphical note in set ${setIndex}`
@@ -653,34 +698,48 @@ export default {
             }
 
             else {
-              usedNotesOfSet.push(noteSequenceEquivalent)
+              this.registerNoteHead(gNoteHead, noteSequenceEquivalent, usedNotesOfSet)
 
-              // Testing leftover
-              // (this should not happen, even in cases of OSMD hiccups)
+              // Now that this notehead has been registered,
+              // It has an equivalent, and must leave the set of left-behinds
+              // if it was part of it.
 
-              if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
-                console.error("Duplicate registration for", gNoteHead)
-              } else if(gNoteHead === undefined) {
-                console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
-              }
-
-              this.gNoteHeadsToNsNotes.set(gNoteHead, noteSequenceEquivalent)
-              this.nsNotesToGNoteHeads.set(noteSequenceEquivalent, gNoteHead)
+              const adjacentsForKey = graceAdjacentsLeftBehind.get(mapKey)
+              adjacentsForKey?.delete(gNoteHead)
             }
         })
 
-        if(usedNotesOfSet.length != set.length && graceAdjacentsLeftBehind.size > 0) {
-          const unaddressedNotes = set.filter(note => !usedNotesOfSet.includes(note))
+        // After dealing with noteheads the normal way,
+        // We check if this set does not contain ns equivalents for previously orphan noteheads.
+
+        if(usedNotesOfSet.size != set.length && graceAdjacentsLeftBehind.size > 0) {
+          const unaddressedNotes = set.filter(note => !usedNotesOfSet.has(note))
+
+          // console.log("Addressing unadressed notes : ", unaddressedNotes)
 
           unaddressedNotes.forEach(note => {
+            // console.log("Addressing note", note)
+
             const mapKey = `p${note.pitch}c${note.channel}`
+            const candidateNoteHeads = graceAdjacentsLeftBehind.get(mapKey)
 
-            const equivalentNoteHead = graceAdjacentsLeftBehind.get(mapKey)
-            if(!!equivalentNoteHead) {
-              this.gNoteHeadsToNsNotes.set(equivalentNoteHead, note)
-              this.nsNotesToGNoteHeads.set(note, equivalentNoteHead)
+            if(!!candidateNoteHeads) {
 
-              graceAdjacentsLeftBehind.delete(mapKey)
+              // Set values are always listed in order of insertion.
+              // As a consequence, we are always looking for the earliest-registered candidate.
+
+              const equivalentNoteHead = Array.from(candidateNoteHeads.values())[0]
+
+              // console.log("Found candidate noteheads for note : ", candidateNoteHeads)
+              // console.log("Registering equivalent notehead", equivalentNoteHead)
+
+              this.registerNoteHead(equivalentNoteHead, note)
+
+              // Once a ns equivalent is found, the registered notehead deleted from the candidates.
+              // And once there are no candidates left, the key is cleared.
+
+              if(candidateNoteHeads.size == 1) graceAdjacentsLeftBehind.delete(mapKey)
+              else candidateNoteHeads.delete(equivalentNoteHead)
             }
           })
         }
@@ -705,6 +764,33 @@ export default {
     // -------------------------------------------------------------------------
     // ---------------------------SETUP UTILS-----------------------------------
     // -------------------------------------------------------------------------
+
+    registerNoteHead(gNoteHead, nsNote, usedNotesOfSet = null) {
+
+      // This case should not occur :
+      // Normally, if the gNoteHead was already present, this function was not called.
+      // But just in case, warn and skip it.
+
+      if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
+        console.warn("Attempted duplicate registration for", gNoteHead)
+        console.warn("Skipping registration...")
+        return
+      }
+
+      // This case should never happen anymore either :
+      // It was only occurring in early tests for setupNoteheads,
+      // before the svgRootBuffer system was finalized.
+
+      else if(gNoteHead === undefined) {
+        console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
+        return
+      }
+
+      if(!!usedNotesOfSet) usedNotesOfSet.add(nsNote)
+
+      this.gNoteHeadsToNsNotes.set(gNoteHead, nsNote)
+      this.nsNotesToGNoteHeads.set(nsNote, gNoteHead)
+    },
 
     // Store tempos with their date of occurrence in microseconds.
     // This is necessary because otherwise, on read, we would assume all quarters to have elapsed with the same microsecond value
@@ -761,11 +847,11 @@ export default {
 
       // If we're dealing with a grace note cluster, determine its principal.
 
+      const graceNotesInSet = this.getGraceNotesInSet(set)
+
       if(set.includes(searchData.upcomingPrincipal)) searchData.upcomingPrincipal = null
       else if(this.includesGraceNote(set)) {
-        const principals = set.filter(
-          note => this.isGraceNote(note)
-        ).map(
+        const principals = graceNotesInSet.map(
           graceNote => graceNote.principal
         ).sort(
           (principalA, principalB) => principalA.startTime - principalB.startTime
@@ -775,7 +861,7 @@ export default {
         // Just in case we have after-graces and graces with following principal
         // back to back in the same cluster.
         // (Yes, it can actually happen.)
-        
+
         const relevantPrincipal = principals[principals.length - 1]
 
         // and if we have only after-graces,
@@ -812,7 +898,7 @@ export default {
           // The next set consists only of grace notes or grace note principals
           // Otherwise, staying in place risks missing these non-principal notes
           !this.includesNonPrincipalNonGraceNote(
-            this.getGraceNotesInSet(set),
+            graceNotesInSet,
             nextSet,
             searchData.upcomingPrincipal
           ) && // and the cluster is not resolved.
@@ -866,7 +952,7 @@ export default {
     // Applies to a noteSequence note.
     // Should rather be relocated to the noteSequence util file when it's made,
     // But has no semantic place in PianoRoll.vue,
-    // because a note can only be a grace note on the basic of sheet music notation
+    // because a note can only be a grace note on the basis of sheet music notation
     isGraceNote(note) {
       return !!note.principal
     },
