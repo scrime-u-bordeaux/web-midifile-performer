@@ -457,6 +457,7 @@ export default {
 
     calculateCursorAnchorsAndSetCoordinates() {
       const allCursorDates = []
+      const allNotesUnderCursor = []
       const allCursorCoordinates = []
 
       // This is necessary to get actual X and Y coordinates for the cursor at it moves.
@@ -467,14 +468,37 @@ export default {
       while(!this.cursor.iterator.endReached) {
         // console.log("Measure : ", this.cursor.iterator.currentMeasureIndex)
         const notesUnderCursor = this.cursor.NotesUnderCursor()
-        // console.log(notesUnderCursor)
+        const eligibleNotes = notesUnderCursor.filter(
+          note => this.isEligibleMfpNote(note)
+        )
+        // console.log(eligibleNotes)
 
         // Because date approximation is always finicky, we want to put luck on our side
         // So we exclude cursor entries that could never be sets,
         // Because they contain no eligible note.
-        if(notesUnderCursor.some(note => this.isEligibleMfpNote(note))) {
+        if(eligibleNotes.length > 0) {
           allCursorDates.push(this.currentCursorDate())
           allCursorCoordinates.push(this.currentCursorCoordinates())
+
+          const noteMapForPosition = new Map()
+
+          // Not dealing with tabs for this right now.
+          // Like, no, I'm not taking into consideration cases with both grace notes and tabs.
+          // TODO : we need to find a way to address tabs through the source notes anyway.
+
+          eligibleNotes.forEach(note => {
+            const {pitch, channel} = this.getOSMDNoteInformation(note)
+            const mapKey = `p${pitch}c${channel}`
+
+            noteMapForPosition.set(
+              mapKey,
+              noteMapForPosition.has(mapKey) ?
+                noteMapForPosition.get(mapKey).add(note) :
+                new Set([note])
+            )
+          })
+
+          allNotesUnderCursor.push(noteMapForPosition)
         }
 
         this.cursor.next()
@@ -498,8 +522,12 @@ export default {
       const searchData = {
         searchIndex: 0,
         dates: allCursorDates,
+        notes: allNotesUnderCursor,
+
         upcomingPrincipal: null
       }
+
+      // console.log("Notes under cursor : ", searchData.notes)
 
       this.cursorAnchors = this.setStarts.map(startIndex =>
         this.findNearestCursorDate(startIndex, searchData)
@@ -634,10 +662,7 @@ export default {
 
             // Determine the information needed to spot the equivalent in the set.
 
-            const pitch = gnote.sourceNote.halfTone + 12
-            const channel = this.currentChannel(
-              gnote.parentVoiceEntry.parentVoiceEntry.parentVoice.parent.idString
-            )
+            const { pitch, channel } = this.getOSMDNoteInformation(gnote, true)
 
             // console.log(pitch, channel)
 
@@ -765,6 +790,18 @@ export default {
     // ---------------------------SETUP UTILS-----------------------------------
     // -------------------------------------------------------------------------
 
+    getOSMDNoteInformation(noteOrGNote, isGNote = false) {
+      const pitch = (isGNote ? noteOrGNote.sourceNote : noteOrGNote)["halfTone"] + 12
+      const channel = this.currentChannel(
+        (isGNote ?
+          noteOrGNote.parentVoiceEntry.parentVoiceEntry :
+          noteOrGNote.ParentVoiceEntry
+        )["parentVoice"].parent.idString
+      )
+
+      return {pitch, channel}
+    },
+
     registerNoteHead(gNoteHead, nsNote, usedNotesOfSet = null) {
 
       // This case should not occur :
@@ -847,11 +884,8 @@ export default {
 
       // If we're dealing with a grace note cluster, determine its principal.
 
-      const graceNotesInSet = this.getGraceNotesInSet(set)
-
-      if(set.includes(searchData.upcomingPrincipal)) searchData.upcomingPrincipal = null
-      else if(this.includesGraceNote(set)) {
-        const principals = graceNotesInSet.map(
+      if(this.includesGraceNote(set)) {
+        const principals = this.getGraceNotesInSet(set).map(
           graceNote => graceNote.principal
         ).sort(
           (principalA, principalB) => principalA.startTime - principalB.startTime
@@ -876,36 +910,113 @@ export default {
 
       const allCursorDates = searchData.dates
 
+      // If we are dealing with a grace note cluster, the normal search process does not apply.
+      // TODO : perhaps move this block to a single-use function.
+      // But we have so many functions here already...
+
+      if(!!searchData.upcomingPrincipal) {
+
+        // Ordinary cursor search does not necessitate knowledge of the notes under the cursor,
+        // But here, we do need them.
+        // This is the entire reason searchData.notes was created.
+
+        const notesUnderCurrentPosition = searchData.notes[searchData.searchIndex]
+
+        // The default action in a grace note cluster is staying in place.
+        // So the first thing to know is whether this is possible.
+        // See method body for details.
+
+        const moveForced = this.setForcesMove(
+          set, searchData.upcomingPrincipal, notesUnderCurrentPosition
+        )
+
+        // console.log("moveForced : ", moveForced)
+
+        // Having examined the set and whether it forces a move,
+        // Its info in searchData.notes is updated.
+
+        set.forEach(nsNote => {
+          const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
+
+          const remainingOSMDNotes = notesUnderCurrentPosition.get(mapKey)
+
+          if(!!remainingOSMDNotes) {
+            const notesInInsertionOrder = Array.from(remainingOSMDNotes.values())
+
+            remainingOSMDNotes.delete(notesInInsertionOrder[0])
+            if(remainingOSMDNotes.size === 0) notesUnderCurrentPosition.delete(mapKey)
+          }
+        })
+
+        // We can now determine what to do with the search index :
+
+        // If the current set forces a move, we must advance by one step exactly.
+        // So, we increment the index before assignation.
+
+        if(moveForced) searchData.searchIndex++
+
+        // In all cases, the returned index is taken from the search index.
+
+        const returnedIndex = searchData.searchIndex
+
+        // If the current contains the principal and does not force a move,
+        // we must of course play that principal, so we stay in place :
+        // Hence, we do not increment *before* assigning.
+        // However, the cluster is over, so the search index can and must be incremented,
+        // To resume the monotonic ordinry search process on the next set.
+
+        if(set.includes(searchData.upcomingPrincipal) && !moveForced) searchData.searchIndex++
+
+        // console.log("Search index", searchData.searchIndex, "vs Returned index", returnedIndex)
+
+        // And this *would* be all...
+        // But two tasks remain if we are on the principal-containing set :
+
+        if(set.includes(searchData.upcomingPrincipal)) {
+
+          // 1. Take into account the imperfection of date approximation.
+          // Sometimes (rarely, but sometimes), the "next" index is still not far enough,
+          // and the increment must take place again.
+          // To know if that is the case, we examine notes under the cursor again,
+          // But this time, for the following set.
+
+          const nextSet = this.getSet(this.setStarts.indexOf(setStartIndex)+1)
+          const notesUnderNextPosition = searchData.notes[searchData.searchIndex]
+
+          // console.log("Principal resolved, examining state of next set")
+
+          if(this.setForcesMove(nextSet, searchData.upcomingPrincipal, notesUnderNextPosition)) {
+            // console.log("Incrementing search index after cluster")
+            searchData.searchIndex++
+          }
+          // else console.log("Next set OK, no additional increment")
+
+          // 2. ...null the principal, so monotonic search resumes on the next set.
+          // That one happens every time.
+
+          searchData.upcomingPrincipal = null
+        }
+
+        return allCursorDates[returnedIndex]
+      }
+
+      // If there is no grace note cluster involved, the search process is very simple :
+      // Get the cursor position with the closest timestamp to the set's.
+
       let difference = Infinity;
       let prevDifference = difference
 
       for(let i = searchData.searchIndex ; i < allCursorDates.length ; i++) {
         difference = Math.abs(referenceStartTime - allCursorDates[i])
 
-        if(difference > prevDifference) { // since we only ever move forwards in time, once the difference increases it will never decrease again.
-          // The cursor may need to remain in the same position if there was a grace note involved.
-          // However, in other cases, having it remain in place can lead to false positives,
-          // hence it must keeping moving forward.
-          // FIXME : actually, false positives can happen even in the case of grace notes...
-          // perhaps the whole idea of date approximation should be thrown out the window
-          // but how ?
+        // Since we only ever move forwards in time,
+        // once the difference increases, it will never decrease again.
 
-          const nextSet = this.getSet(this.setStarts.indexOf(setStartIndex)+1)
-
-          // Stay in place if :
-
-          searchData.searchIndex =
-          // The next set consists only of grace notes or grace note principals
-          // Otherwise, staying in place risks missing these non-principal notes
-          !this.includesNonPrincipalNonGraceNote(
-            graceNotesInSet,
-            nextSet,
-            searchData.upcomingPrincipal
-          ) && // and the cluster is not resolved.
-          !!searchData.upcomingPrincipal ? i-1 : i; // ...else move forward
-
-          // console.log(`${searchData.searchIndex == i - 1 ? "Stay in place" : "Move forward"} for next set`)
-          return allCursorDates[i-1] // this will never trigger at i = 0, because nothing will be larger than Infinity
+        if(difference > prevDifference) {
+          searchData.searchIndex = i
+          // console.log("Notes under chosen position :", searchData.notes[i-1])
+          return allCursorDates[i-1] // this will never trigger at i = 0,
+          // because nothing will be larger than Infinity
         }
         else prevDifference = difference
       }
@@ -965,10 +1076,35 @@ export default {
       return set.filter(note => this.isGraceNote(note))
     },
 
-    includesNonPrincipalNonGraceNote(graceNotes, set, upcomingPrincipal) {
-      const principals = [...graceNotes.map(graceNote => graceNote.principal), upcomingPrincipal]
-      const nonGraceNotes = set.filter(note => !this.isGraceNote(note))
-      return nonGraceNotes.some(note => !principals.includes(note))
+    setForcesMove(set, upcomingPrincipal, notesUnderCurrentPosition) {
+      // console.log("Examining whether to force move for set", set)
+      // console.log("Notes under given cursor position are :", notesUnderCurrentPosition)
+
+      const nonPrincipalNonGraceNotes = set.filter(
+        note => !this.isGraceNote(note) && note !== upcomingPrincipal
+      )
+
+      // console.log("Non grace-adjacent notes in set :", nonPrincipalNonGraceNotes)
+
+      // The search must move forward in a grace note cluster if :
+      // 1. All notes under the current position have expired
+      // (indicating that any following notes are at following position)
+      // or
+      // 2. The current position contains notes that are not part of the cluster,
+      // And are not found at the current position.
+      // In other words, notes are no longer vertically aligned.
+
+      return (notesUnderCurrentPosition.size === 0
+          ||
+        (
+          nonPrincipalNonGraceNotes.length > 0
+            &&
+          nonPrincipalNonGraceNotes.some(nsNote => {
+            const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
+            return notesUnderCurrentPosition.get(mapKey) === undefined
+          })
+        )
+      )
     },
 
     isFullGraceNoteSet(set) {
