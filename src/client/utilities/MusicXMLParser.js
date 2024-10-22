@@ -399,7 +399,16 @@ export default function parseMusicXml(buffer) {
       event => !!event.noteOn
     )
   ).sort(
-    (noteA, noteB) => noteA.delta - noteB.delta
+    (noteA, noteB) => {
+      if(noteA.delta !== noteB.delta)
+        return noteA.delta - noteB.delta
+
+      // Ensure strict order even within to-be sets,
+      // So the indices conform to those of the eventual note sequence,
+      // Which uses the same disambiguation.
+
+      else return noteA.noteOn.noteNumber - noteB.noteOn.noteNumber
+    }
   )
 
   // So, finally, we can get the noteSequence-compatible index of every grace note,
