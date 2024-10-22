@@ -184,14 +184,23 @@ export default function parseMusicXml(buffer) {
   // This can be stored in a single place.
   let measureEnd = 0
 
-  xmlScore.measures.forEach(measure => {
+  // console.log("Begin MusicXML parsing")
+
+  xmlScore.measures.forEach((measure, index) => {
+
+    // console.log(`Measure ${index}`)
 
     for(const partID in measure.parts) {
       const partTrack = trackMap.get(partID)
 
       const partArray = measure.parts[partID]
 
+      // console.log(`Part ${partID} :`, partArray)
+
       partArray.forEach((event, index) => {
+
+        // console.log("Parsing", event)
+        // console.log("Delta before parsing :", partTrack.currentDelta)
 
         switch(event._class) {
 
@@ -327,11 +336,16 @@ export default function parseMusicXml(buffer) {
 
             break
         }
+
+        // console.log("Delta after parsing :", partTrack.currentDelta)
       })
 
       // Ensure measures do not encroach on each other,
       // Even if backups end up in the middle of one.
-      if(partTrack.currentDelta < measureEnd) partTrack.currentDelta = measureEnd
+      if(partTrack.currentDelta < measureEnd) {
+        // console.log("Delta over measure, correcting to", measureEnd)
+        partTrack.currentDelta = measureEnd
+      }
     }
   })
 
@@ -590,8 +604,17 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
     graceNote.principal = principalNotes[index]
   })
 
-  const relatedToFollowing = principalNotes.filter(pnote => pnote === followingXmlNote).length
-  const relatedToPrevious = graceNoteSequence.length - relatedToFollowing
+  const chordGraceNoteIndices = graceNoteSequence.map((graceNote, index) => {
+    return graceNote.chord ? index : null
+  }).filter(indexOrNull => indexOrNull !== null)
+
+  const relatedToFollowing = principalNotes.filter(
+    (pnote, index) => !chordGraceNoteIndices.includes(index) && pnote === followingXmlNote
+  ).length
+
+  const relatedToPrevious = principalNotes.filter(
+    (pnote, index) => !chordGraceNoteIndices.includes(index) && pnote === previousXmlNote
+  ).length
 
   const relevantDefaults = principalNotes.map(principalNote =>
     principalNote.dots ? DEFAULT_GRACE_DURATION_DOTTED : DEFAULT_GRACE_DURATION_NORMAL
@@ -635,13 +658,24 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
 
   // Since the following note hasn't been parsed yet, its duration can simply be changed in place.
   if(!!followingXmlNote)
-    followingXmlNote.duration *= 1 - stealTimeFollowing.reduce((acc, curr) => acc + curr, 0)
+    followingXmlNote.duration *= 1 - stealTimeFollowing.filter(
+      (_, index) => !chordGraceNoteIndices.includes(index)
+    ).reduce(
+      (acc, curr) => acc + curr, 0
+    )
 
   // However, the previous note has already been parsed.
   // Hence, it's the MIDI note off event that must be modified.
+
   const { previousNoteOff, start, duration } = { ...partTrack.xmlNotesToOffEvents.get(previousXmlNote) }
   if(!!previousNoteOff) {
-    const stolenPrevious = stealTimePrevious.reduce((acc, curr) => acc + curr, 0)
+
+    const stolenPrevious = stealTimePrevious.filter(
+      (_, index) => !chordGraceNoteIndices.includes(index)
+    ).reduce(
+      (acc, curr) => acc + curr, 0
+    )
+
     previousNoteOff.delta = start + duration * (1 - stolenPrevious)
 
     // Because we always process grace note clusters when encountering the *first* of their members,
