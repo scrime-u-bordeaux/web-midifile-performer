@@ -938,6 +938,9 @@ export default {
         set.forEach(nsNote => {
           const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
 
+          // We can't safe call here, because it risks...
+          // ...an infinite loop ! (BI18op68-2, which instead just breaks)
+          // As of 10/24, it's not quite clear why.
           const remainingOSMDNotes = notesUnderCurrentPosition.get(mapKey)
 
           if(!!remainingOSMDNotes) {
@@ -1094,14 +1097,14 @@ export default {
       // And are not found at the current position.
       // In other words, notes are no longer vertically aligned.
 
-      return (notesUnderCurrentPosition.size === 0
+      return (notesUnderCurrentPosition?.size === 0
           ||
         (
           nonPrincipalNonGraceNotes.length > 0
             &&
           nonPrincipalNonGraceNotes.some(nsNote => {
             const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
-            return notesUnderCurrentPosition.get(mapKey) === undefined
+            return notesUnderCurrentPosition?.get(mapKey) === undefined
           })
         )
       )
