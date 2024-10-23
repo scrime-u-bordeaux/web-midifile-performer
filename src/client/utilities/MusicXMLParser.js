@@ -631,14 +631,14 @@ function getTrueNoteDuration(xmlNote, partTrack) {
 }
 
 function markLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
-  let i = initialArpeggioIndex
-  const fullChord = [partArray[i]]
+  const fullChord = [partArray[initialArpeggioIndex]]
+  let i = initialArpeggioIndex + 1
 
   // This second argument set to true means : check that the notes have "chord" attributes.
   // Because here, we might run into two successive arpeggiated chords,
   // and we want to stop at the end of the first one.
   // So when the next one starts, with arpeggiates set, but no "chord" attr (since it's the first note of the chord)
-  // The loop stops. 
+  // The loop stops.
   for(; isArpeggiatedChordNote(partArray[i], true); i++) fullChord.push(partArray[i])
 
   partArray[i-1].lastArpeggiatedChordNoteFlag = true
