@@ -34,6 +34,14 @@ const VELOCITY_MASK = 12
 const DEFAULT_GRACE_DURATION_DOTTED = 1 / 3
 const DEFAULT_GRACE_DURATION_NORMAL = 1 / 2
 
+// Minimum timestamp difference between two note on events,
+// Under which they are considered simultaneous.
+// This is not used for any actual parsing,
+// Just advance determination of future notesequence indices
+// To transmit info the visualizer.
+
+const DELTA_EPSILON = 0.0000000001
+
 const stepOffsets = new Map(
   [
     ["a", 0],
@@ -481,7 +489,7 @@ export default function parseMusicXml(buffer) {
     )
   ).sort(
     (noteA, noteB) => {
-      if(noteA.delta !== noteB.delta)
+      if(Math.abs(noteA.delta - noteB.delta) > DELTA_EPSILON)
         return noteA.delta - noteB.delta
 
       // Ensure strict order even within to-be sets,
