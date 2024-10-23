@@ -90,6 +90,45 @@ const tempoMap = new Map(
   ]
 )
 
+// Before starting, define sub-functions relating to backup manipulation through delta warping.
+// TODO : make partTrack a JS class instead. These will be methods.
+
+function prepareDeltaWarp(partTrack) {
+  partTrack.deltaWarpExit = partTrack.currentDelta
+  // console.log("Preparing delta warp by registering exit", partTrack.deltaWarpExit)
+}
+
+function registerDeltaWarp(partTrack) {
+  partTrack.deltaWarps.set(partTrack.currentDelta, partTrack.deltaWarpExit)
+  // console.log("Registering delta warp from", partTrack.currentDelta, "to", partTrack.deltaWarpExit)
+  partTrack.deltaWarpExit = null
+}
+
+function executeDeltaWarp(partTrack) {
+  if(partTrack.deltaWarps.has(partTrack.currentDelta)) {
+    const origDelta = partTrack.currentDelta
+    partTrack.currentDelta = partTrack.deltaWarps.get(partTrack.currentDelta)
+    // console.log("Executing registered delta warp from", origDelta, "to", partTrack.currentDelta)
+    partTrack.warpCompensationValue = origDelta - partTrack.currentDelta
+    // console.log("Registering compensation value of", partTrack.warpCompensationValue)
+  }
+}
+
+function getWarpCompensationValue(partTrack, reset = true) {
+  const returnedValue = partTrack.warpCompensationValue
+
+  if(requiresWarpCompensation(partTrack)) {
+    if(reset) partTrack.warpCompensationValue = 0
+    // console.log("Returning non-zero warp compensation value", returnedValue)
+  }
+
+  return returnedValue
+}
+
+function requiresWarpCompensation(partTrack) {
+  return partTrack.warpCompensationValue !== 0
+}
+
 export default function parseMusicXml(buffer) {
   const xmlScore = parseScore(buffer) // Always returns a timewise score, even from a partwise file.
   const trackMap = new Map()
@@ -155,6 +194,14 @@ export default function parseMusicXml(buffer) {
 
         // Testing for inclusion in this will prevent analyzing the same grace notes multiple times.
         lastAnalyzedGraceNoteSequence: null,
+        // Ditto for arpeggiated chords.
+        lastArpeggiatedChord: null,
+
+        // Some edge cases, such as arpeggiated chords, require altering backups.
+        // The delta warp mechanism aids with this.
+        deltaWarpExit: null,
+        deltaWarps: new Map(),
+        warpCompensationValue: 0,
 
         // Some files may not provide a default tempo event.
         // The MFP.js parser assumes the default tempo anyway,
@@ -215,7 +262,11 @@ export default function parseMusicXml(buffer) {
 
           case "Attributes":
 
-            if(!!event.divisions) divisions = event.divisions
+            if(!!event.divisions) {
+              divisions = event.divisions
+              Array.from(trackMap.values()).forEach(partTrack => partTrack.divisions = divisions)
+            }
+
             if(!!event.transposes) partTrack.transpose = parseInt(event.transposes[0].chromatic, 10)
             break
 
@@ -277,6 +328,7 @@ export default function parseMusicXml(buffer) {
           case "Backup":
 
             partTrack.currentDelta -= event.duration
+            executeDeltaWarp(partTrack)
 
             break
 
@@ -285,6 +337,7 @@ export default function parseMusicXml(buffer) {
           case "Forward":
 
             partTrack.currentDelta += event.duration
+            executeDeltaWarp(partTrack)
 
             break
 
@@ -293,6 +346,11 @@ export default function parseMusicXml(buffer) {
           case "Note":
 
             if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
+
+              if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.includes(event)) {
+                partTrack.lastArpeggiatedChord = markLastArpeggiatedChordNote(partArray, index)
+                prepareDeltaWarp(partTrack)
+              }
 
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
                 const graceNoteData = gatherGraceNoteData(partArray, index)
@@ -328,9 +386,14 @@ export default function parseMusicXml(buffer) {
             // Notes bearing a "chord" attribute are synced to the previous pitch that did not bear one.
             // As such, their duration is irrelevant for the accumulator.
 
-            if(!event.chord) { // We want this to happen to rests as well.
-              partTrack.currentDelta += event.duration
+            if(!event.chord || isArpeggiatedChordNote(event)) { // We want this to happen to rests as well.
+              if(event.lastArpeggiatedChordNoteFlag) registerDeltaWarp(partTrack)
+
+              partTrack.currentDelta +=
+                isArpeggiatedChordNote(event) ?
+                getTrueNoteDuration(event, partTrack) : event.duration + getWarpCompensationValue(partTrack)
               partTrack.lastIncrement = event.duration
+
               if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
             }
 
@@ -527,7 +590,8 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
 }
 
 function getNoteStartTime(xmlNote, partTrack) {
-  return xmlNote.chord ? partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta
+  return xmlNote.chord && !isArpeggiatedChordNote(xmlNote) ?
+    partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta
 }
 
 function manageNoteArticulations(xmlNote, partTrack) {
@@ -551,9 +615,26 @@ function manageNoteArticulations(xmlNote, partTrack) {
 }
 
 function getTrueNoteDuration(xmlNote, partTrack) {
+  if(isArpeggiatedChordNote(xmlNote)
+      &&
+     !xmlNote.lastArpeggiatedChordNoteFlag
+    )
+    return partTrack.divisions / 16
+
   // Divide by 2 (1 << 1) for staccato, by 4 (2 << 1) for staccatissimo.
   const divisor = (partTrack.articulationFlags & DURATION_MASK) << 1
-  return divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration
+  return (divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration) + getWarpCompensationValue(partTrack, false)
+}
+
+function markLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
+  let i = initialArpeggioIndex
+  const fullChord = [partArray[i]]
+
+  for(; isArpeggiatedChordNote(partArray[i], true); i++) fullChord.push(partArray[i])
+
+  partArray[i-1].lastArpeggiatedChordNoteFlag = true
+
+  return fullChord
 }
 
 function gatherGraceNoteData(partArray, initialGraceNoteIndex) {
@@ -759,4 +840,8 @@ function getChannelChangePseudoEvent(channel, delta) {
     channel: channel,
     delta: delta
   }
+}
+
+function isArpeggiatedChordNote(xmlNote, checkChord = false) {
+  return (!checkChord || !!xmlNote?.chord) && xmlNote?.notations?.find(notation => !!notation.arpeggiates)
 }
