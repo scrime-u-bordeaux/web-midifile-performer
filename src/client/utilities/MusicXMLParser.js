@@ -90,43 +90,103 @@ const tempoMap = new Map(
   ]
 )
 
-// Before starting, define sub-functions relating to backup manipulation through delta warping.
-// TODO : make partTrack a JS class instead. These will be methods.
+class PartTrack {
+  activeChannel
 
-function prepareDeltaWarp(partTrack) {
-  partTrack.deltaWarpExit = partTrack.currentDelta
-  // console.log("Preparing delta warp by registering exit", partTrack.deltaWarpExit)
-}
+  // For later identification of notes in the OSMD visualizer,
+  // We need to keep track of each part's channel throughout the totality of the file.
+  channelHistory
 
-function registerDeltaWarp(partTrack) {
-  partTrack.deltaWarps.set(partTrack.currentDelta, partTrack.deltaWarpExit)
-  // console.log("Registering delta warp from", partTrack.currentDelta, "to", partTrack.deltaWarpExit)
-  partTrack.deltaWarpExit = null
-}
+  // Not all files will provide note-specific dynamics.
+  // In fact, for "high-level" notation (distanced from MIDI),
+  // only written values (like mf, f, p, etc), may be provided.
+  // These written values are stored here.
+  notatedDynamics = []
 
-function executeDeltaWarp(partTrack) {
-  if(partTrack.deltaWarps.has(partTrack.currentDelta)) {
-    const origDelta = partTrack.currentDelta
-    partTrack.currentDelta = partTrack.deltaWarps.get(partTrack.currentDelta)
-    // console.log("Executing registered delta warp from", origDelta, "to", partTrack.currentDelta)
-    partTrack.warpCompensationValue = origDelta - partTrack.currentDelta
-    // console.log("Registering compensation value of", partTrack.warpCompensationValue)
+  transpose = 0
+
+  // DT is accumulated per part/track, with backup tags the only way of rewinding it.
+  // We convert to relative at the end.
+  // This is awkward as we convert back to absolute in the MFP,
+  // But otherwise processing is a nightmare.
+  currentDelta = DEFAULT_DELTA
+
+  // Unfortunately, a single accumulator is not enough :
+  // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
+  // when dealing with notes in a chord.
+  lastIncrement = 0
+
+  // A binary flag holder. From most to least significant bit :
+  // Accent, marcato, staccatissimo, staccato
+  // Used to carry that information through chords.
+  articulationFlags = 0
+
+  // Testing for inclusion in this will prevent analyzing the same grace notes multiple times.
+  lastAnalyzedGraceNoteSequence = null
+  // Ditto for arpeggiated chords.
+  lastArpeggiatedChord = null
+
+  // Some edge cases, such as arpeggiated chords, require altering backups.
+  // The delta warp mechanism aids with this.
+  deltaWarpExit = null
+  deltaWarps = new Map()
+  #warpCompensationValue = 0
+
+  // Some files may not provide a default tempo event.
+  // The MFP.js parser assumes the default tempo anyway,
+  // But just to be safe, we provide an event for it to start.
+  events = [getDefaultTempoEvent()]
+
+  // This is a very heavy, but convenient solution to find the preceding note-off of a grace note.
+  // Sadly, it will just take up space for nothing in most cases.
+  xmlNotesToOffEvents = new Map()
+
+  // Conversely, these two hacks are necessary to bypass OSMD's inability to position its cursor over grace notes.
+  // By using it, we can know at which deltas grace notes are encountered...
+  noteOnEventsToXmlNotes = new Map()
+  // ... and where their principals are
+  xmlNotesToNoteOnEvents = new Map()
+
+  constructor(startingChannel) {
+    this.activeChannel = startingChannel
+    this.channelHistory = [getChannelChangePseudoEvent(startingChannel, DEFAULT_DELTA)]
   }
-}
 
-function getWarpCompensationValue(partTrack, reset = true) {
-  const returnedValue = partTrack.warpCompensationValue
-
-  if(requiresWarpCompensation(partTrack)) {
-    if(reset) partTrack.warpCompensationValue = 0
-    // console.log("Returning non-zero warp compensation value", returnedValue)
+  prepareDeltaWarp() {
+    this.deltaWarpExit = this.currentDelta
+    // console.log("Preparing delta warp by registering exit", this.deltaWarpExit)
   }
 
-  return returnedValue
-}
+  registerDeltaWarp() {
+    this.deltaWarps.set(this.currentDelta, this.deltaWarpExit)
+    // console.log("Registering delta warp from", this.currentDelta, "to", this.deltaWarpExit)
+    this.deltaWarpExit = null
+  }
 
-function requiresWarpCompensation(partTrack) {
-  return partTrack.warpCompensationValue !== 0
+  executeDeltaWarp() {
+    if(this.deltaWarps.has(this.currentDelta)) {
+      const origDelta = this.currentDelta
+      this.currentDelta = this.deltaWarps.get(this.currentDelta)
+      // console.log("Executing registered delta warp from", origDelta, "to", this.currentDelta)
+      this.#warpCompensationValue = origDelta - this.currentDelta
+      // console.log("Registering compensation value of", this.#warpCompensationValue)
+    }
+  }
+
+  warpCompensationValue(reset = true) {
+    const returnedValue = this.#warpCompensationValue
+
+    if(this.requiresWarpCompensation()) {
+      if(reset) this.#warpCompensationValue = 0
+      // console.log("Returning non-zero warp compensation value", returnedValue)
+    }
+
+    return returnedValue
+  }
+
+  requiresWarpCompensation() {
+    return this.#warpCompensationValue !== 0
+  }
 }
 
 export default function parseMusicXml(buffer) {
@@ -161,63 +221,7 @@ export default function parseMusicXml(buffer) {
 
     trackMap.set(
       part.id,
-      {
-        activeChannel: startingChannel,
-
-        // For later identification of notes in the OSMD visualizer,
-        // We need to keep track of each part's channel throughout the totality of the file.
-        channelHistory: [getChannelChangePseudoEvent(startingChannel, DEFAULT_DELTA)],
-
-        // Not all files will provide note-specific dynamics.
-        // In fact, for "high-level" notation (distanced from MIDI),
-        // only written values (like mf, f, p, etc), may be provided.
-        // These written values are stored here.
-        notatedDynamics: [],
-
-        transpose: 0,
-
-        // DT is accumulated per part/track, with backup tags the only way of rewinding it.
-        // We convert to relative at the end.
-        // This is awkward as we convert back to absolute in the MFP,
-        // But otherwise processing is a nightmare.
-        currentDelta: DEFAULT_DELTA,
-
-        // Unfortunately, a single accumulator is not enough :
-        // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
-        // when dealing with notes in a chord.
-        lastIncrement: 0,
-
-        // A binary flag holder. From most to least significant bit :
-        // Accent, marcato, staccatissimo, staccato
-        // Used to carry that information through chords.
-        articulationFlags: 0,
-
-        // Testing for inclusion in this will prevent analyzing the same grace notes multiple times.
-        lastAnalyzedGraceNoteSequence: null,
-        // Ditto for arpeggiated chords.
-        lastArpeggiatedChord: null,
-
-        // Some edge cases, such as arpeggiated chords, require altering backups.
-        // The delta warp mechanism aids with this.
-        deltaWarpExit: null,
-        deltaWarps: new Map(),
-        warpCompensationValue: 0,
-
-        // Some files may not provide a default tempo event.
-        // The MFP.js parser assumes the default tempo anyway,
-        // But just to be safe, we provide an event for it to start.
-        events: [getDefaultTempoEvent()],
-
-        // This is a very heavy, but convenient solution to find the preceding note-off of a grace note.
-        // Sadly, it will just take up space for nothing in most cases.
-        xmlNotesToOffEvents: new Map(),
-
-        // Conversely, these two hacks are necessary to bypass OSMD's inability to position its cursor over grace notes.
-        // By using it, we can know at which deltas grace notes are encountered...
-        noteOnEventsToXmlNotes: new Map(),
-        // ... and where their principals are
-        xmlNotesToNoteOnEvents: new Map()
-      }
+      new PartTrack(startingChannel)
     )
   })
 
@@ -328,7 +332,7 @@ export default function parseMusicXml(buffer) {
           case "Backup":
 
             partTrack.currentDelta -= event.duration
-            executeDeltaWarp(partTrack)
+            partTrack.executeDeltaWarp()
 
             break
 
@@ -337,7 +341,7 @@ export default function parseMusicXml(buffer) {
           case "Forward":
 
             partTrack.currentDelta += event.duration
-            executeDeltaWarp(partTrack)
+            partTrack.executeDeltaWarp()
 
             break
 
@@ -349,7 +353,7 @@ export default function parseMusicXml(buffer) {
 
               if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.includes(event)) {
                 partTrack.lastArpeggiatedChord = markLastArpeggiatedChordNote(partArray, index)
-                prepareDeltaWarp(partTrack)
+                partTrack.prepareDeltaWarp()
               }
 
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
@@ -387,11 +391,11 @@ export default function parseMusicXml(buffer) {
             // As such, their duration is irrelevant for the accumulator.
 
             if(!event.chord || isArpeggiatedChordNote(event)) { // We want this to happen to rests as well.
-              if(event.lastArpeggiatedChordNoteFlag) registerDeltaWarp(partTrack)
+              if(event.lastArpeggiatedChordNoteFlag) partTrack.registerDeltaWarp()
 
               partTrack.currentDelta +=
                 isArpeggiatedChordNote(event) ?
-                getTrueNoteDuration(event, partTrack) : event.duration + getWarpCompensationValue(partTrack)
+                getTrueNoteDuration(event, partTrack) : event.duration + partTrack.warpCompensationValue()
               partTrack.lastIncrement = event.duration
 
               if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
@@ -623,13 +627,18 @@ function getTrueNoteDuration(xmlNote, partTrack) {
 
   // Divide by 2 (1 << 1) for staccato, by 4 (2 << 1) for staccatissimo.
   const divisor = (partTrack.articulationFlags & DURATION_MASK) << 1
-  return (divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration) + getWarpCompensationValue(partTrack, false)
+  return (divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration) + partTrack.warpCompensationValue(false)
 }
 
 function markLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
   let i = initialArpeggioIndex
   const fullChord = [partArray[i]]
 
+  // This second argument set to true means : check that the notes have "chord" attributes.
+  // Because here, we might run into two successive arpeggiated chords,
+  // and we want to stop at the end of the first one.
+  // So when the next one starts, with arpeggiates set, but no "chord" attr (since it's the first note of the chord)
+  // The loop stops. 
   for(; isArpeggiatedChordNote(partArray[i], true); i++) fullChord.push(partArray[i])
 
   partArray[i-1].lastArpeggiatedChordNoteFlag = true
