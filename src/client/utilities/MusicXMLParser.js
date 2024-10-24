@@ -401,10 +401,11 @@ export default function parseMusicXml(buffer) {
             if(!event.chord || isArpeggiatedChordNote(event)) { // We want this to happen to rests as well.
               if(event.lastArpeggiatedChordNoteFlag) partTrack.registerDeltaWarp()
 
-              partTrack.currentDelta +=
-                isArpeggiatedChordNote(event) ?
-                getTrueNoteDuration(event, partTrack) : event.duration + partTrack.warpCompensationValue()
-              partTrack.lastIncrement = event.duration
+              const increment = isArpeggiatedChordNote(event) ?
+              getTrueNoteDuration(event, partTrack) : event.duration + partTrack.warpCompensationValue()
+
+              partTrack.currentDelta += increment
+              partTrack.lastIncrement = increment
 
               if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
             }
