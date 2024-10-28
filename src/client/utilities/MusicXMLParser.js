@@ -101,6 +101,13 @@ const tempoMap = new Map(
 class PartTrack {
   activeChannel
 
+  // Arpeggios disturb the synchronization of part events through backups.
+  // To mitigate this effect, we keep track of :
+  #arpDurations = new Map() // The extra duration incurred by each arp
+  arpOffsetForMeasure = 0 // The sum of these durations over the measure
+  // ...and an additional flag, see getArpCompensation() for details
+  #noCompensateFlag = false
+
   // For later identification of notes in the OSMD visualizer,
   // We need to keep track of each part's channel throughout the totality of the file.
   channelHistory
@@ -132,13 +139,8 @@ class PartTrack {
   // Testing for inclusion in this will prevent analyzing the same grace notes multiple times.
   lastAnalyzedGraceNoteSequence = null
   // Ditto for arpeggiated chords.
+  #lastArpeggiatedChordDelta = null
   lastArpeggiatedChord = null
-
-  // Some edge cases, such as arpeggiated chords, require altering backups.
-  // The delta warp mechanism aids with this.
-  deltaWarpExit = null
-  deltaWarps = new Map()
-  #warpCompensationValue = 0
 
   // Some files may not provide a default tempo event.
   // The MFP.js parser assumes the default tempo anyway,
@@ -160,40 +162,76 @@ class PartTrack {
     this.channelHistory = [getChannelChangePseudoEvent(startingChannel, DEFAULT_DELTA)]
   }
 
-  prepareDeltaWarp() {
-    this.deltaWarpExit = this.currentDelta
-    // console.log("Preparing delta warp by registering exit", this.deltaWarpExit)
-  }
-
-  registerDeltaWarp() {
-    this.deltaWarps.set(this.currentDelta, this.deltaWarpExit)
-    // console.log("Registering delta warp from", this.currentDelta, "to", this.deltaWarpExit)
-    this.deltaWarpExit = null
-  }
-
-  executeDeltaWarp() {
-    if(this.deltaWarps.has(this.currentDelta)) {
-      const origDelta = this.currentDelta
-      this.currentDelta = this.deltaWarps.get(this.currentDelta)
-      // console.log("Executing registered delta warp from", origDelta, "to", this.currentDelta)
-      this.#warpCompensationValue = origDelta - this.currentDelta
-      // console.log("Registering compensation value of", this.#warpCompensationValue)
-    }
-  }
-
-  warpCompensationValue(reset = true) {
-    const returnedValue = this.#warpCompensationValue
-
-    if(this.requiresWarpCompensation()) {
-      if(reset) this.#warpCompensationValue = 0
-      // console.log("Returning non-zero warp compensation value", returnedValue)
+  cleanUpForMeasure(measureEnd) {
+    // Ensure measures do not encroach on each other,
+    // Even if backups end up in the middle of one.
+    if(this.currentDelta < measureEnd) {
+      console.log("Delta over measure, correcting to", measureEnd)
+      this.currentDelta = measureEnd
     }
 
-    return returnedValue
+    this.arpOffsetForMeasure = 0
   }
 
-  requiresWarpCompensation() {
-    return this.#warpCompensationValue !== 0
+  getRelevantNotatedDynamics(startTime) {
+    return this.notatedDynamics.findLast(
+      dynamics => dynamics.delta <= startTime
+    )?.value
+  }
+
+  getArpCompensation(xmlNote) {
+    // If this flag is true, the registered compensation corresponds
+    // to an arp that *is being* built.
+    // Therefore, it must not yet be applied.
+
+    if(this.#noCompensateFlag) {
+      this.#noCompensateFlag = false
+      return 0
+    }
+
+    // Check if an arp was registered at this delta.
+    // If so, add its extra duration to the delta increment.
+
+    const offset = this.#arpDurations.get(getNoteStartTime(xmlNote, this))
+    return offset || 0
+  }
+
+  registerArp(arp) {
+    this.#lastArpeggiatedChordDelta = this.currentDelta
+    this.lastArpeggiatedChord = arp
+  }
+
+  updateArpsAndOffsets(event) {
+    const mapKey = this.#lastArpeggiatedChordDelta // should never be null when this method is called
+    // Do NOT add the duration of the last arp note : it is normal, and not part of the offset system.
+    const increment = event.lastArpeggiatedChordNoteFlag ? 0 : getTrueNoteDuration(event, this)
+    const arpDuration = this.#arpDurations.get(mapKey)
+
+    // If no arpeggio has been registered here yet,
+    // The increment must NOT be added to the note at this delta
+    // (Because it represents its own offset)
+
+    if(!arpDuration) this.#noCompensateFlag = true
+
+    this.#arpDurations.set(
+      mapKey,
+      !!arpDuration ? arpDuration + increment : increment
+    )
+
+    // Arpeggio is over
+
+    if(event.lastArpeggiatedChordNoteFlag) {
+      // Add total arpeggio offset to measure accumulator
+      this.arpOffsetForMeasure += arpDuration
+
+      // Shift every registered event that comes after the arp,
+      // So everything remains in sync
+      this.events.filter(
+        event => event._class === "Note" && event.delta >= mapKey
+      ).forEach(
+        event => event.delta += arpDuration
+      )
+    }
   }
 }
 
@@ -339,8 +377,7 @@ export default function parseMusicXml(buffer) {
 
           case "Backup":
 
-            partTrack.currentDelta -= event.duration
-            partTrack.executeDeltaWarp()
+            partTrack.currentDelta -= event.duration + partTrack.arpOffsetForMeasure
 
             break
 
@@ -348,8 +385,7 @@ export default function parseMusicXml(buffer) {
 
           case "Forward":
 
-            partTrack.currentDelta += event.duration
-            partTrack.executeDeltaWarp()
+            partTrack.currentDelta += event.duration + partTrack.arpOffsetForMeasure
 
             break
 
@@ -359,10 +395,8 @@ export default function parseMusicXml(buffer) {
 
             if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
 
-              if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.includes(event)) {
-                partTrack.lastArpeggiatedChord = markLastArpeggiatedChordNote(partArray, index)
-                partTrack.prepareDeltaWarp()
-              }
+              if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.includes(event))
+                partTrack.registerArp(markFirstAndLastArpeggiatedChordNote(partArray, index))
 
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
                 const graceNoteData = gatherGraceNoteData(partArray, index)
@@ -399,10 +433,11 @@ export default function parseMusicXml(buffer) {
             // As such, their duration is irrelevant for the accumulator.
 
             if(!event.chord || isArpeggiatedChordNote(event)) { // We want this to happen to rests as well.
-              if(event.lastArpeggiatedChordNoteFlag) partTrack.registerDeltaWarp()
+              if(isArpeggiatedChordNote(event)) partTrack.updateArpsAndOffsets(event)
 
-              const increment = isArpeggiatedChordNote(event) ?
-              getTrueNoteDuration(event, partTrack) : event.duration + partTrack.warpCompensationValue()
+              const increment = (isArpeggiatedChordNote(event) ?
+                getTrueNoteDuration(event, partTrack) : event.duration
+              ) + partTrack.getArpCompensation(event)
 
               partTrack.currentDelta += increment
               partTrack.lastIncrement = increment
@@ -416,12 +451,7 @@ export default function parseMusicXml(buffer) {
         // console.log("Delta after parsing :", partTrack.currentDelta)
       })
 
-      // Ensure measures do not encroach on each other,
-      // Even if backups end up in the middle of one.
-      if(partTrack.currentDelta < measureEnd) {
-        // console.log("Delta over measure, correcting to", measureEnd)
-        partTrack.currentDelta = measureEnd
-      }
+      partTrack.cleanUpForMeasure(measureEnd)
     }
   })
 
@@ -583,9 +613,11 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
 
 function getMidiNoteOffEvent(xmlNote, partTrack) {
   manageNoteArticulations(xmlNote, partTrack)
+  const startTime = getNoteStartTime(xmlNote, partTrack)
+  const duration = getTrueNoteDuration(xmlNote, partTrack)
 
   const midiNoteOffEvent = {
-    delta: getNoteStartTime(xmlNote, partTrack) + getTrueNoteDuration(xmlNote, partTrack),
+    delta: startTime + duration,
     channel : partTrack.activeChannel,
     noteOff: {
       velocity: getMidiVelocity(xmlNote),
@@ -595,8 +627,8 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
 
   partTrack.xmlNotesToOffEvents.set(xmlNote, {
     previousNoteOff: midiNoteOffEvent,
-    start: getNoteStartTime(xmlNote, partTrack),
-    duration: getTrueNoteDuration(xmlNote, partTrack)
+    start: startTime,
+    duration: duration
   })
 
   return midiNoteOffEvent
@@ -636,10 +668,12 @@ function getTrueNoteDuration(xmlNote, partTrack) {
 
   // Divide by 2 (1 << 1) for staccato, by 4 (2 << 1) for staccatissimo.
   const divisor = (partTrack.articulationFlags & DURATION_MASK) << 1
-  return (divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration) + partTrack.warpCompensationValue(false)
+  return (divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration)
 }
 
-function markLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
+function markFirstAndLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
+  partArray[initialArpeggioIndex].firstArpeggiatedChordNoteFlag = true
+
   const fullChord = [partArray[initialArpeggioIndex]]
   let i = initialArpeggioIndex + 1
 
@@ -784,12 +818,6 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
   }
 }
 
-function getRelevantNotatedDynamics(partTrack, startTime) {
-  return partTrack?.notatedDynamics.findLast(
-    dynamics => dynamics.delta <= startTime
-  )?.value
-}
-
 // Velocity is defined by the dynamics (for the note on) and end-dynamics (for the note off)
 // attributes of note tags.
 // When these are not present, dynamics tags are used instead,
@@ -810,7 +838,7 @@ function getMidiVelocity(xmlNote, partTrack = null, startTime = null) {
   // So instead of testing for its existence, we test for a default.
   // Also, note that notatedDynamics can never be 0, so !! works fine here.
 
-  const notatedDynamics = getRelevantNotatedDynamics(partTrack, startTime)
+  const notatedDynamics = partTrack?.getRelevantNotatedDynamics(startTime)
 
   if(!!notatedDynamics && relevantDynamics === DEFAULT_PROVIDED_DYNAMICS)
     return multiplicator * notatedDynamics
