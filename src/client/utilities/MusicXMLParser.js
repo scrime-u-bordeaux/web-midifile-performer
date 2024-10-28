@@ -550,7 +550,24 @@ export default function parseMusicXml(buffer) {
       }
     }
   ).filter(
-    note => !!note
+    info => !!info
+  )
+
+  const arpeggioInfo = allNoteOns.map(
+    (note, index) => {
+      if(!mergedOnToXml.get(note).firstArpeggiatedChordNoteFlag) return null
+
+      const endIndex = allNoteOns.slice(index).findIndex(
+        note => !!mergedOnToXml.get(note).lastArpeggiatedChordNoteFlag
+      ) + index
+
+      return {
+        startIndex: index,
+        endIndex: endIndex
+      }
+    }
+  ).filter(
+    info => !!info
   )
 
   // Worse yet : we can't emit from there, because this isn't a class
@@ -563,7 +580,8 @@ export default function parseMusicXml(buffer) {
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
     tempoEvents: tempoEvents,
     channelChanges: channelChanges,
-    graceNoteInfo: graceNoteInfo
+    graceNoteInfo: graceNoteInfo,
+    arpeggioInfo: arpeggioInfo
   }
 
   return midiJson
