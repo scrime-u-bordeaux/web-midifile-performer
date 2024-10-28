@@ -166,7 +166,7 @@ class PartTrack {
     // Ensure measures do not encroach on each other,
     // Even if backups end up in the middle of one.
     if(this.currentDelta < measureEnd) {
-      console.log("Delta over measure, correcting to", measureEnd)
+      // console.log("Delta over measure, correcting to", measureEnd)
       this.currentDelta = measureEnd
     }
 
@@ -632,7 +632,7 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
 function getMidiNoteOffEvent(xmlNote, partTrack) {
   manageNoteArticulations(xmlNote, partTrack)
   const startTime = getNoteStartTime(xmlNote, partTrack)
-  const duration = getTrueNoteDuration(xmlNote, partTrack)
+  const duration = getTrueNoteDuration(xmlNote, partTrack, true)
 
   const midiNoteOffEvent = {
     delta: startTime + duration,
@@ -677,10 +677,12 @@ function manageNoteArticulations(xmlNote, partTrack) {
   }
 }
 
-function getTrueNoteDuration(xmlNote, partTrack) {
+function getTrueNoteDuration(xmlNote, partTrack, fullDurationForArps = false) {
   if(isArpeggiatedChordNote(xmlNote)
       &&
      !xmlNote.lastArpeggiatedChordNoteFlag
+      &&
+     !fullDurationForArps
     )
     return partTrack.divisions / 16
 
