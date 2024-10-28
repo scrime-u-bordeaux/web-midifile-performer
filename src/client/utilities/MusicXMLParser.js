@@ -719,7 +719,7 @@ function gatherGraceNoteData(partArray, initialGraceNoteIndex) {
   for(; i < partArray.length && partArray[i].grace ; i++) graceNoteSequence.push(partArray[i])
 
   // There may not always be a following non-grace note in the measure.
-  const followingXmlNote = !!partArray[i]?.grace ? null : partArray[i]
+  const followingXmlNote = partArray[i]?._class !== "Note" || !!partArray[i]?.grace ? null : partArray[i]
 
   let j = initialGraceNoteIndex - 1
 
