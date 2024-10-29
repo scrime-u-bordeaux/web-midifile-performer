@@ -28,8 +28,12 @@ const STACCATO_FLAG = 1
 const STACCATISSIMO_FLAG = 2
 const MARCATO_FLAG = 4
 const ACCENT_FLAG = 8
+const FERMATA_FLAG = 16
 const DURATION_MASK = 3
 const VELOCITY_MASK = 12
+const FERMATA_MASK = 16
+
+const FERMATA_HOLD = 2
 
 const DEFAULT_GRACE_DURATION_DOTTED = 1 / 3
 const DEFAULT_GRACE_DURATION_NORMAL = 1 / 2
@@ -149,7 +153,7 @@ class PartTrack {
   lastIncrement = 0
 
   // A binary flag holder. From most to least significant bit :
-  // Accent, marcato, staccatissimo, staccato
+  // Fermata, accent, marcato, staccatissimo, staccato
   // Used to carry that information through chords.
   articulationFlags = 0
   preserveArticulation = false // Used when articulation flags should exceptionally carry over
@@ -714,6 +718,15 @@ function manageNoteArticulations(xmlNote, partTrack) {
     if(!partTrack.preserveArticulation) partTrack.articulationFlags = 0
     else partTrack.preserveArticulation = false
 
+    // Fermata are not grouped with articulations,
+    // but are instead direct children of the notation node.
+    // I don't really know why.
+
+    const notations = xmlNote.notations
+
+    if(!!notations?.find(notation => !!notation.fermatas))
+      partTrack.articulationFlags |= FERMATA_FLAG
+
     const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
 
     if(!articulations) return
@@ -738,6 +751,18 @@ function getTrueNoteDuration(xmlNote, partTrack, fullDurationForArps = false) {
      !fullDurationForArps
     )
     return partTrack.divisions / 16
+
+  const hasFermata = partTrack.articulationFlags & FERMATA_MASK
+
+  // Modify the duration in place for a fermata,
+  // So the rest of the logic with the delta accumulator follows.
+
+  if(!!hasFermata)
+    xmlNote.duration *= FERMATA_HOLD
+
+  // Note that fermata and non-zero divisors should not overlap :
+  // A note should not be both fermata and staccato,
+  // Because it can't be both longer and shorter.
 
   // Divide by 2 (1 << 1) for staccato, by 4 (2 << 1) for staccatissimo.
   const divisor = (partTrack.articulationFlags & DURATION_MASK) << 1
