@@ -227,7 +227,7 @@ class PartTrack {
       // Shift every registered event that comes after the arp,
       // So everything remains in sync
       this.events.filter(
-        event => event._class === "Note" && event.delta >= mapKey
+        midiEvent => (!!midiEvent.noteOn || !!midiEvent.noteOff) && midiEvent.delta > mapKey
       ).forEach(
         event => event.delta += arpDuration
       )
