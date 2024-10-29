@@ -34,6 +34,9 @@ const VELOCITY_MASK = 12
 const DEFAULT_GRACE_DURATION_DOTTED = 1 / 3
 const DEFAULT_GRACE_DURATION_NORMAL = 1 / 2
 
+const DYN_PREVIOUS = 0
+const DYN_SFZ = 1
+
 // Minimum timestamp difference between two note on events,
 // Under which they are considered simultaneous.
 // This is not used for any actual parsing,
@@ -56,14 +59,28 @@ const stepOffsets = new Map(
 
 const velocityMap = new Map(
   [
+    ["ppppp", 5],
+    ["pppp", 10],
     ["ppp", 16],
+    ["sppp", [16, DYN_PREVIOUS]],
     ["pp", 33],
+    ["spp", [33, DYN_PREVIOUS]],
     ["p", 49],
+    ["sp", [49, DYN_PREVIOUS]],
     ["mp", 64],
     ["mf", 80],
+    ["pf", 85],
     ["f", 96],
+    ["fp", [96, 49]],
+    ["sf", [96, DYN_PREVIOUS]],
+    ["fz", DYN_SFZ],
+    ["sfz", DYN_SFZ],
     ["ff", 112],
-    ["fff", 127]
+    ["sff", [112, DYN_PREVIOUS]],
+    ["fff", 120],
+    ["sfff", [120, DYN_PREVIOUS]],
+    ["ffff", 126],
+    ["fffff", 127]
   ]
 )
 
@@ -135,6 +152,7 @@ class PartTrack {
   // Accent, marcato, staccatissimo, staccato
   // Used to carry that information through chords.
   articulationFlags = 0
+  preserveArticulation = false // Used when articulation flags should exceptionally carry over
 
   // Testing for inclusion in this will prevent analyzing the same grace notes multiple times.
   lastAnalyzedGraceNoteSequence = null
@@ -160,6 +178,51 @@ class PartTrack {
   constructor(startingChannel) {
     this.activeChannel = startingChannel
     this.channelHistory = [getChannelChangePseudoEvent(startingChannel, DEFAULT_DELTA)]
+  }
+
+  addNotatedDynamics(xmlDirections) {
+    const dynamics = xmlDirections.directionTypes.find(
+      direction => direction.hasOwnProperty("dynamics")
+    ).dynamics
+
+    const velocityKeys = Array.from(velocityMap.keys())
+
+    const dynamicsValue = velocityMap.get(
+      // We're going to assume a dynamics object can only contain one "normal" dynamic tag
+      Object.keys(dynamics).find(key => velocityKeys.includes(key))
+    )
+
+    if(!dynamicsValue) return
+
+    if(dynamicsValue instanceof Array) { // subito dynamics
+
+      const lastNotatedDynamics = this.notatedDynamics.at(-1)
+
+      this.notatedDynamics.push({ // push this one only for this beat
+        delta: this.currentDelta,
+        value: dynamicsValue[0]
+      })
+
+      this.notatedDynamics.push({
+        delta: this.currentDelta+1, // TODO : should this rather be + divisions ?
+        value:
+          !!dynamicsValue[1] ? // If the second value is a valid dynamics value, use it
+            dynamicsValue[1] : // This is only the case for fortepiano.
+            !!lastNotatedDynamics ? // Otherwise, use the last notated dynamics...
+            lastNotatedDynamics.value :
+            dynamicsValue[1] // And if there aren't any, signal to use defaults instead.
+      })
+    }
+
+    else if(dynamicsValue === DYN_SFZ) {
+      this.articulationFlags |= MARCATO_FLAG // interpret sforzando as marcato
+      this.preserveArticulation = true
+    }
+
+    else this.notatedDynamics.push({
+      delta: this.currentDelta,
+      value: dynamicsValue
+    })
   }
 
   cleanUpForMeasure(measureEnd) {
@@ -324,19 +387,8 @@ export default function parseMusicXml(buffer) {
             // For some reasons, children of a directionType do not work on the _class system.
             if(!!event.directionTypes) {
 
-              if(event.directionTypes.some(direction => direction.hasOwnProperty("dynamics"))) {
-                const dynamics = event.directionTypes.find(direction => direction.hasOwnProperty("dynamics")).dynamics
-                const velocityKeys = Array.from(velocityMap.keys())
-                const dynamicsValue = velocityMap.get(
-                  // We're going to assume a dynamics object can only contain one "normal" dynamic tag
-                  Object.keys(dynamics).find(key => velocityKeys.includes(key))
-                )
-                // FIXME : No nullcheck ?
-                partTrack.notatedDynamics.push({
-                  delta: partTrack.currentDelta,
-                  value: dynamicsValue
-                })
-              }
+              if(event.directionTypes.some(direction => direction.hasOwnProperty("dynamics")))
+                partTrack.addNotatedDynamics(event)
 
               if(event.directionTypes.some(direction => direction.hasOwnProperty("words"))) {
                 // Again, I assume there's never going to be *more* than one direction string in a single direction object.
@@ -659,7 +711,8 @@ function getNoteStartTime(xmlNote, partTrack) {
 
 function manageNoteArticulations(xmlNote, partTrack) {
   if(!xmlNote.chord) {
-    partTrack.articulationFlags = 0
+    if(!partTrack.preserveArticulation) partTrack.articulationFlags = 0
+    else partTrack.preserveArticulation = false
 
     const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
 
@@ -856,7 +909,8 @@ function getMidiVelocity(xmlNote, partTrack = null, startTime = null) {
 
   // Because of how our parsing lib currently works, there is always a dynamics and endDynamics field on notes.
   // So instead of testing for its existence, we test for a default.
-  // Also, note that notatedDynamics can never be 0, so !! works fine here.
+  // Also, note that if notatedDynamics is 0, this means a return to default
+  // So !! works as intended.
 
   const notatedDynamics = partTrack?.getRelevantNotatedDynamics(startTime)
 
