@@ -125,9 +125,11 @@ class PartTrack {
   // Arpeggios disturb the synchronization of part events through backups.
   // To mitigate this effect, we keep track of :
   #arpDurations = new Map() // The extra duration incurred by each arp
-  arpOffsetForMeasure = 0 // The sum of these durations over the measure
+  #arpOffsetForMeasure = 0 // The sum of these durations over the measure
   // ...and an additional flag, see getArpCompensation() for details
   #noCompensateFlag = false
+
+  #fermataOffsetForMeasure = 0
 
   // For later identification of notes in the OSMD visualizer,
   // We need to keep track of each part's channel throughout the totality of the file.
@@ -237,7 +239,8 @@ class PartTrack {
       this.currentDelta = measureEnd
     }
 
-    this.arpOffsetForMeasure = 0
+    this.#arpOffsetForMeasure = 0
+    this.#fermataOffsetForMeasure = 0
   }
 
   getRelevantNotatedDynamics(startTime) {
@@ -261,6 +264,10 @@ class PartTrack {
 
     const offset = this.#arpDurations.get(getNoteStartTime(xmlNote, this))
     return offset || 0
+  }
+
+  getOffsetForMeasure() {
+    return this.#arpOffsetForMeasure + this.#fermataOffsetForMeasure
   }
 
   registerArp(arp) {
@@ -289,7 +296,7 @@ class PartTrack {
 
     if(event.lastArpeggiatedChordNoteFlag) {
       // Add total arpeggio offset to measure accumulator
-      this.arpOffsetForMeasure += arpDuration
+      this.#arpOffsetForMeasure += arpDuration
 
       // Shift every registered event that comes after the arp,
       // So everything remains in sync
@@ -299,6 +306,10 @@ class PartTrack {
         event => event.delta += arpDuration
       )
     }
+  }
+
+  signalFermata(xmlNote) {
+    this.#fermataOffsetForMeasure += xmlNote.duration
   }
 }
 
@@ -433,7 +444,7 @@ export default function parseMusicXml(buffer) {
 
           case "Backup":
 
-            partTrack.currentDelta -= event.duration + partTrack.arpOffsetForMeasure
+            partTrack.currentDelta -= event.duration + partTrack.getOffsetForMeasure()
 
             break
 
@@ -441,7 +452,7 @@ export default function parseMusicXml(buffer) {
 
           case "Forward":
 
-            partTrack.currentDelta += event.duration + partTrack.arpOffsetForMeasure
+            partTrack.currentDelta += event.duration + partTrack.getOffsetForMeasure()
 
             break
 
@@ -691,7 +702,11 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
 }
 
 function getMidiNoteOffEvent(xmlNote, partTrack) {
-  manageNoteArticulations(xmlNote, partTrack)
+  // TODO : is this call needed ?
+  // Shouldn't a call in getMidiNoteOnEvent suffice ?
+  // I don't want to remove it and risk breakign something, but...
+  manageNoteArticulations(xmlNote, partTrack, false)
+
   const startTime = getNoteStartTime(xmlNote, partTrack)
   const duration = getTrueNoteDuration(xmlNote, partTrack, true)
 
@@ -718,7 +733,7 @@ function getNoteStartTime(xmlNote, partTrack) {
     partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta
 }
 
-function manageNoteArticulations(xmlNote, partTrack) {
+function manageNoteArticulations(xmlNote, partTrack, signalFermata = true) {
   if(!xmlNote.chord) {
     if(!partTrack.preserveArticulation) partTrack.articulationFlags = 0
     else partTrack.preserveArticulation = false
@@ -729,8 +744,13 @@ function manageNoteArticulations(xmlNote, partTrack) {
 
     const notations = xmlNote.notations
 
-    if(!!notations?.find(notation => !!notation.fermatas))
+    if(!!notations?.find(notation => !!notation.fermatas)) {
+      // Hacky way to avoid doing this twice, since the function is called for both on and off
+      // TODO : Why is that the case ??
+      if(signalFermata) partTrack.signalFermata(xmlNote)
+
       partTrack.articulationFlags |= FERMATA_FLAG
+    }
 
     const articulations = xmlNote.notations?.find(notation => !!notation.articulations)?.articulations
 
