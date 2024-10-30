@@ -611,11 +611,16 @@ export default function parseMusicXml(buffer) {
 
   const arpeggioInfo = allNoteOns.map(
     (note, index) => {
-      if(!mergedOnToXml.get(note).firstArpeggiatedChordNoteFlag) return null
+      const startXmlEquivalent = mergedOnToXml.get(note)
+      if(!startXmlEquivalent.firstArpeggiatedChordNoteFlag) return null
 
-      const endIndex = allNoteOns.slice(index).findIndex(
-        note => !!mergedOnToXml.get(note).lastArpeggiatedChordNoteFlag
-      ) + index
+      const endIndex = allNoteOns.slice(index).findIndex(note => {
+        const candidateXmlEquivalent = mergedOnToXml.get(note)
+        return (
+          candidateXmlEquivalent.lastArpeggiatedChordNoteFlag &&
+          candidateXmlEquivalent.arpeggioStartNote === startXmlEquivalent
+        )
+      }) + index
 
       return {
         startIndex: index,
@@ -783,6 +788,7 @@ function markFirstAndLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
   for(; isArpeggiatedChordNote(partArray[i], true); i++) fullChord.push(partArray[i])
 
   partArray[i-1].lastArpeggiatedChordNoteFlag = true
+  partArray[i-1].arpeggioStartNote = partArray[initialArpeggioIndex]
 
   return fullChord
 }

@@ -111,6 +111,8 @@ export default {
       // (inability to position cursor over grace notes) when they are adjacent to their principal,
       arpeggioInfo: [], // much of the same
 
+      arpeggiosInProgress: 0,
+
       // The list of dates covered by the cursor that correspond to each set.
       // Used to move cursors during refresh.
       cursorAnchors: [],
@@ -1021,8 +1023,12 @@ export default {
       }
 
       if(this.includesArpeggiatedNote(set)) {
+
+        this.updateArpeggiosInProgress(set)
+
         return allCursorDates[this.isLastArpeggiatedSet(set) ?
-          searchData.currentIndex++ : searchData.currentIndex]
+          searchData.currentIndex++ : searchData.currentIndex
+        ]
       }
 
       return allCursorDates[searchData.currentIndex++]
@@ -1083,8 +1089,21 @@ export default {
       return set.some(note => note.isArpeggiatedChordNote)
     },
 
+    updateArpeggiosInProgress(set) {
+      const startedArpeggios = set.filter(
+        note => note.firstArpeggiatedChordNoteFlag
+      ).length
+
+      const endedArpeggios = set.filter(
+        note => note.lastArpeggiatedChordNoteFlag
+      ).length
+
+      this.arpeggiosInProgress += startedArpeggios
+      this.arpeggiosInProgress -= endedArpeggios
+    },
+
     isLastArpeggiatedSet(set) {
-      return set.some(note => note.lastArpeggiatedChordNoteFlag)
+      return this.arpeggiosInProgress === 0
     },
 
     setForcesMove(set, upcomingPrincipal, notesUnderCurrentPosition) {
