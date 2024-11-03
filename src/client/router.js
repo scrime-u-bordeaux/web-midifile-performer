@@ -5,15 +5,16 @@ import {
   createRouter,
 } from 'vue-router';
 import pages from './pages';
-import config from '../../config';
 
 const router = createRouter({
-  history: createWebHashHistory(config.publicPath),
+  // '/' seems sufficient for local dev and prod with nginx reverse proxy :
   // history: createWebHashHistory('/'),
   // history: createWebHashHistory('/web-midifile-performer/'),
+  // history: createWebHashHistory(process.env.PUBLIC_PATH),
 
   // history: createWebHistory('/'),
   // history: createWebHistory('/web-midifile-performer/'),
+  history: createWebHistory(process.env.PUBLIC_PATH),
   routes: [
     {
       path: '/',
