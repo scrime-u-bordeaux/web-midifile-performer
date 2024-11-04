@@ -126,8 +126,6 @@ class PartTrack {
   // To mitigate this effect, we keep track of :
   #arpDurations = new Map() // The extra duration incurred by each arp
   #arpOffsetForMeasure = 0 // The sum of these durations over the measure
-  // ...and an additional flag, see getArpCompensation() for details
-  #noCompensateFlag = false
 
   #fermataOffsetForMeasure = 0
 
@@ -252,19 +250,28 @@ class PartTrack {
   }
 
   getArpCompensation(xmlNote) {
-    // If this flag is true, the registered compensation corresponds
-    // to an arp that *is being* built.
-    // Therefore, it must not yet be applied.
+    // Synced arpeggios should not be compensated.
+    // This seems like an acceptable compromise for now.
+    // If it breaks in some cases, just use the difference of their respective offsets.
 
-    if(this.#noCompensateFlag) {
-      this.#noCompensateFlag = false
-      return 0
-    }
+    if(!!xmlNote.arpeggioStartNote) return 0
 
     // Check if an arp was registered at this delta.
     // If so, add its extra duration to the delta increment.
 
-    const offset = this.#arpDurations.get(getNoteStartTime(xmlNote, this))
+    const durationMapAtDelta = this.#arpDurations.get(getNoteStartTime(xmlNote, this))
+
+    if(!durationMapAtDelta) return 0
+
+    // Compensate events synced with one or more arps
+    // With the sum of these arps' offset
+
+    const offset = Array.from(
+      durationMapAtDelta.values()
+    )?.reduce(
+      (accOffset, offset) => accOffset + offset
+    )
+
     return offset || 0
   }
 
@@ -277,26 +284,26 @@ class PartTrack {
     this.lastArpeggiatedChord = new Set(arp)
   }
 
-  updateArpsAndOffsets(event) {
-    const mapKey = this.#lastArpeggiatedChordDelta // should never be null when this method is called
+  updateArpsAndOffsets(xmlNote) {
+    const arpDelta = this.#lastArpeggiatedChordDelta // should never be null when this method is called
+    const durationMapAtDelta = this.#arpDurations.get(arpDelta) || new Map()
+
+    const arpRef = xmlNote.arpeggioStartNote
+    const arpDuration = durationMapAtDelta.get(arpRef)
+
     // Do NOT add the duration of the last arp note : it is normal, and not part of the offset system.
-    const increment = event.lastArpeggiatedChordNoteFlag ? 0 : getTrueNoteDuration(event, this)
-    const arpDuration = this.#arpDurations.get(mapKey)
+    const increment = xmlNote.lastArpeggiatedChordNoteFlag ? 0 : getTrueNoteDuration(xmlNote, this)
 
-    // If no arpeggio has been registered here yet,
-    // The increment must NOT be added to the note at this delta
-    // (Because it represents its own offset)
-
-    if(!arpDuration) this.#noCompensateFlag = true
-
-    this.#arpDurations.set(
-      mapKey,
+    durationMapAtDelta.set(
+      arpRef,
       !!arpDuration ? arpDuration + increment : increment
     )
 
+    this.#arpDurations.set(arpDelta, durationMapAtDelta)
+
     // Arpeggio is over
 
-    if(event.lastArpeggiatedChordNoteFlag) {
+    if(xmlNote.lastArpeggiatedChordNoteFlag) {
       // Add total arpeggio offset to measure accumulator
       this.#arpOffsetForMeasure += arpDuration
 
@@ -312,14 +319,17 @@ class PartTrack {
             this.noteOnEventsToXmlNotes.get(midiEvent) :
             this.noteOffEventsToXmlNotes.get(midiEvent)
 
-        // Do NOT shift the arp itself, of course.
+        const isInSyncedArp =
+          this.xmlNotesToNoteOnEvents.get(xmlEquivalent.arpeggioStartNote)?.delta === arpDelta
 
-        const isInCurrentArp =
-          this.lastArpeggiatedChord.has(xmlEquivalent)
-
-        !isInCurrentArp && midiEvent.delta > mapKey
+        return !isInSyncedArp && midiEvent.delta > arpDelta
       }).forEach(
-        event => event.delta += arpDuration
+        event => {
+          // FIXME : this works for Clair de Lune,
+          // which is the only sample I found with synchronized arpeggios,
+          // But is not valid in the general case.
+          event.delta += Math.max(arpDuration - event.offsetAtCreation, 0)
+        }
       )
     }
   }
@@ -479,7 +489,7 @@ export default function parseMusicXml(buffer) {
             if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
 
               if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.has(event))
-                partTrack.registerArp(markFirstAndLastArpeggiatedChordNote(partArray, index))
+                partTrack.registerArp(markArpeggio(partArray, index))
 
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
                 const graceNoteData = gatherGraceNoteData(partArray, index)
@@ -708,7 +718,8 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
     noteOn: {
       velocity: getMidiVelocity(xmlNote, partTrack, startTime),
       noteNumber: getMidiNoteNumber(xmlNote, partTrack)
-    }
+    },
+    offsetAtCreation: partTrack.getOffsetForMeasure()
   }
 
   partTrack.noteOnEventsToXmlNotes.set(midiNoteOnEvent, xmlNote)
@@ -732,7 +743,8 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
     noteOff: {
       velocity: getMidiVelocity(xmlNote),
       noteNumber: getMidiNoteNumber(xmlNote, partTrack)
-    }
+    },
+    offsetAtCreation: partTrack.getOffsetForMeasure()
   }
 
   partTrack.xmlNotesToNoteOffEvents.set(xmlNote, {
@@ -815,8 +827,9 @@ function getTrueNoteDuration(xmlNote, partTrack, fullDurationForArps = false) {
   return (divisor > 0 ? xmlNote.duration / divisor : xmlNote.duration)
 }
 
-function markFirstAndLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
+function markArpeggio(partArray, initialArpeggioIndex) {
   partArray[initialArpeggioIndex].firstArpeggiatedChordNoteFlag = true
+  partArray[initialArpeggioIndex].arpeggioStartNote = partArray[initialArpeggioIndex]
 
   const fullChord = [partArray[initialArpeggioIndex]]
   let i = initialArpeggioIndex + 1
@@ -826,10 +839,12 @@ function markFirstAndLastArpeggiatedChordNote(partArray, initialArpeggioIndex) {
   // and we want to stop at the end of the first one.
   // So when the next one starts, with arpeggiates set, but no "chord" attr (since it's the first note of the chord)
   // The loop stops.
-  for(; isArpeggiatedChordNote(partArray[i], true); i++) fullChord.push(partArray[i])
+  for(; isArpeggiatedChordNote(partArray[i], true); i++) {
+    fullChord.push(partArray[i])
+    partArray[i].arpeggioStartNote = partArray[initialArpeggioIndex]
+  }
 
   partArray[i-1].lastArpeggiatedChordNoteFlag = true
-  partArray[i-1].arpeggioStartNote = partArray[initialArpeggioIndex]
 
   return fullChord
 }
