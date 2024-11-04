@@ -980,11 +980,12 @@ export default {
 
         const returnedIndex = searchData.currentIndex
 
-        // If the current contains the principal and does not force a move,
-        // we must of course play that principal, so we stay in place :
-        // Hence, we do not increment *before* assigning.
-        // However, the cluster is over, so the search index can and must be incremented,
-        // To resume the monotonic ordinry search process on the next set.
+        // If the current contains the principal, the cluster is over,
+        // so the search should always incremented,
+        // *even if a move was forced,*
+        // to resume the monotonic ordinry search process on the next set.
+        // However, this is true for some files and not others.
+        // FIXME : address this once and for all.
 
         if(set.includes(searchData.upcomingPrincipal) && !moveForced) searchData.currentIndex++
 
@@ -995,11 +996,14 @@ export default {
 
         if(set.includes(searchData.upcomingPrincipal)) {
 
-          // 1. Take into account the imperfection of date approximation.
-          // Sometimes (rarely, but sometimes), the "next" index is still not far enough,
-          // and the increment must take place again.
+          // TODO : is this still necessary ?
+          // When data approx was used, sometimes (rarely, but sometimes),
+          // the "next" index was still not far enough,
+          // and the increment had to take place again.
           // To know if that is the case, we examine notes under the cursor again,
           // But this time, for the following set.
+
+          // This can be probably be dropped now.
 
           const nextSet = this.getSet(this.setStarts.indexOf(setStartIndex)+1)
           // Caution : here, "currentIndex" is actually the next one.
