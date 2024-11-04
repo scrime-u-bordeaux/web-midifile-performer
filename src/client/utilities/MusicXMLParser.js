@@ -173,7 +173,9 @@ class PartTrack {
 
   // This is a very heavy, but convenient solution to find the preceding note-off of a grace note.
   // Sadly, it will just take up space for nothing in most cases.
-  xmlNotesToOffEvents = new Map()
+  xmlNotesToNoteOffEvents = new Map()
+  // In turn this map is necessary to check arpeggio shift, and nothing else.
+  noteOffEventsToXmlNotes = new Map()
 
   // Conversely, these two hacks are necessary to bypass OSMD's inability to position its cursor over grace notes.
   // By using it, we can know at which deltas grace notes are encountered...
@@ -272,7 +274,7 @@ class PartTrack {
 
   registerArp(arp) {
     this.#lastArpeggiatedChordDelta = this.currentDelta
-    this.lastArpeggiatedChord = arp
+    this.lastArpeggiatedChord = new Set(arp)
   }
 
   updateArpsAndOffsets(event) {
@@ -299,10 +301,24 @@ class PartTrack {
       this.#arpOffsetForMeasure += arpDuration
 
       // Shift every registered event that comes after the arp,
-      // So everything remains in sync
-      this.events.filter(
-        midiEvent => (!!midiEvent.noteOn || !!midiEvent.noteOff) && midiEvent.delta > mapKey
-      ).forEach(
+      // So everything remains in sync.
+
+      this.events.filter( midiEvent => {
+        const isNoteEvent = !!midiEvent.noteOn || !!midiEvent.noteOff
+        if(!isNoteEvent) return false
+
+        const xmlEquivalent =
+          !!midiEvent.noteOn ?
+            this.noteOnEventsToXmlNotes.get(midiEvent) :
+            this.noteOffEventsToXmlNotes.get(midiEvent)
+
+        // Do NOT shift the arp itself, of course.
+
+        const isInCurrentArp =
+          this.lastArpeggiatedChord.has(xmlEquivalent)
+
+        !isInCurrentArp && midiEvent.delta > mapKey
+      }).forEach(
         event => event.delta += arpDuration
       )
     }
@@ -462,7 +478,7 @@ export default function parseMusicXml(buffer) {
 
             if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
 
-              if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.includes(event))
+              if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.has(event))
                 partTrack.registerArp(markFirstAndLastArpeggiatedChordNote(partArray, index))
 
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
@@ -719,11 +735,16 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
     }
   }
 
-  partTrack.xmlNotesToOffEvents.set(xmlNote, {
+  partTrack.xmlNotesToNoteOffEvents.set(xmlNote, {
     previousNoteOff: midiNoteOffEvent,
     start: startTime,
     duration: duration
   })
+
+  partTrack.noteOffEventsToXmlNotes.set(
+    midiNoteOffEvent,
+    xmlNote
+  )
 
   return midiNoteOffEvent
 }
@@ -924,7 +945,7 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
   // However, the previous note has already been parsed.
   // Hence, it's the MIDI note off event that must be modified.
 
-  const { previousNoteOff, start, duration } = { ...partTrack.xmlNotesToOffEvents.get(previousXmlNote) }
+  const { previousNoteOff, start, duration } = { ...partTrack.xmlNotesToNoteOffEvents.get(previousXmlNote) }
   if(!!previousNoteOff) {
 
     const stolenPrevious = stealTimePrevious.filter(
