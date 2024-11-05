@@ -120,7 +120,7 @@ export default {
       )
     },
 
-    // TODO : fix this when mode is unified into store, and make it a store getter. 
+    // TODO : fix this when mode is unified into store, and make it a store getter.
     // Right now this is gonna work in both perform and play because we can't distinguish them...
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
@@ -458,9 +458,16 @@ export default {
         })
       })
 
-      // TODO : Is the sort necessary ?
-      // The chronology should already be sorted.
-      this.noteSequence.sort((noteA, noteB) => noteA.startTime - noteB.startTime)
+      // Add the supplementary intra-set pitch order,
+      // To ensure the exactitude of indices given by the MusicXML parser.
+
+      this.noteSequence.sort((noteA, noteB) => {
+        if(noteA.startTime !== noteB.startTime)
+          return noteA.startTime - noteB.startTime
+
+        else return noteA.pitch - noteB.pitch
+      })
+
       this.noteSequence.forEach((note, index) => note.index = index)
     },
 

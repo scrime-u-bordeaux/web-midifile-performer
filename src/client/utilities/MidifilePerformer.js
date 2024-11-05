@@ -280,6 +280,8 @@ class MidifilePerformer extends EventEmitter {
       // They are for the OSMD visualizer. Pass them along.
       this.emit('musicXmlTempos', jsonOrBuffer.tempoEvents)
       this.emit('musicXmlChannels', jsonOrBuffer.channelChanges)
+      this.emit('musicXmlGraceNoteInfo', jsonOrBuffer.graceNoteInfo)
+      this.emit('musicXmlArpeggioInfo', jsonOrBuffer.arpeggioInfo)
     }
 
     const allNoteEvents = mergeTracks(midiJson);

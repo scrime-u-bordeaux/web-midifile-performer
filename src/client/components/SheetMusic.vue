@@ -107,6 +107,11 @@ export default {
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
       tempoEvents: [],
       channelChanges: new Map(),
+      graceNoteInfo: [], // Only needed because of an OSMD cursor limitation
+      // (inability to position cursor over grace notes) when they are adjacent to their principal,
+      arpeggioInfo: [], // much of the same
+
+      arpeggiosInProgress: 0,
 
       // The list of dates covered by the cursor that correspond to each set.
       // Used to move cursors during refresh.
@@ -172,6 +177,24 @@ export default {
       if(this.drawn) this.moveCursorToSet(newEnd + 1, "end")
     },
 
+    noteSequence(newSequence, oldSequence) {
+      // This is called AFTER setGraceNoteInfo/setArpeggioInfo !!
+
+      this.graceNoteInfo.forEach(info => {
+        const graceNote = newSequence[info.graceIndex]
+        graceNote.principal = newSequence[info.principalIndex]
+      })
+
+      this.arpeggioInfo.forEach(info => {
+        newSequence[info.startIndex].firstArpeggiatedChordNoteFlag = true
+        newSequence[info.endIndex].lastArpeggiatedChordNoteFlag = true
+
+        newSequence.slice(info.startIndex, info.endIndex+1).forEach(
+          note => note.isArpeggiatedChordNote = true
+        )
+      })
+    },
+
     // TODO : implement zoom on wheel like the piano roll.
     // However, this would be *very* costly,
     // since the whole notehead setup would need to be repeated.
@@ -221,7 +244,6 @@ export default {
       } catch(e) {
         console.error("Error during setup of notehead event listeners.")
         console.error(e.message)
-        console.error("This is probably due to an OSMD cursor bug : see issue 67")
         console.error("Sheet music notes after this index will not react to click and hover.")
 
         this.cursor.reset()
@@ -361,9 +383,6 @@ export default {
     onNoteClick(event) {
       const noteHeads = this.getNoteHeadsFromNoteSvgFamily(event.target)
       // There shouldn't be more than one set assigned to noteheads sharing the same stem...
-      // ...in practice, there is, because of a noteSequence bug,
-      // (see issue #77)
-      // but only the actual set matters, and it's that of the first valid index.
       const noteIndex = this.getFirstValidNoteIndex(noteHeads)
       if(noteIndex < 0 ) return
 
@@ -450,6 +469,7 @@ export default {
 
     calculateCursorAnchorsAndSetCoordinates() {
       const allCursorDates = []
+      const allNotesUnderCursor = []
       const allCursorCoordinates = []
 
       // This is necessary to get actual X and Y coordinates for the cursor at it moves.
@@ -460,14 +480,37 @@ export default {
       while(!this.cursor.iterator.endReached) {
         // console.log("Measure : ", this.cursor.iterator.currentMeasureIndex)
         const notesUnderCursor = this.cursor.NotesUnderCursor()
-        // console.log(notesUnderCursor)
+        const eligibleNotes = notesUnderCursor.filter(
+          note => this.isEligibleMfpNote(note)
+        )
+        // console.log(eligibleNotes)
 
         // Because date approximation is always finicky, we want to put luck on our side
         // So we exclude cursor entries that could never be sets,
         // Because they contain no eligible note.
-        if(notesUnderCursor.some(note => this.isEligibleMfpNote(note))) {
+        if(eligibleNotes.length > 0) {
           allCursorDates.push(this.currentCursorDate())
           allCursorCoordinates.push(this.currentCursorCoordinates())
+
+          const noteMapForPosition = new Map()
+
+          // Not dealing with tabs for this right now.
+          // Like, no, I'm not taking into consideration cases with both grace notes and tabs.
+          // TODO : we need to find a way to address tabs through the source notes anyway.
+
+          eligibleNotes.forEach(note => {
+            const {pitch, channel} = this.getOSMDNoteInformation(note)
+            const mapKey = `p${pitch}c${channel}`
+
+            noteMapForPosition.set(
+              mapKey,
+              noteMapForPosition.has(mapKey) ?
+                noteMapForPosition.get(mapKey).add(note) :
+                new Set([note])
+            )
+          })
+
+          allNotesUnderCursor.push(noteMapForPosition)
         }
 
         this.cursor.next()
@@ -488,13 +531,18 @@ export default {
       // and to do that, we need an object.
       // I miss int references.
 
-      const cursorDatesAndSearchIndex = {
-        searchIndex: 0,
-        dates: allCursorDates
+      const searchData = {
+        currentIndex: 0,
+        dates: allCursorDates,
+        notes: allNotesUnderCursor,
+
+        upcomingPrincipal: null
       }
 
+      // console.log("Notes under cursor : ", searchData.notes)
+
       this.cursorAnchors = this.setStarts.map(startIndex =>
-        this.findNearestCursorDate(startIndex, cursorDatesAndSearchIndex)
+        this.findNearestCursorDate(startIndex, searchData)
       ).concat([endDate]) // push() returns the length instead
 
       // I'm not very happy with this double array iteration.
@@ -508,11 +556,11 @@ export default {
       this.setOsmdCursorAnchors(this.cursorAnchors)
       this.setOsmdSetCoordinates(this.setCoordinates)
 
-      // console.log("All possible positions : ", allCursorPositions)
+      console.log("All possible positions : ", allCursorDates)
       // console.log("Full note sequence : ", this.noteSequence)
       //
-      // console.log("Retained anchors : ", this.cursorAnchors)
-      // console.log("Actual set start times : ", this.setStarts.map(startIndex => this.noteSequence[startIndex].startTime))
+      console.log("Retained anchors : ", this.cursorAnchors)
+      console.log("Actual set start times : ", this.setStarts.map(startIndex => this.noteSequence[startIndex].startTime))
     },
 
     setupCursors() {
@@ -555,11 +603,15 @@ export default {
 
     setupNoteHeads() {
 
-      this.setStarts.forEach((start, setIndex) => {
-        const end = this.setEnds[setIndex]
-        const set = this.noteSequence.slice(start, end+1)
+      // Grace notes and their principals may be left unadressed as the cursor moves forward.
+      // They must then be dealt with across set borders.
+      const graceAdjacentsLeftBehind = new Map()
 
-        const usedNotesOfSet = []
+      this.setStarts.forEach((start, setIndex) => {
+        const set = this.getSet(setIndex)
+        // console.log(`Set ${setIndex} :`, set)
+
+        const usedNotesOfSet = new Set()
 
         // Separate GNotes can share the same stem.
         // In this case, getSVGGElement will return the same root node.
@@ -572,12 +624,21 @@ export default {
 
         // As well, since listeners cannot be set on every new root node
         // (since some will only contain tie-prolonging noteheads)
-        // a flag is used to keep track of whether they have been set.
+        // a set is used to keep track of whether they have been set.
         // As soon as a non-tie-prolonging note is encountered in a buffer,
-        // the listeners are set, and the flag is reset.
-        let listenersSetForBuffer = null
+        // the listeners are set, and the root note enters the set.
+        const buffersWithListeners = new Set()
 
         this.moveCursorToSet(setIndex)
+
+        // console.log(
+        //   "All notes under cursor :",
+        //   this.cursor.GNotesUnderCursor()
+        //     .filter(gnote =>
+        //       this.isEligibleMfpNote(gnote.sourceNote, false) &&
+        //       gnote.clef.clefType !== TAB_CLEF // There's probably a way to test this with the sourceNote in isEligibleMfpNote instead
+        //     )
+        // )
 
         this.cursor.GNotesUnderCursor()
           .filter(gnote =>
@@ -585,31 +646,37 @@ export default {
             gnote.clef.clefType !== TAB_CLEF // There's probably a way to test this with the sourceNote in isEligibleMfpNote instead
           ).forEach(gnote => {
 
+            // console.log("Examining gnote", gnote)
+
             const gNoteSVGRoot = gnote.getSVGGElement()
 
             if(gNoteSVGRoot !== svgRootBuffer) {
               svgRootBuffer = gNoteSVGRoot
               indexInBuffer = 0
-
-              listenersSetForBuffer = false
             } else indexInBuffer++
+
+            // Tie prolongations are necessary for the indexInBuffer to make sense,
+            // But they have no ns equivalent, so they are skipped.
 
             const isTieProlongation = this.isNoteTieProlongation(gnote.sourceNote)
             if(isTieProlongation) return
 
-            if(!listenersSetForBuffer) {
+            // If listeners had not yet been set for this root, set them.
+
+            if(!buffersWithListeners.has(svgRootBuffer)) {
               gNoteSVGRoot.addEventListener("mousedown", this.onNoteClick)
               gNoteSVGRoot.addEventListener("mouseover", this.onNoteHover)
               gNoteSVGRoot.addEventListener("mouseup", this.onNoteUnClick)
               gNoteSVGRoot.addEventListener("mouseleave", this.onNoteLeave)
 
-              listenersSetForBuffer = true
+              buffersWithListeners.add(svgRootBuffer)
             }
 
-            const pitch = gnote.sourceNote.halfTone + 12
-            const channel = this.currentChannel(
-              gnote.parentVoiceEntry.parentVoiceEntry.parentVoice.parent.idString
-            )
+            // Determine the information needed to spot the equivalent in the set.
+
+            const { pitch, channel } = this.getOSMDNoteInformation(gnote, true)
+
+            // console.log(pitch, channel)
 
             // Normally, there should only be one note on of a given pitch and channel in each set.
             // However, due to how the MusicXML parser currently works, this might not be the case.
@@ -618,30 +685,101 @@ export default {
 
             const noteSequenceEquivalent = set.find(candidate =>
               candidate.pitch === pitch && candidate.channel === channel
-              && !usedNotesOfSet.includes(candidate)
+              && !usedNotesOfSet.has(candidate)
             )
 
-            if(!noteSequenceEquivalent) throw new Error(
-              `Could not find equivalent for graphical note in set ${setIndex}`
-            )
-
-            usedNotesOfSet.push(noteSequenceEquivalent)
+            // console.log("Equivalent for gnote :", noteSequenceEquivalent)
 
             const gNoteHeads = this.getNoteHeadsFromNoteSvgFamily(svgRootBuffer)
             const gNoteHead = gNoteHeads[indexInBuffer]
 
-            // Testing leftover
-            // (this should not happen, even in cases of OSMD hiccups)
+            // This precaution is necessary now (16/10/2024)
+            // that the left-behind adjacents are considered :
+            // indeed, they are deleted from graceAdjacentsLeftBehind on registration (see below),
+            // but even if they HAVE already been registered,
+            // they may still be found AGAIN, this time with no ns equivalent,
+            // since the cursor stays in the same position with different ns sets.
+            // But since they were already registered, they should not be tracked as "left behind".
 
-            if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
-              console.error("Duplicate registration for", gNoteHead)
-            } else if(gNoteHead === undefined) {
-              console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
+            // This early exit means that the "duplicate registration" message should never appear anymore.
+
+            if(this.gNoteHeadsToNsNotes.has(gNoteHead)) return
+
+            // TODO : this should definitely be a shared function of SheetMusic and PianoRoll.
+            const mapKey = `p${pitch}c${channel}`
+
+            if(!noteSequenceEquivalent) {
+
+              // It is normal for a grace cluster or arpeggio to behave strangely.
+              // The cursor may indeed stay in place for multiple sets,
+              // Over which the gnotes will not biject.
+              // This is where we keep track of this occurrence.
+
+              if(this.includesArpeggiatedNote(set) || this.includesGraceNote(set) || graceAdjacentsLeftBehind.size > 0) {
+                const otherAdjacentsForKey = graceAdjacentsLeftBehind.get(mapKey)
+
+                graceAdjacentsLeftBehind.set(
+                  mapKey,
+                  !!otherAdjacentsForKey ?
+                    otherAdjacentsForKey.add(gNoteHead) : new Set([gNoteHead])
+                )
+              }
+
+              // Outside of grace clusters, however, this is an error,
+              // which should halt the whole process.
+
+              else throw new Error(
+                `Could not find equivalent for graphical note in set ${setIndex}`
+              )
+
             }
 
-            this.gNoteHeadsToNsNotes.set(gNoteHead, noteSequenceEquivalent)
-            this.nsNotesToGNoteHeads.set(noteSequenceEquivalent, gNoteHead)
+            else {
+              this.registerNoteHead(gNoteHead, noteSequenceEquivalent, usedNotesOfSet)
+
+              // Now that this notehead has been registered,
+              // It has an equivalent, and must leave the set of left-behinds
+              // if it was part of it.
+
+              const adjacentsForKey = graceAdjacentsLeftBehind.get(mapKey)
+              adjacentsForKey?.delete(gNoteHead)
+            }
         })
+
+        // After dealing with noteheads the normal way,
+        // We check if this set does not contain ns equivalents for previously orphan noteheads.
+
+        if(usedNotesOfSet.size != set.length && graceAdjacentsLeftBehind.size > 0) {
+          const unaddressedNotes = set.filter(note => !usedNotesOfSet.has(note))
+
+          // console.log("Addressing unadressed notes : ", unaddressedNotes)
+
+          unaddressedNotes.forEach(note => {
+            // console.log("Addressing note", note)
+
+            const mapKey = `p${note.pitch}c${note.channel}`
+            const candidateNoteHeads = graceAdjacentsLeftBehind.get(mapKey)
+
+            if(!!candidateNoteHeads) {
+
+              // Set values are always listed in order of insertion.
+              // As a consequence, we are always looking for the earliest-registered candidate.
+
+              const equivalentNoteHead = Array.from(candidateNoteHeads.values())[0]
+
+              // console.log("Found candidate noteheads for note : ", candidateNoteHeads)
+              // console.log("Registering equivalent notehead", equivalentNoteHead)
+
+              this.registerNoteHead(equivalentNoteHead, note)
+
+              // Once a ns equivalent is found, the registered notehead deleted from the candidates.
+              // And once there are no candidates left, the key is cleared.
+
+              if(candidateNoteHeads.size == 1) graceAdjacentsLeftBehind.delete(mapKey)
+              else candidateNoteHeads.delete(equivalentNoteHead)
+            }
+          })
+        }
       })
 
       if(this.gNoteHeadsToNsNotes.size !== this.nsNotesToGNoteHeads.size) {
@@ -663,6 +801,45 @@ export default {
     // -------------------------------------------------------------------------
     // ---------------------------SETUP UTILS-----------------------------------
     // -------------------------------------------------------------------------
+
+    getOSMDNoteInformation(noteOrGNote, isGNote = false) {
+      const pitch = (isGNote ? noteOrGNote.sourceNote : noteOrGNote)["halfTone"] + 12
+      const channel = this.currentChannel(
+        (isGNote ?
+          noteOrGNote.parentVoiceEntry.parentVoiceEntry :
+          noteOrGNote.ParentVoiceEntry
+        )["parentVoice"].parent.idString
+      )
+
+      return {pitch, channel}
+    },
+
+    registerNoteHead(gNoteHead, nsNote, usedNotesOfSet = null) {
+
+      // This case should not occur :
+      // Normally, if the gNoteHead was already present, this function was not called.
+      // But just in case, warn and skip it.
+
+      if(this.gNoteHeadsToNsNotes.has(gNoteHead)) {
+        console.warn("Attempted duplicate registration for", gNoteHead)
+        console.warn("Skipping registration...")
+        return
+      }
+
+      // This case should never happen anymore either :
+      // It was only occurring in early tests for setupNoteheads,
+      // before the svgRootBuffer system was finalized.
+
+      else if(gNoteHead === undefined) {
+        console.error("gNoteHead undefined for equivalent", noteSequenceEquivalent)
+        return
+      }
+
+      if(!!usedNotesOfSet) usedNotesOfSet.add(nsNote)
+
+      this.gNoteHeadsToNsNotes.set(gNoteHead, nsNote)
+      this.nsNotesToGNoteHeads.set(nsNote, gNoteHead)
+    },
 
     // Store tempos with their date of occurrence in microseconds.
     // This is necessary because otherwise, on read, we would assume all quarters to have elapsed with the same microsecond value
@@ -694,6 +871,14 @@ export default {
       this.channelChanges = channelChanges
     },
 
+    setGraceNoteInfo(graceNoteInfo) {
+      this.graceNoteInfo = graceNoteInfo
+    },
+
+    setArpeggioInfo(arpeggioInfo) {
+      this.arpeggioInfo = arpeggioInfo
+    },
+
     getNearestTempoEvent(timeStampInWholeNotes) {
       return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes)
     },
@@ -702,25 +887,155 @@ export default {
       return this.channelChanges.get(partId).findLast(event => event.delta <= timeStampInWholeNotes)
     },
 
-    findNearestCursorDate(setStartIndex, cursorDatesAndSearchIndex) {
+    // FIXME : last commit of mission on 31/05/2024 may have broken this function
+    // Though it should only be the case in files with grace notes...
+    // Should
+
+    findNearestCursorDate(setStartIndex, searchData) {
+      // console.log(`Finding nearest cursor date for set ${this.setStarts.indexOf(setStartIndex)}`)
+      const set = this.getSet(this.setStarts.indexOf(setStartIndex))
+      // console.log("Set in question is : ", set)
+
+      // console.log("Notes under current position", searchData.notes[searchData.currentIndex])
+
       const referenceStartTime = this.noteSequence[setStartIndex].startTime
-      const allCursorDates = cursorDatesAndSearchIndex.dates
 
-      let difference = Infinity;
-      let prevDifference = difference
+      // If we're dealing with a grace note cluster, determine its principal.
 
-      for(let i = cursorDatesAndSearchIndex.searchIndex ; i < allCursorDates.length ; i++) {
-        difference = Math.abs(referenceStartTime - allCursorDates[i])
+      if(this.includesGraceNote(set)) {
+        const principals = this.getGraceNotesInSet(set).map(
+          graceNote => graceNote.principal
+        ).sort(
+          (principalA, principalB) => principalA.startTime - principalB.startTime
+        )
 
-        if(difference > prevDifference) { // since we only ever move forwards in time, once the difference increases it will never decrease again.
-          cursorDatesAndSearchIndex.searchIndex = i;
-          return allCursorDates[i-1] // this will never trigger at i = 0, because nothing will be larger than Infinity
-        }
-        else prevDifference = difference
+        // The chosen principal is the latest-occurring one.
+        // Just in case we have after-graces and graces with following principal
+        // back to back in the same cluster.
+        // (Yes, it can actually happen.)
+
+        const relevantPrincipal = principals[principals.length - 1]
+
+        // and if we have only after-graces,
+        // (i.e. : the latest-occurring principal is still before this set),
+        // then there's no need to consider their principal, since it's behind us.
+
+        if(relevantPrincipal.startTime < referenceStartTime)
+          searchData.upcomingPrincipal = null
+
+        else searchData.upcomingPrincipal = relevantPrincipal
       }
 
-      // Of course, we won't find a bigger difference for the last anchor point.
-      return allCursorDates[allCursorDates.length - 1]
+      const allCursorDates = searchData.dates
+
+      // If we are dealing with a grace note cluster, the normal search process does not apply.
+      // TODO : perhaps move this block to a single-use function.
+      // But we have so many functions here already...
+
+      if(!!searchData.upcomingPrincipal) {
+
+        // Ordinary cursor search does not necessitate knowledge of the notes under the cursor,
+        // But here, we do need them.
+        // This is the entire reason searchData.notes was created.
+
+        const notesUnderCurrentPosition = searchData.notes[searchData.currentIndex]
+
+        // The default action in a grace note cluster is staying in place.
+        // So the first thing to know is whether this is possible.
+        // See method body for details.
+
+        const moveForced = this.setForcesMove(
+          set, searchData.upcomingPrincipal, notesUnderCurrentPosition
+        )
+
+        // console.log("moveForced : ", moveForced)
+
+        // Having examined the set and whether it forces a move,
+        // Its info in searchData.notes is updated.
+
+        set.forEach(nsNote => {
+          const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
+
+          // We can't safe call here, because it risks...
+          // ...an infinite loop ! (BI18op68-2, which instead just breaks)
+          // As of 10/24, it's not quite clear why.
+          const remainingOSMDNotes = notesUnderCurrentPosition.get(mapKey)
+
+          if(!!remainingOSMDNotes) {
+            const notesInInsertionOrder = Array.from(remainingOSMDNotes.values())
+
+            remainingOSMDNotes.delete(notesInInsertionOrder[0])
+            if(remainingOSMDNotes.size === 0) notesUnderCurrentPosition.delete(mapKey)
+          }
+        })
+
+        // We can now determine what to do with the search index :
+
+        // If the current set forces a move, we must advance by one step exactly.
+        // So, we increment the index before assignation.
+
+        if(moveForced) searchData.currentIndex++
+
+        // In all cases, the returned index is taken from the search index.
+
+        const returnedIndex = searchData.currentIndex
+
+        // If the current contains the principal, the cluster is over,
+        // so the search should always incremented,
+        // *even if a move was forced,*
+        // to resume the monotonic ordinry search process on the next set.
+        // However, this is true for some files and not others.
+        // FIXME : address this once and for all.
+
+        if(set.includes(searchData.upcomingPrincipal) && !moveForced) searchData.currentIndex++
+
+        // console.log("Search index", searchData.currentIndex, "vs Returned index", returnedIndex)
+
+        // And this *would* be all...
+        // But two tasks remain if we are on the principal-containing set :
+
+        if(set.includes(searchData.upcomingPrincipal)) {
+
+          // TODO : is this still necessary ?
+          // When data approx was used, sometimes (rarely, but sometimes),
+          // the "next" index was still not far enough,
+          // and the increment had to take place again.
+          // To know if that is the case, we examine notes under the cursor again,
+          // But this time, for the following set.
+
+          // This can be probably be dropped now.
+
+          const nextSet = this.getSet(this.setStarts.indexOf(setStartIndex)+1)
+          // Caution : here, "currentIndex" is actually the next one.
+          const notesUnderNextPosition = searchData.notes[searchData.currentIndex]
+
+          // console.log("Principal resolved, examining state of next set")
+
+          if(this.setForcesMove(nextSet, searchData.upcomingPrincipal, notesUnderNextPosition)) {
+            // console.log("Incrementing search index after cluster")
+            searchData.currentIndex++
+          }
+          // else console.log("Next set OK, no additional increment")
+
+          // 2. ...null the principal, so monotonic search resumes on the next set.
+          // That one happens every time.
+
+          searchData.upcomingPrincipal = null
+        }
+
+        return allCursorDates[returnedIndex]
+      }
+
+      if(this.includesArpeggiatedNote(set)) {
+
+        this.updateArpeggiosInProgress(set)
+
+        return allCursorDates[this.isLastArpeggiatedSet(set) ?
+          searchData.currentIndex++ : searchData.currentIndex
+        ]
+      }
+
+      return allCursorDates[searchData.currentIndex++]
     },
 
     currentCursorCoordinates(providedCursor = undefined) {
@@ -758,6 +1073,74 @@ export default {
       (!ignoreTied || !this.isNoteTieProlongation(note)) // and ties, aside from starts, are not actual notes
     },
 
+    // Applies to a noteSequence note.
+    // Should rather be relocated to the noteSequence util file when it's made,
+    // But has no semantic place in PianoRoll.vue,
+    // because a note can only be a grace note on the basis of sheet music notation
+    isGraceNote(note) {
+      return !!note.principal
+    },
+
+    includesGraceNote(set) {
+      return set.some(note => this.isGraceNote(note))
+    },
+
+    getGraceNotesInSet(set) {
+      return set.filter(note => this.isGraceNote(note))
+    },
+
+    includesArpeggiatedNote(set) {
+      return set.some(note => note.isArpeggiatedChordNote)
+    },
+
+    updateArpeggiosInProgress(set) {
+      const startedArpeggios = set.filter(
+        note => note.firstArpeggiatedChordNoteFlag
+      ).length
+
+      const endedArpeggios = set.filter(
+        note => note.lastArpeggiatedChordNoteFlag
+      ).length
+
+      this.arpeggiosInProgress += startedArpeggios
+      this.arpeggiosInProgress -= endedArpeggios
+    },
+
+    isLastArpeggiatedSet(set) {
+      return this.arpeggiosInProgress === 0
+    },
+
+    setForcesMove(set, upcomingPrincipal, notesUnderCurrentPosition) {
+      // console.log("Examining whether to force move for set", set)
+      // console.log("Notes under given cursor position are :", notesUnderCurrentPosition)
+
+      const nonPrincipalNonGraceNotes = set.filter(
+        note => !this.isGraceNote(note) && note !== upcomingPrincipal
+      )
+
+      // console.log("Non grace-adjacent notes in set :", nonPrincipalNonGraceNotes)
+
+      // The search must move forward in a grace note cluster if :
+      // 1. All notes under the current position have expired
+      // (indicating that any following notes are at following position)
+      // or
+      // 2. The current position contains notes that are not part of the cluster,
+      // And are not found at the current position.
+      // In other words, notes are no longer vertically aligned.
+
+      return (notesUnderCurrentPosition?.size === 0
+          ||
+        (
+          nonPrincipalNonGraceNotes.length > 0
+            &&
+          nonPrincipalNonGraceNotes.some(nsNote => {
+            const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
+            return notesUnderCurrentPosition?.get(mapKey) === undefined
+          })
+        )
+      )
+    },
+
     // -------------------------------------------------------------------------
     // ----------------------------RUNTIME UTILS--------------------------------
     // -------------------------------------------------------------------------
@@ -773,6 +1156,9 @@ export default {
       const chosenCursor = this.osmd.cursors[this.cursorNames.indexOf(which)]
 
       const desiredDate = this.cursorAnchors[setIndex]
+
+      if(desiredDate === undefined)
+        throw new Error(`Could not move to set ${setIndex} : undefined cursor anchor`)
 
       while(this.currentCursorDate(chosenCursor) !== desiredDate) { // thanks to the cursor anchors, we can use equality
         if(this.currentCursorDate(chosenCursor) < desiredDate) chosenCursor.next()
@@ -840,15 +1226,18 @@ export default {
     // ---------------------------SHARED UTILS----------------------------------
     // -------------------------------------------------------------------------
 
-    currentCursorDate(providedCursor = undefined) {
-      const cursor = !!providedCursor ? providedCursor : this.cursor
-
-      const tempo = this.getNearestTempoEvent(cursor.iterator.currentTimeStamp.realValue)
+    wholeNotesToSeconds(wholeNoteTimeStamp) {
+      const tempo = this.getNearestTempoEvent(wholeNoteTimeStamp)
       return (
         tempo.usDate +
-        4 * (cursor.iterator.currentTimeStamp.realValue - tempo.delta)
+        4 * (wholeNoteTimeStamp - tempo.delta)
           * tempo.setTempo.microsecondsPerQuarter
       ) * 0.000001
+    },
+
+    currentCursorDate(providedCursor = undefined) {
+      const cursor = !!providedCursor ? providedCursor : this.cursor
+      return this.wholeNotesToSeconds(cursor.iterator.currentTimeStamp.realValue)
     },
 
     // When clicking on a note, multiple elements can be the target.
@@ -877,6 +1266,7 @@ export default {
 
         // FIXME : this does not cover the case of grouped notes (eights and above)
         // Because their stems are not drawn as part of their graphical notes.
+        // 07/10/24 : Is this still the case or did I just forget to remove this comment ?
 
         // The stem of the note.
 

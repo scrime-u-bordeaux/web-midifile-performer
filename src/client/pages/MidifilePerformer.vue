@@ -383,8 +383,12 @@ export default {
     this.performer.clear();
 
     this.performer.addListener('chronology', this.onChronology)
+
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.addListener('musicXmlChannels', this.onMusicXmlChannels)
+    this.performer.addListener('musicXmlGraceNoteInfo', this.onMusicXmlGraceNoteInfo)
+    this.performer.addListener('musicXmlArpeggioInfo', this.onMusicXmlArpeggioInfo)
+
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
     // temporary !!
@@ -420,8 +424,12 @@ export default {
     document.removeEventListener('keyup',this.onKeyUp)
 
     this.performer.removeListener('chronology', this.onChronology)
+
     this.performer.removeListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.removeListener('musicXmlChannels', this.onMusicXmlChannels)
+    this.performer.removeListener('musicXmlGraceNoteInfo', this.onMusicXmlGraceNoteInfo)
+    this.performer.removeListener('musicXmlArpeggioInfo', this.onMusicXmlArpeggioInfo)
+
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
     this.performer.removeListener('isModeSilent', this.onIsModeSilent)
@@ -518,11 +526,18 @@ export default {
     onChronology(chronology) {
       this.$refs.pianoRoll.updateNoteSequence(chronology)
     },
+
     onMusicXmlTempos(tempoEvents) {
       this.$refs.sheetMusic.setTempoEvents(tempoEvents)
     },
     onMusicXmlChannels(channelChanges) {
       this.$refs.sheetMusic.setChannelChanges(channelChanges)
+    },
+    onMusicXmlGraceNoteInfo(graceNoteInfo) {
+      this.$refs.sheetMusic.setGraceNoteInfo(graceNoteInfo)
+    },
+    onMusicXmlArpeggioInfo(arpeggioInfo) {
+      this.$refs.sheetMusic.setArpeggioInfo(arpeggioInfo)
     },
 
     onStartChange(i) {
