@@ -274,7 +274,6 @@ export default {
   components: { NumberInput },
   data() {
     return {
-      currentMode: 'silent',
       dragging: null,
       position: 0,
       refreshKey: 0,
@@ -294,7 +293,7 @@ export default {
   },
   computed: {
     ...mapState(
-      ['performModeStartedAt']
+      ['currentMode']
     ),
     positions() {
       // return this.end - this.start + 1;
@@ -331,11 +330,6 @@ export default {
       return !!this.indexLabel ? this.indexLabel[0].toUpperCase() + this.indexLabel.slice(1) : ""
     }
     //*/
-  },
-  watch: {
-    performModeStartedAt(newestTime, previousTime) {
-      this.currentMode = 'perform'
-    }
   },
   created() {
     document.addEventListener('mousemove', this.drag);
@@ -426,10 +420,7 @@ export default {
       this.dragging = null;
     },
     toggleListen(e) {
-      // THIS IS *BAD* and I despise myself for thinking such duplication was acceptable
-      // For the love of all that is good in this world, please let the store deal with this !!!
       const newMode = this.currentMode === 'listen' ? 'silent' : 'listen';
-      this.currentMode = newMode
       this.$emit('modeChange', newMode);
     },
     onPlaybackSpeedChanged(e) {

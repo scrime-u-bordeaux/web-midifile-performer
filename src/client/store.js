@@ -94,7 +94,6 @@ const store = createStore({
       sequenceIndex: 0,
       currentMode: 'silent',
 
-      performModeStartedAt: 0, // hack, aim to remove by storing mode here instead
       midiAccessRequested: false,
       userClickOccurred: false,
       synthNotesFetched: 0,
@@ -265,9 +264,6 @@ const store = createStore({
         Math.max(index, state.sequenceStart),
         state.sequenceEnd
       );
-    },
-    setPerformModeStartedAt(state, time) {
-      state.performModeStartedAt = time;
     },
     setMidiAccessRequested(state) {
       state.midiAccessRequested = true;
