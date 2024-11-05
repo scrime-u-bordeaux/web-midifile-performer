@@ -41,7 +41,6 @@ export default {
       'sequenceStart',
       'sequenceEnd',
       'midiBuffers',
-      'performModeStartedAt'
     ]),
   },
   methods: {
@@ -56,7 +55,6 @@ export default {
       'setSequenceStart',
       'setSequenceEnd',
       'setSequenceIndex',
-      'setPerformModeStartedAt',
       'setMidiAccessRequested',
       'setUserClickOccurred',
       'setSynthNotesFetched',
@@ -76,7 +74,6 @@ export default {
       if(this.canPerform) {
         if(this.performer.mode !== 'perform' && cmd.pressed) { // key releases can never trigger perform mode
           this.performer.setMode('perform')
-          this.setPerformModeStartedAt(Date.now()) // inform watchers, e.g. the scroll bar to set the button to pause
         }
         this.performer.command(cmd);
       }

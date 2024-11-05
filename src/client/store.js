@@ -92,8 +92,8 @@ const store = createStore({
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
+      currentMode: 'silent',
 
-      performModeStartedAt: 0, // hack, aim to remove by storing mode here instead
       midiAccessRequested: false,
       userClickOccurred: false,
       synthNotesFetched: 0,
@@ -126,6 +126,11 @@ const store = createStore({
     fileIncludes: (state) => (channel) => {
       return new Set(state.noteSequence.map(note => note.channel)).has(channel)
     },
+
+    isModeSilent: state => state.currentMode === 'silent',
+    isModeListen: state => state.currentMode === 'listen',
+    isModePerform: state => state.currentMode === 'perform',
+
     currentSettings: state => {
 
       // Properties that are objects or arrays need to be converted to raw from Vue's Proxy format
@@ -242,6 +247,9 @@ const store = createStore({
     },
     ////////////////////////////////////////////////////////////////////////////
     // TO BE USED BY MidifilePerformer CLASS ONLY !!!
+    setCurrentMode(state, mode) {
+      state.currentMode = mode
+    },
     setSequenceLength(state, length) {
       state.sequenceLength = length;
       // todo : update start, end and index
@@ -261,9 +269,6 @@ const store = createStore({
         Math.max(index, state.sequenceStart),
         state.sequenceEnd
       );
-    },
-    setPerformModeStartedAt(state, time) {
-      state.performModeStartedAt = time;
     },
     setMidiAccessRequested(state) {
       state.midiAccessRequested = true;

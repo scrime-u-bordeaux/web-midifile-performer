@@ -27,7 +27,7 @@ svg {
  * https://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapGetters, mapMutations } from 'vuex'
 
 export default {
 
@@ -75,10 +75,6 @@ export default {
       activeNotes: new Map(),
 
       // temporary !!
-      // TODO : Phase out with unification of mode state in store
-      isModeSilent: true,
-
-      // temporary !!
       // FIXME (issue #57): this doesn't fix the overlaps of successive notes
       // if the following note is calculated to start before the other ends
       // setting fixed margins doesn't work either
@@ -102,11 +98,16 @@ export default {
 
   computed: {
     ...mapState([
+      'currentMode', // used only for watcher
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'minKeyboardNote', 'keyboardState',
       'highlightPalette',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
+
+    ...mapGetters(
+      ['isModeSilent', 'isModePerform']
+    ),
 
     activeNoteRGB() {
       return this.highlightPalette.get(
@@ -120,15 +121,20 @@ export default {
       )
     },
 
-    // TODO : fix this when mode is unified into store, and make it a store getter.
-    // Right now this is gonna work in both perform and play because we can't distinguish them...
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
-             (!this.isModeSilent && this.playOnClickInPerformMode)
+             (this.isModePerform && this.playOnClickInPerformMode)
     }
   },
 
   watch: {
+
+    currentMode(newMode, oldMode) {
+      if(newMode === 'silent') {
+        this.stop()
+        this.paintCurrentSet()
+      }
+    },
 
     noteHeight(newHeight, oldHeight) {
       if(newHeight < 1) {
@@ -261,11 +267,6 @@ export default {
     // -------------------------------------------------------------------------
     // -----------------------------LISTENERS-----------------------------------
     // -------------------------------------------------------------------------
-
-    onIsModeSilent(isIt) {
-      this.isModeSilent = isIt
-      if(isIt) this.paintCurrentSet()
-    },
 
     // TODO : Can we factorize these ?
     // (By testing the type of the received event)
@@ -808,9 +809,7 @@ export default {
     },
 
     keepTrackOfCurrentSet() {
-      // FIXME : this should only happen in PERFORM mode, not play
-      // This distinction is only possible once we have unified the mode into the store
-      // FIXME : also, this won't work when a longer note is being held...
+      // FIXME : this won't work when a longer note is being held...
       // Is there a better way ?
       if(
         !this.isModeSilent &&

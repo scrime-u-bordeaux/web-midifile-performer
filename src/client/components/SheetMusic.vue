@@ -15,7 +15,7 @@
 
 <script>
 
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapGetters, mapMutations } from 'vuex'
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 
 const TAB_CLEF = 4 // Internal OSMD enum not accessible here
@@ -23,12 +23,17 @@ const TAB_CLEF = 4 // Internal OSMD enum not accessible here
 export default {
   computed: {
     ...mapState([
+      'currentMode', // used for watcher only
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
       'noteSequence', 'setStarts', 'setEnds', 'activeNotes', 'highlightPalette',
       'osmdCursorAnchors', 'osmdSetCoordinates',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
+
+    ...mapGetters(
+      ['isModeSilent', 'isModePerform']
+    ),
 
     activeNoteRGB() {
       return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
@@ -50,11 +55,9 @@ export default {
       return this.$refs.container.getBoundingClientRect().height
     },
 
-    // TODO : fix this when mode is unified into store, and make it a store getter.
-    // Right now this is gonna work in both perform and play because we can't distinguish them...
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
-             (!this.isModeSilent && this.playOnClickInPerformMode)
+             (this.isModePerform && this.playOnClickInPerformMode)
     }
   },
 
@@ -130,10 +133,6 @@ export default {
       // Simple convenience to avoid redundant switch statements.
       cursorNames: ["start", "index", "end"],
 
-      // temporary !!
-      // TODO : Phase out with unification of mode state in store
-      isModeSilent: true,
-
       // Identical role to highlightedNote in PianoRoll
       // However, here, multiple noteheads may share the same stem.
       noteHeadsUnderCursor: [],
@@ -167,6 +166,13 @@ export default {
     async mfpMidiFile(newFile, oldFile) {
       if(newFile.isMidi || !newFile.musicXmlString) return
       await this.updateScore()
+    },
+
+    currentMode(newMode, oldMode) {
+      if(!this.drawn) return
+      this.updateCursorColor()
+
+      if(newMode === 'silent') this.stop()
     },
 
     sequenceStart(newStart, oldStart) {
@@ -316,13 +322,6 @@ export default {
 
     onIndexJump(index) {
       this.refresh(index, true)
-    },
-
-    onIsModeSilent(isIt) {
-      if(!this.drawn) return
-
-      this.isModeSilent = isIt
-      this.updateCursorColor()
     },
 
     onCursorDragStart(event) {

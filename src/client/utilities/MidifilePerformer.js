@@ -484,9 +484,7 @@ class MidifilePerformer extends EventEmitter {
       this.emit('allnotesoff');
     }
 
-    // temporary !!
-    // TODO : phase out with unification of mode state into store
-    this.emit('isModeSilent', this.mode === 'silent')
+    this.emit('mode', this.mode)
   }
 
   command(cmd) {

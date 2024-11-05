@@ -25,7 +25,7 @@
       <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
         <img :src="`pics/piano_roll_icon_${
           pianoRollSelected ?
-            (currentMode === 'silent' ?
+            (isModeSilent ?
               'enabled_silent' : 'enabled_play_perform'
             ) :
             'disabled'
@@ -33,7 +33,7 @@
           @click="selectedVisualizer = 'piano'"/>
         <img :src="`pics/music_notes_icon_${
           sheetMusicSelected ?
-            (currentMode === 'silent' ?
+            (isModeSilent ?
               'enabled_silent' : 'enabled_play_perform'
             ) :
             'disabled'
@@ -124,7 +124,7 @@
             <button
               style="display: none;"
               @click="onClickExport"
-              :disabled="currentMode !== 'silent'">
+              :disabled="isModeSilent">
               {{ $t('midiFilePerformer.export') }}
             </button>
           </div>
@@ -256,7 +256,7 @@ span.link {
 
 <script>
 import { nextTick } from 'vue';
-import { mapMutations, mapState } from 'vuex';
+import { mapMutations, mapGetters, mapState } from 'vuex';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
@@ -299,6 +299,11 @@ export default {
       'preferredVelocityStrategy',
       'conserveVelocity'
     ]),
+
+    ...mapGetters([
+      'isModeSilent'
+    ]),
+    
     pianoRollSelected() {
       return this.selectedVisualizer === "piano"
     },
@@ -320,20 +325,6 @@ export default {
         this.synthNotesDecoded !== this.NUMBER_OF_SOUNDFILES
       )
       || this.loadingFlag
-    },
-    // TODO : we should work towards deprecating mode state duplication.
-    currentMode: {
-      // Instead of putting guards here, we could use v-show to hide the scroll bar and not v-if,
-      // But if we do that, we need the scroll-bar to get its bound rectangle after mounting
-      // (Because an element hidden with v-show is mounted right away, even if hidden, so it would get 0 and never work)
-      // This seems more legible to me.
-
-      get() {
-        return this.$refs.mainScrollBar ? this.$refs.mainScrollBar.currentMode : 'silent'
-      },
-      set(mode) {
-        if(!!this.$refs.mainScrollBar) this.$refs.mainScrollBar.currentMode = mode
-      }
     }
   },
   watch: {
@@ -382,6 +373,8 @@ export default {
   async mounted() {
     this.performer.clear();
 
+    this.performer.addListener('mode', this.setCurrentMode)
+
     this.performer.addListener('chronology', this.onChronology)
 
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
@@ -391,9 +384,6 @@ export default {
 
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
-    // temporary !!
-    // TODO : phase out with unification of mode state into store
-    this.performer.addListener('isModeSilent', this.onIsModeSilent)
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
@@ -432,11 +422,11 @@ export default {
 
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
-    this.performer.removeListener('isModeSilent', this.onIsModeSilent)
   },
   methods: {
     ...mapMutations([
       'setMfpMidiFile',
+      'setCurrentMode'
     ]),
 
     // -------------------------------------------------------------------------
@@ -518,10 +508,6 @@ export default {
 
     onModeChange(mode) {
       this.performer.setMode(mode);
-      if(mode === 'silent') {
-        this.$refs.pianoRoll.stop()
-        this.$refs.sheetMusic.stop()
-      }
     },
     onChronology(chronology) {
       this.$refs.pianoRoll.updateNoteSequence(chronology)
@@ -564,8 +550,7 @@ export default {
     },
 
     onSilence() {
-      if (this.performer.mode === 'listen') this.$refs.mainScrollBar.toggleListen() // keep scrollbar state consistent if listen mode
-      else this.performer.setMode('silent') // simply silence if perform mode
+      this.performer.setMode('silent')
       this.$refs.pianoRoll.stop()
       this.$refs.sheetMusic.stop()
     },
@@ -599,23 +584,6 @@ export default {
       }
     },
 
-    onIsModeSilent(isIt) {
-      this.$refs.keyboard.isModeSilent = isIt
-
-      this.$refs.pianoRoll.onIsModeSilent(isIt)
-      this.$refs.sheetMusic.onIsModeSilent(isIt)
-
-      // This whole charade is necessary solely because the mode isn't unified.
-      // If it were, all components would read from store and instantly know it changed,
-      // Even if the change came from downwards up (i.e. : MFP.js set itself to silent, because loopEnd was reached with loop off)
-      // But it's not unified. So we have to pass that information all the way through.
-
-      this.$refs.pianoRoll.stop()
-      this.$refs.sheetMusic.stop()
-
-      if(isIt && this.$refs.mainScrollBar?.currentMode === 'listen')
-        this.$refs.mainScrollBar.toggleListen()
-    },
     onVisualizerRefresh(refreshState) {
       this.$refs.pianoRoll.refresh(refreshState.referenceSetIndex)
       if(!this.mfpMidiFile.isMidi) this.$refs.sheetMusic.refresh(refreshState.referenceSetIndex, refreshState.isStartingSet)
@@ -645,9 +613,7 @@ export default {
     },
 
     preparePerformerForLoad() {
-      this.currentMode = 'silent';
-      // FIXME : delegate mode to store
-      this.performer.setMode(this.currentMode);
+      this.performer.setMode('silent');
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
     },
