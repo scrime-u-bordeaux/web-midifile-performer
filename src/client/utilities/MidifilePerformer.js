@@ -219,6 +219,9 @@ class MidifilePerformer extends EventEmitter {
     super();
     this.performer = null;
     this.analyzer = new AllNoteEventsAnalyzer();
+    this.playbackWorker = new Worker(new URL("PlaybackWorker.js", import.meta.url))
+
+    this.playbackWorker.onmessage = (message) => this.#onPlayBackTimeOutElapsed(message.data)
 
     this.index = 0;
     this.playbackSpeed = 1;
@@ -473,20 +476,13 @@ class MidifilePerformer extends EventEmitter {
           console.log("Active wait") // maybe there's something more productive to do while waiting ?
       }
 
-      if (this.timeout && previousMode === "listen") {
-        clearTimeout(this.timeout);
-        this.timeout = null;
-      }
+      if (previousMode === "listen") this.playbackWorker.postMessage(null)
 
       this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy);
     }
 
     if (this.mode === 'silent') {
-      if (this.timeout) {
-        clearTimeout(this.timeout);
-        this.timeout = null;
-      }
-
+      this.playbackWorker.postMessage(null)
       this.emit('allnotesoff');
     }
 
@@ -647,27 +643,34 @@ class MidifilePerformer extends EventEmitter {
 
     if (this.performer.stopped()) return;
 
-    this.timeout = setTimeout(() => {
-      this.performer.render({
-        pressed: start,
-        id: 1,
-        velocity: (
-          start ?
-            this.maxVelocities[this.#getNextIndex()] // render has not happened yet, so it's the next index we're after
-            : 0
-          ),
-        channel: 1
-      });
-
-      if (start) this.emit('index', this.#getCurrentIndex());
-
-      // Ensure perform won't cut off a note too soon, nor move to the next one too early.
-      // Ending sets can be interrupted just fine (right ?)
-      this.interruptionGuard = new InterruptionGuard(start ? (dt + pair.end.dt) / this.playbackSpeed : 0)
-
-      this.#playNextSet(pair, !start, false);
-    }, dt / this.playbackSpeed);
+    this.playbackWorker.postMessage({
+      pair: pair,
+      start: start,
+      dt: dt,
+      timeout_duration: dt / this.playbackSpeed
+    })
   };
+
+  #onPlayBackTimeOutElapsed({pair, start, dt}) {
+    this.performer.render({
+      pressed: start,
+      id: 1,
+      velocity: (
+        start ?
+          this.maxVelocities[this.#getNextIndex()] // render has not happened yet, so it's the next index we're after
+          : 0
+        ),
+      channel: 1
+    });
+
+    if (start) this.emit('index', this.#getCurrentIndex());
+
+    // Ensure perform won't cut off a note too soon, nor move to the next one too early.
+    // Ending sets can be interrupted just fine (right ?)
+    this.interruptionGuard = new InterruptionGuard(start ? (dt + pair.end.dt) / this.playbackSpeed : 0)
+
+    this.#playNextSet(pair, !start, false);
+  }
 
   // This ugly logic is due to edge cases around the start and loop indices.
   // When switching modes, we do not want the new mode to repeat the previous set.
