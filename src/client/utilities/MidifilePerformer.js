@@ -197,7 +197,9 @@ function noteEventsFromNoteDataVector(notes) {
 
 class InterruptionGuard {
   constructor(dt, startTimeStamp) {
-    this.dt = Math.min(dt,1000) || 0; // we can interrupt something longer than a second, it's about delays between ordinary notes
+    // we can interrupt something longer than a second ;
+    // interruption matters with delays between ordinary notes
+    this.dt = Math.min(dt, 1000) || 0;
     this.startTimeStamp = startTimeStamp || Date.now();
   }
 
@@ -391,6 +393,10 @@ class MidifilePerformer extends EventEmitter {
     this.emit('userChangedIndex', this.index)
   }
 
+  setRepeatCurrent() {
+    this.repeatIndexFromJump = true
+  }
+
   setSequenceBounds(min, max) {
     const previousIndex = this.#getCurrentIndex()
     this.performer.setLoopIndices(min, max);
@@ -497,7 +503,7 @@ class MidifilePerformer extends EventEmitter {
       this.pretendTriggerFlag = false;
       // Indicate to listen mode that pretendTrigger was performed,
       // And thus that it should repeat this index if it resumes there
-      this.repeatIndexFlag = true;
+      this.repeatIndexFromPretendTrigger = true;
       return res;
     }
 
@@ -511,7 +517,7 @@ class MidifilePerformer extends EventEmitter {
     if (cmd.pressed) {
       // Releasing the key does not change the index
       // So this flag only becomes false on key press
-      this.repeatIndexFlag = false;
+      this.repeatIndexFromPretendTrigger = false;
       this.emit('index', this.#getCurrentIndex());
 
       if(!this.performVelocitySaved) this.performVelocitySaved = true;
@@ -690,12 +696,23 @@ class MidifilePerformer extends EventEmitter {
             this.startAlreadyPlayed = true : this.endAlreadyPlayed = true
         }
 
-      else if(this.repeatIndexFlag) { // special case of perform mode interruption
-        // It pretended to trigger a set actually triggered by listen mode.
+      // In special cases, the current index should be repeated
+
+      else if(this.repeatIndexFromPretendTrigger || this.repeatIndexFromJump) {
+
+        // PretendTrigger :
+        // Perform pretended to trigger a set actually triggered by listen mode.
         // So the index already moved forward then, but it produced nothing.
         // If we're here, that means listen mode was set right after that,
         // and so we need to play the set at the index it was set to.
-        this.repeatIndexFlag = false;
+
+        if(this.repeatIndexFromPretendTrigger) this.repeatIndexFromPretendTrigger = false;
+
+        // Jump :
+        // The user set the current index here. So we want to play this.
+
+        if(this.repeatIndexFromJump) this.repeatIndexFromJump = false;
+
         this.setSequenceIndex(this.#getCurrentIndex(), false);
       }
 

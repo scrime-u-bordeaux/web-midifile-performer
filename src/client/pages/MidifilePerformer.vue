@@ -303,7 +303,7 @@ export default {
     ...mapGetters([
       'isModeSilent'
     ]),
-    
+
     pianoRollSelected() {
       return this.selectedVisualizer === "piano"
     },
@@ -534,6 +534,8 @@ export default {
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
       this.performer.setSequenceIndex(i);
+      this.performer.setRepeatCurrent()
+
       this.$refs.pianoRoll.stop()
       this.$refs.sheetMusic.stop()
     },
