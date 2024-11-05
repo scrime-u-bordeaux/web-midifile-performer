@@ -186,6 +186,8 @@ export default {
     noteSequence(newSequence, oldSequence) {
       // This is called AFTER setGraceNoteInfo/setArpeggioInfo !!
 
+      if(this.mfpMidiFile.isMidi) return
+
       this.graceNoteInfo.forEach(info => {
         const graceNote = newSequence[info.graceIndex]
         graceNote.principal = newSequence[info.principalIndex]
