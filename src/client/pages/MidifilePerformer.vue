@@ -289,6 +289,7 @@ export default {
       'maxKeyboardNote',
       'keyboardState',
       'looping',
+      'currentMode',
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
@@ -382,6 +383,8 @@ export default {
   async mounted() {
     this.performer.clear();
 
+    this.performer.addListener('mode', this.setCurrentMode)
+
     this.performer.addListener('chronology', this.onChronology)
 
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
@@ -437,6 +440,7 @@ export default {
   methods: {
     ...mapMutations([
       'setMfpMidiFile',
+      'setCurrentMode'
     ]),
 
     // -------------------------------------------------------------------------

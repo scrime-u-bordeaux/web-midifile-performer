@@ -92,6 +92,7 @@ const store = createStore({
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
+      currentMode: 'silent',
 
       performModeStartedAt: 0, // hack, aim to remove by storing mode here instead
       midiAccessRequested: false,
@@ -242,6 +243,9 @@ const store = createStore({
     },
     ////////////////////////////////////////////////////////////////////////////
     // TO BE USED BY MidifilePerformer CLASS ONLY !!!
+    setCurrentMode(state, mode) {
+      state.currentMode = mode
+    },
     setSequenceLength(state, length) {
       state.sequenceLength = length;
       // todo : update start, end and index
