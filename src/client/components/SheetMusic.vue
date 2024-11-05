@@ -15,7 +15,7 @@
 
 <script>
 
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapGetters, mapMutations } from 'vuex'
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 
 const TAB_CLEF = 4 // Internal OSMD enum not accessible here
@@ -23,13 +23,17 @@ const TAB_CLEF = 4 // Internal OSMD enum not accessible here
 export default {
   computed: {
     ...mapState([
-      'currentMode',
+      'currentMode', // used for watcher only
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
       'noteSequence', 'setStarts', 'setEnds', 'activeNotes', 'highlightPalette',
       'osmdCursorAnchors', 'osmdSetCoordinates',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
+
+    ...mapGetters(
+      ['isModeSilent', 'isModePerform']
+    ),
 
     activeNoteRGB() {
       return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
@@ -51,13 +55,9 @@ export default {
       return this.$refs.container.getBoundingClientRect().height
     },
 
-    isModeSilent() {
-      return this.currentMode === 'silent'
-    },
-
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
-             (!this.isModeSilent && this.playOnClickInPerformMode)
+             (this.isModePerform && this.playOnClickInPerformMode)
     }
   },
 

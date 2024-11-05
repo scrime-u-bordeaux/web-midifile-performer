@@ -126,6 +126,11 @@ const store = createStore({
     fileIncludes: (state) => (channel) => {
       return new Set(state.noteSequence.map(note => note.channel)).has(channel)
     },
+
+    isModeSilent: state => state.currentMode === 'silent',
+    isModeListen: state => state.currentMode === 'listen',
+    isModePerform: state => state.currentMode === 'perform',
+
     currentSettings: state => {
 
       // Properties that are objects or arrays need to be converted to raw from Vue's Proxy format

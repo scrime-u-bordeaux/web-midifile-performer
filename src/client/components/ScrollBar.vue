@@ -94,7 +94,7 @@
   <div class="indices" v-if="hasBounds">
     <div class="play-button-container">
       <div class="play-button"
-       :class="currentMode === 'listen' ? 'pause-icon' : 'play-icon'"
+       :class="isModeListen ? 'pause-icon' : 'play-icon'"
        @click="toggleListen">
       </div>
     </div>
@@ -266,7 +266,7 @@ rect, circle {
 
 <script>
 import NumberInput from './NumberInput.vue';
-import { mapState } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 
 export default {
   // TODO : should we keep exposing start and end as props instead of through mapState ?
@@ -292,8 +292,8 @@ export default {
     };
   },
   computed: {
-    ...mapState(
-      ['currentMode']
+    ...mapGetters(
+      ['isModeListen']
     ),
     positions() {
       // return this.end - this.start + 1;
@@ -420,7 +420,7 @@ export default {
       this.dragging = null;
     },
     toggleListen(e) {
-      const newMode = this.currentMode === 'listen' ? 'silent' : 'listen';
+      const newMode = this.isModeListen ? 'silent' : 'listen';
       this.$emit('modeChange', newMode);
     },
     onPlaybackSpeedChanged(e) {

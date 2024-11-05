@@ -25,7 +25,7 @@
       <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
         <img :src="`pics/piano_roll_icon_${
           pianoRollSelected ?
-            (currentMode === 'silent' ?
+            (isModeSilent ?
               'enabled_silent' : 'enabled_play_perform'
             ) :
             'disabled'
@@ -33,7 +33,7 @@
           @click="selectedVisualizer = 'piano'"/>
         <img :src="`pics/music_notes_icon_${
           sheetMusicSelected ?
-            (currentMode === 'silent' ?
+            (isModeSilent ?
               'enabled_silent' : 'enabled_play_perform'
             ) :
             'disabled'
@@ -124,7 +124,7 @@
             <button
               style="display: none;"
               @click="onClickExport"
-              :disabled="currentMode !== 'silent'">
+              :disabled="isModeSilent">
               {{ $t('midiFilePerformer.export') }}
             </button>
           </div>
@@ -256,7 +256,7 @@ span.link {
 
 <script>
 import { nextTick } from 'vue';
-import { mapMutations, mapState } from 'vuex';
+import { mapMutations, mapGetters, mapState } from 'vuex';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
@@ -289,7 +289,6 @@ export default {
       'maxKeyboardNote',
       'keyboardState',
       'looping',
-      'currentMode',
       'sequenceStart',
       'sequenceEnd',
       'sequenceIndex',
@@ -300,6 +299,11 @@ export default {
       'preferredVelocityStrategy',
       'conserveVelocity'
     ]),
+
+    ...mapGetters([
+      'isModeSilent'
+    ]),
+    
     pianoRollSelected() {
       return this.selectedVisualizer === "piano"
     },

@@ -27,7 +27,7 @@ svg {
  * https://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { mapState, mapMutations } from 'vuex'
+import { mapState, mapGetters, mapMutations } from 'vuex'
 
 export default {
 
@@ -98,12 +98,16 @@ export default {
 
   computed: {
     ...mapState([
-      'currentMode',
+      'currentMode', // used only for watcher
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'minKeyboardNote', 'keyboardState',
       'highlightPalette',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
+
+    ...mapGetters(
+      ['isModeSilent', 'isModePerform']
+    ),
 
     activeNoteRGB() {
       return this.highlightPalette.get(
@@ -117,14 +121,9 @@ export default {
       )
     },
 
-    isModeSilent() {
-      return this.currentMode === 'silent'
-    },
-
-
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
-             (!this.isModeSilent && this.playOnClickInPerformMode)
+             (this.isModePerform && this.playOnClickInPerformMode)
     }
   },
 

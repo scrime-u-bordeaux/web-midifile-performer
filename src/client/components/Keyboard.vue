@@ -81,7 +81,7 @@
 </style>
 
 <script>
-import { mapState } from 'vuex';
+import { mapGetters } from 'vuex';
 
 const whiteNoteWidthHeightRatio = 5;
 const blackNoteWidthRatio = 0.65;
@@ -115,11 +115,7 @@ export default {
     };
   },
   computed: {
-    ...mapState(['currentMode']),
-
-    isModeSilent() {
-      return this.currentMode === 'silent'
-    },
+    ...mapGetters(['isModeSilent']),
 
     noteDims() {
       const white = {
