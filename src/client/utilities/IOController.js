@@ -196,28 +196,39 @@ class IOController extends EventEmitter {
     this.emit('currentOutputId', this.currentOutputId);
   }
 
+  silenceChannel(channel) {
+    const id = this.currentOutputId
+
+    if (this.currentOutputId !== DEFAULT_IO_ID) {
+      let msg;
+      // TODO : QUESTION :
+      // The following commented code was present from as far back
+      // as the first working iteration of the IOCTL.
+      // It is reminiscent of the Score addon code for the same function.
+      // The reason for not using it instead of the 0x80 loop for every pitch
+      // is unclear.
+
+      // 0xBF is CC
+      // 0x78 is "all sound off"
+      // msg = [ (0xB0 | (channel & 0xF)), 0x78, 0x00 ];
+      // this.outputs[id].send(msg);
+      // 0x7B is "all notes off"
+      // msg = [ (0xB0 | (channel & 0xF)), 0x7B, 0x00 ];
+      // this.outputs[id].send(msg);
+
+      for (let n = 0; n < 128; ++n) {
+        msg = [ (0x80 | (channel & 0xF)), (n & 0x7F), 0x00 ]
+        this.outputs[id].send(msg);
+      }
+    } else this.sampler?.silenceChannel(channel+1)
+  }
+
   allNotesOff() {
     this.emit('allnotesoff');
     console.log("calling all sound off");
-    if (this.currentOutputId !== DEFAULT_IO_ID) {
-      const id = this.currentOutputId;
-      for (let channel = 0; channel < 16; ++channel) {
-        let msg;
-        // 0xBF is CC
-        // 0x78 is "all sound off"
-        // msg = [ (0xB0 | (channel & 0xF)), 0x78, 0x00 ];
-        // this.outputs[id].send(msg);
-        // 0x7B is "all notes off"
-        // msg = [ (0xB0 | (channel & 0xF)), 0x7B, 0x00 ];
-        // this.outputs[id].send(msg);
-        for (let n = 0; n < 128; ++n) {
-          msg = [ (0x80 | (channel & 0xF)), (n & 0x7F), 0x00 ]
-          this.outputs[id].send(msg);
-        }
-      }
-    } else {
-      this.sampler.allNotesOff();
-    }
+
+    for (let channel = 0; channel < 16; ++channel)
+      this.silenceChannel(channel)
   }
 
   onMIDIMessage(msg) {
@@ -302,6 +313,9 @@ class IOController extends EventEmitter {
   }
 
   refreshChannelControls(controls) {
+    controls.channelActive.forEach((isActive, index) => {
+      if(!isActive) this.silenceChannel(index)
+    })
     this.channelControls = structuredClone(controls)
   }
 };

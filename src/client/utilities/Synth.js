@@ -112,12 +112,15 @@ class Synth extends EventEmitter {
     }
   }
 
-  allNotesOff() {
-    for(let channel = 1; channel <= 16; channel++) {
-      for (let i = this.minNote; i <= this.maxNote; ++i) {
-        this.noteOff({ noteNumber: i, velocity: 0, channel: channel});
-      }
+  silenceChannel(channel) {
+    for (let i = this.minNote; i <= this.maxNote; ++i) {
+      this.noteOff({ noteNumber: i, velocity: 0, channel: channel});
     }
+  }
+
+  allNotesOff() {
+    for(let channel = 1; channel <= 16; channel++)
+      this.silenceChannel(channel)
   }
 
   getNoteIndexIfInRange(noteNumber) {
@@ -177,17 +180,17 @@ class Synth extends EventEmitter {
 
   getPlayerForNoteOnChannel(noteNumber, channel) {
     const currentChannelNotes = this.playingMap.get(channel)
-    return currentChannelNotes.get(noteNumber)
+    return currentChannelNotes?.get(noteNumber)
   }
 
   setPlayerForNoteOnChannel(noteNumber, channel, player) {
     const currentChannelNotes = this.playingMap.get(channel)
-    currentChannelNotes.set(noteNumber, player)
+    currentChannelNotes?.set(noteNumber, player)
   }
 
   removePlayerForNoteOnChannel(noteNumber, channel) {
     const currentChannelNotes = this.playingMap.get(channel)
-    currentChannelNotes.delete(noteNumber)
+    currentChannelNotes?.delete(noteNumber)
   }
 
   turnOffPlayer(player) {
