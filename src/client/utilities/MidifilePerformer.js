@@ -212,9 +212,58 @@ class InterruptionGuard {
   }
 }
 
+class AutoPlaybackSemaphore {
+  #referredMFP = null
+  #semaphore = 0
+  #waitingFlag = false
+
+  constructor(mfp) {
+    this.#referredMFP = mfp
+  }
+
+  isClear(offset = 0) {
+    // console.log("Semaphore is", this.#semaphore)
+    return this.#semaphore <= (0 + offset)
+  }
+
+  update(command) {
+    this.#semaphore += command.pressed ? 1 : -1
+    // console.log("Semaphore is", this.#semaphore)
+    this.#stopWaitIfWaiting()
+  }
+
+  reset() {
+    // console.log("Reset semaphore")
+    this.#semaphore = 0
+  }
+
+  initiateWait() {
+    // console.log("Initiate wait")
+    this.#waitingFlag = true
+    if(this.isClear()) this.#stopWaitIfWaiting()
+  }
+
+  #stopWaitIfWaiting() {
+    if(this.#waitingFlag) {
+      // console.log("End wait")
+      this.#waitingFlag = false
+      this.#referredMFP.effectiveSetModeListen()
+    }
+  }
+}
+
 /* * * * * * * * * * * * MIDI FILE PERFORMER PLAYER CLASS * * * * * * * * * * */
 
 class MidifilePerformer extends EventEmitter {
+
+  #chronology = null;
+
+  #noInterruptFlag = false
+  #onlyAcceptPressed = false
+  #noRenderFlag = false
+  #playbackTriggers = new Set();
+  #autoPlaybackSemaphore = null
+
   constructor() {
     super();
     this.performer = null;
@@ -233,6 +282,8 @@ class MidifilePerformer extends EventEmitter {
     this.performVelocitySaved = false;
     this.maxVelocities = [];
     this.velocityProfile = [];
+
+    this.#autoPlaybackSemaphore = new AutoPlaybackSemaphore(this)
   }
 
   async initialize() {
@@ -276,6 +327,8 @@ class MidifilePerformer extends EventEmitter {
 
   async loadMidifile(jsonOrBuffer, isBuffer = true) {
     // this.emit('allnotesoff');
+    this.#chronology = null
+
     const midiJson = isBuffer ? await parseMidiArrayBuffer(jsonOrBuffer) : jsonOrBuffer;
 
     if(!isBuffer) { // Arrays and maps of absolute-delta events are included in midi JSONs parsed from MusicXML files.
@@ -312,8 +365,8 @@ class MidifilePerformer extends EventEmitter {
 
     // GENERATE VELOCITY PROFILE ///////////////////////////////////////////////
 
-    const translatedChronology = this.#getChronology()
-    const { maxVelocities, velocityProfile } = this.#createVelocityProfile(translatedChronology);
+    this.#chronology = this.#getChronology()
+    const { maxVelocities, velocityProfile } = this.#createVelocityProfile();
 
     this.maxVelocities = maxVelocities
     this.velocityProfile = velocityProfile
@@ -321,24 +374,40 @@ class MidifilePerformer extends EventEmitter {
     // DEFINE CALLBACK TO RENDER METHOD ////////////////////////////////////////
     // TODO : why is this done every time we load and not at construction time ?
     // is this because the lib binds the events callback to the chronology ?
+    // TODO : OUTSOURCE this massive function to a non-lambda,
+    // But this will require amending the wrapper.
 
     this.performer.setNoteEventsCallback(notes => {
+      // console.log("Rendering")
       const receivedNotes = noteEventsFromNoteDataVector(notes)
 
       const notesToEmit = this.mode === 'perform' ? [...this.pendingEndSet, ...receivedNotes] : receivedNotes
+      // console.log("Emitting", notesToEmit)
       this.emit('notes', notesToEmit)
+
+      // Prevent triggering the pending ending set more than once
+
+      // Do it here rather than in command() after this callback ends ;
+      // Otherwise the wrong set gets dropped on auto-listen.
+
+      if(this.mode === 'perform') {
+        // console.log("Emptying pending end set (was ", this.pendingEndSet, ")")
+        this.pendingEndSet = []
+      }
 
       const isStartingSet = notesToEmit.filter(note => note.on).length > 0
 
-      if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet)
+      if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet) {
         // in passive playback, only redraw on note on's
         // in perform, note offs may dynamically cancel, so redraw on both
         this.emit('visualizerRefresh', {
           isStartingSet: isStartingSet,
           referenceSetIndex: this.#getCurrentIndex()
         })
+      }
 
-      // This acts together with #updateIndexOnModeShift to ensure proper mode transition around loop boundaries.
+      // This block acts together with #updateIndexOnModeShift,
+      // to ensure proper mode transition around loop boundaries.
       // Sadly, it's not enough to update the index as the mode shifts :
       // it must also be done when the index is reached via rendering.
 
@@ -354,6 +423,40 @@ class MidifilePerformer extends EventEmitter {
           this.endAlreadyPlayed = false;
         }
       }
+
+      // console.log("NoTriggerModeSwitch:", this.noTriggerModeSwitch)
+      // console.log("Compared sets", receivedNotes, this.upcomingEndSet)
+      // console.log("Are sets equal", this.#areSameEventSets(receivedNotes, this.upcomingEndSet, true))
+
+      // Manage mode auto-switch (based on provided playback triggers)
+
+      // After an index jump, e.g. by clicking the visualizer or moving the transport bar,
+      // Auto-switch should never happen.
+      if(this.noTriggerModeSwitch) {
+
+        // In the case of autoplayed notes, it's necessary to kill sound manually without relying on the lib
+        // Because the AVS returns no off events regarding them.
+        // By extension, this applies on top of the existing off events sent for ordinary index updates.
+        this.emit('allnotesoff')
+
+        // The flag will be set back to true if we jump again.
+        this.noTriggerModeSwitch = false
+      } else {
+
+        // Evaluate conditions that could lead to mode switch.
+        // See methods in question for their formulation.
+
+        if(this.#shouldTriggerAutoListen(receivedNotes)) {
+          // console.log(this.mode === 'perform', this.#areSameEventSets(receivedNotes, this.upcomingEndSet, true))
+          // console.log("Auto switch to listen")
+          this.setMode('listen', true)
+        } else if(!isStartingSet && this.#shouldEndAutoListen()) {
+          // console.log("Auto switch to perform")
+          this.setMode('perform', true)
+        }
+      }
+
+      // Finally, manage reaching the end of the sequence with looping disabled.
 
       if(
         !this.#getLooping() &&
@@ -380,7 +483,7 @@ class MidifilePerformer extends EventEmitter {
       end: this.#getLoopEndIndex(),
     });
 
-    this.emit('chronology', translatedChronology)
+    this.emit('chronology', this.#chronology)
   }
 
   clear() {
@@ -393,8 +496,9 @@ class MidifilePerformer extends EventEmitter {
     this.emit('userChangedIndex', this.index)
   }
 
-  setRepeatCurrent() {
+  markIndexJump() {
     this.repeatIndexFromJump = true
+    this.noTriggerModeSwitch = true
   }
 
   setSequenceBounds(min, max) {
@@ -434,7 +538,8 @@ class MidifilePerformer extends EventEmitter {
     }
   }
 
-  setMode(mode) {
+  setMode(mode, toggleNoInterrupt = false) {
+    // console.log("Setting mode to", mode)
     if (mode === this.mode) return;
     const previousMode = this.mode
     this.mode = mode;
@@ -446,25 +551,44 @@ class MidifilePerformer extends EventEmitter {
     //   this.performer.stop();
     // }
 
+    // Handle transition from listen mode
+    //
+
+    if(this.timeout && previousMode === "listen") {
+      // console.log("Clearing timeout", this.timeout)
+      clearTimeout(this.timeout);
+      this.timeout = null;
+
+      // This flag is ESSENTIAL to mode auto-switch.
+      // Without it, nested timeouts, which cannot be cancelled by the above instructions,
+      // May keep firing listen mode out of control.
+      // However, it is unnecessary and in fact causes bug for ordinary playback,
+      // So it's only set if auto playback was active.
+
+      if(this.mode === 'perform' && this.#noInterruptFlag) this.#noRenderFlag = true
+    }
+
+    if(this.mode !== 'listen' || !toggleNoInterrupt) this.#autoPlaybackSemaphore.reset()
+
     this.#updateIndexOnModeShift()
 
     if (this.mode === 'listen') {
 
-      this.#setChordVelocityMappingStrategy(
-        this.conserveVelocity && this.performVelocitySaved ?
-          this.preferredVelocityStrategy :
-          "none"
-      );
+      if(toggleNoInterrupt) {
+        this.#noInterruptFlag = true
+        this.#autoPlaybackSemaphore.initiateWait()
+        return
+      }
 
-      let pair; // carry the pair information between calls ; otherwise delays are shifted
-
-      this.#playNextSet(pair, true, true);
+      this.effectiveSetModeListen()
     }
 
     if (this.mode === 'perform') {
 
-      // Handle transition from listen mode
-      //
+      if(toggleNoInterrupt) {
+        this.#noInterruptFlag = false
+        this.#onlyAcceptPressed = true
+      }
 
       if(this.interruptionGuard.playbackInterruptionStatus() === PRETEND_TRIGGER)
         this.pretendTriggerFlag = true
@@ -473,20 +597,11 @@ class MidifilePerformer extends EventEmitter {
           console.log("Active wait") // maybe there's something more productive to do while waiting ?
       }
 
-      if (this.timeout && previousMode === "listen") {
-        clearTimeout(this.timeout);
-        this.timeout = null;
-      }
-
       this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy);
     }
 
     if (this.mode === 'silent') {
-      if (this.timeout) {
-        clearTimeout(this.timeout);
-        this.timeout = null;
-      }
-
+      this.#noInterruptFlag = false
       this.emit('allnotesoff');
     }
 
@@ -497,22 +612,52 @@ class MidifilePerformer extends EventEmitter {
     // command : { pressed, id, velocity, channel }
     // note : { on, pitch, velocity, channel }
 
+    // console.log("MFP command")
+
+    // console.log("Repeat index flag", this.repeatIndexFromPretendTrigger)
+
+    if(this.mode !== 'perform' && cmd.pressed) { // key releases can never trigger perform mode
+      if(this.#noInterruptFlag) {
+        // console.log("Interrupt attempt ignored")
+        return
+      }
+      this.setMode('perform')
+    }
+
+    // console.log("Updating semaphore")
+    this.#autoPlaybackSemaphore.update(cmd)
+
     const res = [];
     if (this.mode !== 'perform' || this.pretendTriggerFlag) {
       // Ensure we do not do this more than once
       this.pretendTriggerFlag = false;
       // Indicate to listen mode that pretendTrigger was performed,
       // And thus that it should repeat this index if it resumes there
-      this.repeatIndexFromPretendTrigger = true;
+      if(!this.#noInterruptFlag) this.repeatIndexFromPretendTrigger = true;
       return res;
     }
 
     // this.emit('index', this.index);
-    this.performer.render(cmd);
 
-    // Prevent triggering the pending ending set more than once
+    if(cmd.pressed)
+      this.upcomingEndSet = noteEventsFromNoteDataVector(
+        this.performer.peekNextSetPair().end.events
+      )
 
-    this.pendingEndSet = []
+    // console.log("Begin render")
+
+    if(
+      (!cmd.pressed &&
+        !this.#noInterruptFlag && !this.#onlyAcceptPressed
+      )
+      ||
+      (cmd.pressed &&
+        (!this.#playbackTriggerReached() || this.#autoPlaybackSemaphore.isClear(1))
+      )
+    ) {
+      if(this.#onlyAcceptPressed) this.#onlyAcceptPressed = false
+      this.performer.render(cmd);
+    }
 
     if (cmd.pressed) {
       // Releasing the key does not change the index
@@ -599,13 +744,50 @@ class MidifilePerformer extends EventEmitter {
   }
 
   /**
-   * Read the chronology from the performer and keep track of the ratio between each set's velocity and the max velocity of the piece.
-   * This is used to conserve velocity variations when using passive playback with a non-null chord velocity mapping
+   * Determine triggers for automatic playback in partial perform mode.
   **/
 
-  #createVelocityProfile(chronology) {
+  updatePlaybackTriggers({triggerType, triggerCriteria}) {
+    this.#playbackTriggers = new Set()
+
+    if(triggerType === 'tempo') return
+
+    else if(triggerType === 'channels') {
+
+      if(triggerCriteria.size === 0) return
+
+      const playbackChannels = new Set(
+        Array.from({length: 16}, (_, index) => index + 1)
+      ).difference(triggerCriteria)
+
+      this.#playbackTriggers = new Set(
+        this.#chronology.filter(
+          set => set.type === "start"
+        ).map((set, index) =>
+          {
+            return set.events.filter(
+              event => event.on
+            ).every(
+              event => playbackChannels.has(event.channel)
+            ) ?
+              index : null
+          }
+        ).filter(indexOrNull => indexOrNull !== null)
+      )
+    }
+
+    // console.log("Playback set indices : ", this.#playbackTriggers)
+  }
+
+  /**
+   * Keep track of the ratio between each set's velocity and the max velocity of the piece.
+   * This is used to conserve velocity variations when using passive playback
+   * with a non-null chord velocity mapping
+  **/
+
+  #createVelocityProfile() {
     const localMaximums =
-      chronology.filter(set => set.type === "start")
+      this.#chronology.filter(set => set.type === "start")
         .map(startingSet => startingSet.events)
         .map(set =>
           Math.max(...set.filter(event => event.on).map(event => event.velocity))
@@ -632,6 +814,14 @@ class MidifilePerformer extends EventEmitter {
   // Passive playback (listen) algorithm
 
   #playNextSet(pair, start, first) {
+    if(this.#noRenderFlag) {
+      // console.log("No render flag was set, not playing next set")
+      this.#noRenderFlag = false
+      return
+    }
+
+    // console.log("Playing next set")
+
     let dt = 0;
     if (start) {
       pair = this.performer.peekNextSetPair();
@@ -647,6 +837,9 @@ class MidifilePerformer extends EventEmitter {
 
     if (this.performer.stopped()) return;
 
+    // Fix "unstoppable playback" bug : no two timeouts at a time
+    if(this.timeout) clearTimeout(this.timeout)
+
     this.timeout = setTimeout(() => {
       this.performer.render({
         pressed: start,
@@ -658,6 +851,8 @@ class MidifilePerformer extends EventEmitter {
           ),
         channel: 1
       });
+
+      // console.log("Set new timeout", this.timeout)
 
       if (start) this.emit('index', this.#getCurrentIndex());
 
@@ -725,20 +920,51 @@ class MidifilePerformer extends EventEmitter {
     }
   }
 
-  #areSameEventSets(setA, setB) {
-    if(setA.length === 0) return setB.length === 0 // Don't forget : every() is true for any condition if the array is empty
-    // And actually, can the last ending set even be empty ? I think not.
-    // So we could just write setA.length !== 0 && every ...
-    // ...but better safe than sorry.
+  effectiveSetModeListen() {
+    // console.log("*Actually* setting mode to listen")
+    this.#setChordVelocityMappingStrategy(
+      this.conserveVelocity && this.performVelocitySaved ?
+        this.preferredVelocityStrategy :
+        "none"
+    );
 
-    return setA.every((event, index) => {
+    let pair; // carry the pair information between calls ; otherwise delays are shifted
+
+    this.#playNextSet(pair, true, true);
+  }
+
+  // TODO : compare performance to lodash.isEqual.
+
+  #areSameEventSets(setA, setB, ignoreVelocity = false) {
+    if(!setA || !setB) return false
+
+    return setA.length === setB.length && setA.every((event, index) => {
       const eventB = setB[index]
 
       return event.on === eventB.on &&
         event.pitch === eventB.pitch &&
-        event.velocity === eventB.velocity &&
+        (ignoreVelocity || event.velocity === eventB.velocity) &&
         event.channel === eventB.channel
     })
+  }
+
+  // Boolean triggers for mode auto-switch
+
+  #playbackTriggerReached(when = "next") {
+    return this.mode === 'perform' && // User was performing
+    this.#playbackTriggers.has(when === "next" ? this.#getNextIndex() : this.#getCurrentIndex()) // We have reached a playback trigger
+  }
+
+  #shouldTriggerAutoListen(notes) {
+    return this.#playbackTriggerReached() &&
+    this.#areSameEventSets(notes, this.upcomingEndSet, true) // We have triggered the last perform-stored end set
+    // (otherwise legato playing could note steal on trigger sets !)
+  }
+
+  #shouldEndAutoListen() {
+    return this.mode === 'listen' && // TODO : I think this is superfluous...
+    this.#noInterruptFlag && // ...because this flag is here, and only ever set to true in auto-listen
+    !this.#playbackTriggers.has(this.#getNextIndex()) // Of course, only hand back to perform if we are not on a playback trigger !
   }
 }
 

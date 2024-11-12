@@ -533,8 +533,8 @@ export default {
       // scrollbar callback, i is chordSequence index
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
+      this.performer.markIndexJump()
       this.performer.setSequenceIndex(i);
-      this.performer.setRepeatCurrent()
 
       this.$refs.pianoRoll.stop()
       this.$refs.sheetMusic.stop()
