@@ -449,6 +449,13 @@ class MidifilePerformer extends EventEmitter {
         if(this.#shouldTriggerAutoListen(receivedNotes)) {
           // console.log(this.mode === 'perform', this.#areSameEventSets(receivedNotes, this.upcomingEndSet, true))
           // console.log("Auto switch to listen")
+
+          // Unset this flag : otherwise, jumping in perform mode
+          // Will repeat the last perform set when enabling auto-listen
+          // Do it here rather than in setMode too ;
+          // Otherwise it would happen after updateIndex = too late
+          if(this.repeatIndexFromJump) this.repeatIndexFromJump = false
+          
           this.setMode('listen', true)
         } else if(!isStartingSet && this.#shouldEndAutoListen()) {
           // console.log("Auto switch to perform")
