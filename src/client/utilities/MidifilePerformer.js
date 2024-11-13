@@ -247,7 +247,7 @@ class AutoPlaybackSemaphore {
     if(this.#waitingFlag) {
       // console.log("End wait")
       this.#waitingFlag = false
-      this.#referredMFP.effectiveSetModeListen()
+      this.#referredMFP.effectiveSetModeListen(true)
     }
   }
 }
@@ -927,7 +927,7 @@ class MidifilePerformer extends EventEmitter {
     }
   }
 
-  effectiveSetModeListen() {
+  effectiveSetModeListen(emit = false) {
     // console.log("*Actually* setting mode to listen")
     this.#setChordVelocityMappingStrategy(
       this.conserveVelocity && this.performVelocitySaved ?
@@ -938,6 +938,8 @@ class MidifilePerformer extends EventEmitter {
     let pair; // carry the pair information between calls ; otherwise delays are shifted
 
     this.#playNextSet(pair, true, true);
+
+    if(emit) this.emit('mode', this.mode)
   }
 
   // TODO : compare performance to lodash.isEqual.
