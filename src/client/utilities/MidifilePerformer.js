@@ -258,11 +258,14 @@ class MidifilePerformer extends EventEmitter {
 
   #chronology = null;
 
-  #noInterruptFlag = false
-  #onlyAcceptPressed = false
-  #noRenderFlag = false
   #playbackTriggers = new Set();
-  #autoPlaybackSemaphore = null
+  #noInterruptFlag = false;
+  #onlyAcceptPressed = false;
+  #noRenderFlag = false;
+  #autoPlaybackSemaphore = null;
+
+  #storeCommandFlag = false;
+  #storedUntriggeredCommand = null;
 
   constructor() {
     super();
@@ -455,11 +458,19 @@ class MidifilePerformer extends EventEmitter {
           // Do it here rather than in setMode too ;
           // Otherwise it would happen after updateIndex = too late
           if(this.repeatIndexFromJump) this.repeatIndexFromJump = false
-          
+
           this.setMode('listen', true)
-        } else if(!isStartingSet && this.#shouldEndAutoListen()) {
-          // console.log("Auto switch to perform")
-          this.setMode('perform', true)
+        } else if(this.#shouldEndAutoListen()) {
+          if(isStartingSet) {
+            // console.log("Activating command store")
+            this.#storeCommandFlag = true
+          }
+
+          else {
+             // console.log("Auto switch to perform")
+             this.#storeCommandFlag = false
+             this.setMode('perform', true)
+          }
         }
       }
 
@@ -605,6 +616,10 @@ class MidifilePerformer extends EventEmitter {
       }
 
       this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy);
+
+      // if(!!this.#storedUntriggeredCommand) console.log("Triggering stored command")
+      this.command(this.#storedUntriggeredCommand, true)
+      this.#storedUntriggeredCommand = null
     }
 
     if (this.mode === 'silent') {
@@ -615,7 +630,7 @@ class MidifilePerformer extends EventEmitter {
     this.emit('mode', this.mode)
   }
 
-  command(cmd) {
+  command(cmd, noUpdateSemaphore = false) {
     // command : { pressed, id, velocity, channel }
     // note : { on, pitch, velocity, channel }
 
@@ -623,16 +638,24 @@ class MidifilePerformer extends EventEmitter {
 
     // console.log("Repeat index flag", this.repeatIndexFromPretendTrigger)
 
+    if(!cmd) return
+
     if(this.mode !== 'perform' && cmd.pressed) { // key releases can never trigger perform mode
       if(this.#noInterruptFlag) {
+        if(this.#storeCommandFlag) {
+          // console.log("Store command for later trigger")
+          this.#storedUntriggeredCommand = cmd
+        }
         // console.log("Interrupt attempt ignored")
         return
       }
       this.setMode('perform')
     }
 
-    // console.log("Updating semaphore")
-    this.#autoPlaybackSemaphore.update(cmd)
+    if(!noUpdateSemaphore) {
+      // console.log("Updating semaphore")
+      this.#autoPlaybackSemaphore.update(cmd)
+    }
 
     const res = [];
     if (this.mode !== 'perform' || this.pretendTriggerFlag) {
@@ -651,8 +674,6 @@ class MidifilePerformer extends EventEmitter {
         this.performer.peekNextSetPair().end.events
       )
 
-    // console.log("Begin render")
-
     if(
       (!cmd.pressed &&
         !this.#noInterruptFlag && !this.#onlyAcceptPressed
@@ -663,6 +684,7 @@ class MidifilePerformer extends EventEmitter {
       )
     ) {
       if(this.#onlyAcceptPressed) this.#onlyAcceptPressed = false
+      // console.log("Begin render")
       this.performer.render(cmd);
     }
 
@@ -822,7 +844,7 @@ class MidifilePerformer extends EventEmitter {
 
   #playNextSet(pair, start, first) {
     if(this.#noRenderFlag) {
-      // console.log("No render flag was set, not playing next set")
+      // console.log("No render flag is true, not playing next set")
       this.#noRenderFlag = false
       return
     }
