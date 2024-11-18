@@ -5,7 +5,7 @@ import MidiPlayer           from 'midi-player-js';
 import Performer            from 'midifile-performer';
 import AllNoteEventsAnalyzer from './AllNoteEventsAnalyzer';
 
-import { convertChronologyToNoteSequence } from './NoteSequenceUtils'
+import { convertChronologyToNoteSequence, getSetUtil } from './NoteSequenceUtils'
 
 const chordDeltaMsDateThreshold = 20;
 
@@ -260,6 +260,15 @@ class MidifilePerformer extends EventEmitter {
 
   #chronology = null;
 
+  // Mostly, MusicXMLs are processed identically to other MIDI files,
+  // However in their case, they can also be performed by the measure (with auto-playback),
+  // Whereas MIDI files cannot ;
+  // Hence keeping track of the file type is needed.
+
+  #isFileMusicXml = false;
+  #measureStartingSetIndices = null;
+
+  #playbackTriggerDescription = null;
   #playbackTriggers = new Set();
   #noInterruptFlag = false;
   #onlyAcceptPressed = false;
@@ -332,12 +341,14 @@ class MidifilePerformer extends EventEmitter {
 
   async loadMidifile(jsonOrBuffer, isBuffer = true) {
     // this.emit('allnotesoff');
+    this.#isFileMusicXml = false
     this.#chronology = null
 
     const midiJson = isBuffer ? await parseMidiArrayBuffer(jsonOrBuffer) : jsonOrBuffer;
 
     if(!isBuffer) { // Arrays and maps of absolute-delta events are included in midi JSONs parsed from MusicXML files.
       // They are for the OSMD visualizer. Pass them along.
+      this.#isFileMusicXml = true
       this.emit('musicXmlTempos', jsonOrBuffer.tempoEvents)
       this.emit('musicXmlChannels', jsonOrBuffer.channelChanges)
       this.emit('musicXmlGraceNoteInfo', jsonOrBuffer.graceNoteInfo)
@@ -495,6 +506,51 @@ class MidifilePerformer extends EventEmitter {
     this.endAlreadyPlayed = false;
     this.performVelocitySaved = false;
 
+    // Always reset playback triggers.
+
+    this.#playbackTriggers = new Set();
+
+    // Do not preserve channel-based playback triggering between files.
+    // Preserve tempo-based triggering,
+    // But since it is only possible in MusicXML files, test for that first.
+
+    if(
+      this.#playbackTriggerDescription?.triggerType === 'channels' ||
+      (
+        !this.#isFileMusicXml &&
+        this.#playbackTriggerDescription?.triggertype === 'tempo'
+      )
+    ) {
+      this.#playbackTriggerDescription = null
+    }
+
+    // ... in-between calculations ... /////////////////////////////////////////
+
+    const noteSequenceInfo = convertChronologyToNoteSequence(this.#chronology)
+
+    if(this.#isFileMusicXml) {
+      this.#measureStartingSetIndices = new Set(
+        // We could also use map() on the chronology ;
+        // The result is exactly the same, by virtue of what setStarts *is*.
+        noteSequenceInfo.setStarts.map((_, index) => {
+          const set = getSetUtil(
+            index,
+            noteSequenceInfo.noteSequence,
+            noteSequenceInfo.setStarts,
+            noteSequenceInfo.setEnds
+          )
+
+          return set.some(note => jsonOrBuffer.measureStartIndices.has(note.index)) ?
+            index : null
+        }).filter(
+          indexOrNull => indexOrNull !== null
+        )
+      )
+    } else this.#measureStartingSetIndices = null
+
+    if(this.#playbackTriggerDescription?.type === "tempo")
+      this.#setPlaybackTriggersFromMeasures()
+
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////
 
     this.emit('sequence', {
@@ -505,7 +561,7 @@ class MidifilePerformer extends EventEmitter {
 
     this.emit(
       'noteSequenceInfo',
-      convertChronologyToNoteSequence(this.#chronology)
+      noteSequenceInfo
     )
   }
 
@@ -781,10 +837,26 @@ class MidifilePerformer extends EventEmitter {
    * Determine triggers for automatic playback in partial perform mode.
   **/
 
-  updatePlaybackTriggers({triggerType, triggerCriteria}) {
-    this.#playbackTriggers = new Set()
+  updatePlaybackTriggers(triggerDescription) {
+    const {triggerType, triggerCriteria} = triggerDescription
 
-    if(triggerType === 'tempo') return
+    this.#playbackTriggers = new Set()
+    this.#playbackTriggerDescription = triggerDescription
+
+    if(triggerType === 'tempo') {
+      if(!this.#isFileMusicXml) {
+        console.warn('ERROR : attempted setting tempo-based triggers on MIDI file')
+        console.warn('Tempo-based triggers are only valid for MusicXML files')
+        console.warn('Ignoring and setting no triggers')
+
+        this.#playbackTriggerDescription = null
+
+        return
+      }
+
+      if(triggerCriteria === 'measure') this.#setPlaybackTriggersFromMeasures()
+      // else if(triggerCriteria === 'beat') ...
+    }
 
     else if(triggerType === 'channels') {
 
@@ -811,6 +883,25 @@ class MidifilePerformer extends EventEmitter {
     }
 
     // console.log("Playback set indices : ", this.#playbackTriggers)
+  }
+
+  #setPlaybackTriggersFromMeasures() {
+    if(!this.#measureStartingSetIndices) {
+      console.warn("Trying to get measure-based playback triggers from nonexistent measure info")
+      console.warn("This should not happen !")
+      console.warn("Ignoring request and resetting playback triggers.")
+      return new Set()
+    }
+
+    this.#playbackTriggers = new Set(
+      this.#chronology.filter(
+        set => set.type === "start"
+      ).map(
+        (_, index) => this.#measureStartingSetIndices.has(index) ? null : index
+      ).filter(
+        indexOrNull => indexOrNull !== null
+      )
+    )
   }
 
   /**

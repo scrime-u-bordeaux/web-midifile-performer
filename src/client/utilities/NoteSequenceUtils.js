@@ -93,7 +93,24 @@ function noteMapKey(nsNote) {
   return `p${nsNote.pitch}c${nsNote.channel}`
 }
 
+// The naming of the following two methods is due to the fact
+// that higher level entities (Vue components) do not call them directly,
+// Instead using the store-provided getters, which only require the first parameter.
+// They are, however, directly called by MFP.js if need be.
+
+function getSetUtil(setIndex, noteSequence, setStarts, setEnds) {
+  return noteSequence.slice(setStarts[setIndex], setEnds[setIndex]+1)
+}
+
+function getSetIndexUtil(noteIndex, setStarts) {
+  const tentativeSetIndex = setStarts.findIndex(i => i > noteIndex)
+  return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : setStarts.length - 1
+}
+
 export {
   noteMapKey,
-  convertChronologyToNoteSequence
+  convertChronologyToNoteSequence,
+
+  getSetUtil,
+  getSetIndexUtil
 }

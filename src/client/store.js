@@ -3,6 +3,8 @@ import { createStore } from 'vuex';
 import metaJson from '../../meta.json'
 import defaultSettings from './default_settings.json'
 
+import { getSetUtil, getSetIndexUtil } from './utilities/NoteSequenceUtils'
+
 const minKeyboardNote = 21;
 const maxKeyboardNote = 108;
 
@@ -135,12 +137,11 @@ const store = createStore({
     },
 
     getSet: state => setIndex => {
-      return state.noteSequence.slice(state.setStarts[setIndex], state.setEnds[setIndex]+1)
+      return getSetUtil(setIndex, state.noteSequence, state.setStarts, state.setEnds)
     },
 
     getSetIndex: state => noteIndex => {
-      const tentativeSetIndex = state.setStarts.findIndex(i => i > noteIndex)
-      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : state.setStarts.length - 1
+      return getSetIndexUtil(noteIndex, state.setStarts)
     },
 
     isModeSilent: state => state.currentMode === 'silent',

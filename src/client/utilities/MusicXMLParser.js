@@ -147,6 +147,10 @@ class PartTrack {
   // But otherwise processing is a nightmare.
   currentDelta = DEFAULT_DELTA
 
+  // The first note of a measure must be marked.
+  // This way, the MFP will know where measures begin.
+  #measureMarked = false
+
   // Unfortunately, a single accumulator is not enough :
   // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
   // when dealing with notes in a chord.
@@ -241,6 +245,8 @@ class PartTrack {
 
     this.#arpOffsetForMeasure = 0
     this.#fermataOffsetForMeasure = 0
+
+    this.#measureMarked = false
   }
 
   getRelevantNotatedDynamics(startTime) {
@@ -336,6 +342,12 @@ class PartTrack {
 
   signalFermata(xmlNote) {
     this.#fermataOffsetForMeasure += xmlNote.duration
+  }
+
+  isMeasureMarked() {
+    const retval = this.#measureMarked
+    if(!retval) this.#measureMarked = true
+    return retval
   }
 }
 
@@ -604,8 +616,6 @@ export default function parseMusicXml(buffer) {
   )
 
   // We can then get all note ons, the same way they're gathered in the noteSequence.
-  // IMPORTANT : the in-set order might still vary.
-  // But what really matters is that the indexes we're getting will point to the right set.
 
   const allNoteOns = Array.from(trackMap.values()).flatMap(partTrack =>
     partTrack.events.filter(
@@ -624,7 +634,20 @@ export default function parseMusicXml(buffer) {
     }
   )
 
-  // So, finally, we can get the noteSequence-compatible index of every grace note,
+  // The first thing this merged list is used for is knowing where measures start.
+  // For now, this is only useful in determining MFP auto-playback triggers ;
+  // However, it might have several more uses in the future
+  // (e.g. : jump to / loop on measure)
+
+  const measureStartIndices = new Set(
+    allNoteOns.map(
+      (note, index) => note.beginsMeasure ? index : null
+    ).filter(
+      indexOrNull => indexOrNull !== null
+    )
+  )
+
+  // Using allNoteOns, we can get the noteSequence-compatible index of every grace note,
   // And its principal.
 
   const graceNoteInfo = allNoteOns.map(
@@ -645,6 +668,8 @@ export default function parseMusicXml(buffer) {
   ).filter(
     info => !!info
   )
+
+  // We are also able to mark every note which is part of an arpeggio.
 
   const arpeggioInfo = allNoteOns.map(
     (note, index) => {
@@ -676,6 +701,7 @@ export default function parseMusicXml(buffer) {
     division: divisions,
     format: 1,
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
+    measureStartIndices: measureStartIndices,
     tempoEvents: tempoEvents,
     channelChanges: channelChanges,
     graceNoteInfo: graceNoteInfo,
@@ -719,7 +745,14 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
       velocity: getMidiVelocity(xmlNote, partTrack, startTime),
       noteNumber: getMidiNoteNumber(xmlNote, partTrack)
     },
-    offsetAtCreation: partTrack.getOffsetForMeasure()
+
+    // This other info is not used by the MFP,
+    // Only for parsing and registration purposes
+
+    // This is for record-keeping in arpeggio-induced time shifts
+    offsetAtCreation: partTrack.getOffsetForMeasure(),
+    // This is to register the start of measures at wrap-up
+    beginsMeasure: !partTrack.isMeasureMarked()
   }
 
   partTrack.noteOnEventsToXmlNotes.set(midiNoteOnEvent, xmlNote)
