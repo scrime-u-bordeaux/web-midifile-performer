@@ -669,7 +669,7 @@ class MidifilePerformer extends EventEmitter {
         this.#onlyAcceptPressed = true
       }
 
-      if(this.interruptionGuard.playbackInterruptionStatus() === PRETEND_TRIGGER)
+      if(!toggleNoInterrupt && this.interruptionGuard.playbackInterruptionStatus() === PRETEND_TRIGGER)
         this.pretendTriggerFlag = true
 
       else while(this.interruptionGuard.playbackInterruptionStatus() === WAIT) {
