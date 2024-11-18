@@ -5,6 +5,8 @@ import MidiPlayer           from 'midi-player-js';
 import Performer            from 'midifile-performer';
 import AllNoteEventsAnalyzer from './AllNoteEventsAnalyzer';
 
+import { convertChronologyToNoteSequence } from './NoteSequenceUtils'
+
 const chordDeltaMsDateThreshold = 20;
 
 // typedefs ////////////////////////////////////////////////////////////////////
@@ -501,7 +503,10 @@ class MidifilePerformer extends EventEmitter {
       end: this.#getLoopEndIndex(),
     });
 
-    this.emit('chronology', this.#chronology)
+    this.emit(
+      'noteSequenceInfo',
+      convertChronologyToNoteSequence(this.#chronology)
+    )
   }
 
   clear() {

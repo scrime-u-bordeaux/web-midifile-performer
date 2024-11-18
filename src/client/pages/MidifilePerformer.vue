@@ -375,7 +375,7 @@ export default {
 
     this.performer.addListener('mode', this.setCurrentMode)
 
-    this.performer.addListener('chronology', this.onChronology)
+    this.performer.addListener('noteSequenceInfo', this.onNoteSequenceInfo)
 
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.addListener('musicXmlChannels', this.onMusicXmlChannels)
@@ -413,7 +413,7 @@ export default {
     document.removeEventListener('keydown',this.onKeyDown)
     document.removeEventListener('keyup',this.onKeyUp)
 
-    this.performer.removeListener('chronology', this.onChronology)
+    this.performer.removeListener('noteSequenceInfo', this.onNoteSequenceInfo)
 
     this.performer.removeListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.removeListener('musicXmlChannels', this.onMusicXmlChannels)
@@ -426,7 +426,10 @@ export default {
   methods: {
     ...mapMutations([
       'setMfpMidiFile',
-      'setCurrentMode'
+      'setCurrentMode',
+      'setNoteSequence',
+      'setSetStarts',
+      'setSetEnds'
     ]),
 
     // -------------------------------------------------------------------------
@@ -509,8 +512,11 @@ export default {
     onModeChange(mode) {
       this.performer.setMode(mode);
     },
-    onChronology(chronology) {
-      this.$refs.pianoRoll.updateNoteSequence(chronology)
+
+    onNoteSequenceInfo({noteSequence, setStarts, setEnds}) {
+      this.setNoteSequence(noteSequence)
+      this.setSetStarts(setStarts)
+      this.setSetEnds(setEnds)
     },
 
     onMusicXmlTempos(tempoEvents) {

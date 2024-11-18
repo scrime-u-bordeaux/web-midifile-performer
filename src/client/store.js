@@ -70,12 +70,19 @@ const store = createStore({
       firstStepsMidiFile: { ...midifiles[1], buffer: null },
       mfpMidiFile: { id: 'mfp', title: '', url: '', isMidi: true, buffer: null },
 
-      // Model shared by visualizers.
-      // TODO : move it in a more logical place.
-      // setStarts and setEnds register the indices where sets start and begin in noteSequence
+      // The main visualizer model, adapted from Magenta's own.
+      // Contains notes with their MFP information,
+      // Their start, and end times.
+
       noteSequence: [],
-      setStarts: [],
-      setEnds: [],
+
+      // Convenience arrays to switch between noteSequence indexes and set indexes.
+
+      setStarts: [], // index of the first note for each set
+      setEnds:[], // index of the last note for each set
+
+      // Shared state of which notes to paint, and in color.
+
       activeNotes: [],
       highlightPalette: highlightPalette,
 
