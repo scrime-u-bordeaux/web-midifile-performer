@@ -134,6 +134,15 @@ const store = createStore({
       return new Set(state.noteSequence.map(note => note.channel)).has(channel)
     },
 
+    getSet: state => setIndex => {
+      return state.noteSequence.slice(state.setStarts[setIndex], state.setEnds[setIndex]+1)
+    },
+
+    getSetIndex: state => noteIndex => {
+      const tentativeSetIndex = state.setStarts.findIndex(i => i > noteIndex)
+      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : state.setStarts.length - 1
+    },
+
     isModeSilent: state => state.currentMode === 'silent',
     isModeListen: state => state.currentMode === 'listen',
     isModePerform: state => state.currentMode === 'perform',

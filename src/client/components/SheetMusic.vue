@@ -33,9 +33,10 @@ export default {
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
 
-    ...mapGetters(
-      ['isModeSilent', 'isModePerform']
-    ),
+    ...mapGetters([
+      'isModeSilent', 'isModePerform',
+      'getSet', 'getSetIndex'
+    ]),
 
     activeNoteRGB() {
       return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
@@ -1379,16 +1380,7 @@ export default {
 
       if(paintType === "mouse") this.noteHeadsHighlightedByMouse = []
       else this.noteHeadsHighlightedByRefresh = []
-    },
-
-    getSet(setIndex) {
-      return this.noteSequence.slice(this.setStarts[setIndex], this.setEnds[setIndex]+1)
-    },
-
-    getSetIndex(noteIndex) {
-      const tentativeSetIndex = this.setStarts.findIndex(i => i > noteIndex)
-      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
-    },
+    }
   }
 }
 </script>

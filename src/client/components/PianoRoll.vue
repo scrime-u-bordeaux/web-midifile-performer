@@ -98,9 +98,10 @@ export default {
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
 
-    ...mapGetters(
-      ['isModeSilent', 'isModePerform']
-    ),
+    ...mapGetters([
+      'isModeSilent', 'isModePerform',
+      'getSet', 'getSetIndex'
+    ]),
 
     activeNoteRGB() {
       return this.highlightPalette.get(
@@ -567,15 +568,6 @@ export default {
         )
 
       return {x, y, w, h: this.noteHeight}
-    },
-
-    getSet(setIndex) {
-      return this.noteSequence.slice(this.setStarts[setIndex], this.setEnds[setIndex]+1)
-    },
-
-    getSetIndex(noteIndex) {
-      const tentativeSetIndex = this.setStarts.findIndex(i => i > noteIndex)
-      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
     },
 
     getNoteIndexFromRect(rect) {
