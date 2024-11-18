@@ -18,6 +18,8 @@
 import { mapState, mapGetters, mapMutations } from 'vuex'
 import { OpenSheetMusicDisplay } from 'opensheetmusicdisplay'
 
+import { noteMapKey } from '../utilities/NoteSequenceUtils'
+
 const TAB_CLEF = 4 // Internal OSMD enum not accessible here
 
 export default {
@@ -501,7 +503,7 @@ export default {
 
           eligibleNotes.forEach(note => {
             const {pitch, channel} = this.getOSMDNoteInformation(note)
-            const mapKey = `p${pitch}c${channel}`
+            const mapKey = noteMapKey({pitch, channel})
 
             noteMapForPosition.set(
               mapKey,
@@ -707,7 +709,7 @@ export default {
             if(this.gNoteHeadsToNsNotes.has(gNoteHead)) return
 
             // TODO : this should definitely be a shared function of SheetMusic and PianoRoll.
-            const mapKey = `p${pitch}c${channel}`
+            const mapKey = noteMapKey({pitch, channel})
 
             if(!noteSequenceEquivalent) {
 
@@ -758,7 +760,7 @@ export default {
           unaddressedNotes.forEach(note => {
             // console.log("Addressing note", note)
 
-            const mapKey = `p${note.pitch}c${note.channel}`
+            const mapKey = noteMapKey(note)
             const candidateNoteHeads = graceAdjacentsLeftBehind.get(mapKey)
 
             if(!!candidateNoteHeads) {
@@ -955,7 +957,7 @@ export default {
         // Its info in searchData.notes is updated.
 
         set.forEach(nsNote => {
-          const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
+          const mapKey = noteMapKey(nsNote)
 
           // We can't safe call here, because it risks...
           // ...an infinite loop ! (BI18op68-2, which instead just breaks)
@@ -1135,7 +1137,7 @@ export default {
           nonPrincipalNonGraceNotes.length > 0
             &&
           nonPrincipalNonGraceNotes.some(nsNote => {
-            const mapKey = `p${nsNote.pitch}c${nsNote.channel}`
+            const mapKey = noteMapKey(nsNote)
             return notesUnderCurrentPosition?.get(mapKey) === undefined
           })
         )

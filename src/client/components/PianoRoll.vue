@@ -28,6 +28,7 @@ svg {
  */
 
 import { mapState, mapGetters, mapMutations } from 'vuex'
+import { noteMapKey } from '../utilities/NoteSequenceUtils'
 
 export default {
 
@@ -642,7 +643,7 @@ export default {
         // the factorization ?
         // Depending on how JS behaves, it could slow down the playback.
 
-        const mapKey = `p${note.pitch}c${note.channel}`
+        const mapKey = noteMapKey(note)
         const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
         const isPlaying = pitchMask & 1 << note.channel
 
@@ -652,7 +653,7 @@ export default {
       const set = this.getSet(setIndex)
 
       set.forEach((note, index) => {
-        const mapKey = `p${note.pitch}c${note.channel}`
+        const mapKey = noteMapKey(note)
         const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
         const isPlaying = pitchMask & 1 << note.channel
 
