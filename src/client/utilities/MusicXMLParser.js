@@ -147,10 +147,6 @@ class PartTrack {
   // But otherwise processing is a nightmare.
   currentDelta = DEFAULT_DELTA
 
-  // The first note of a measure must be marked.
-  // This way, the MFP will know where measures begin.
-  #measureMarked = false
-
   // Unfortunately, a single accumulator is not enough :
   // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
   // when dealing with notes in a chord.
@@ -245,8 +241,6 @@ class PartTrack {
 
     this.#arpOffsetForMeasure = 0
     this.#fermataOffsetForMeasure = 0
-
-    this.#measureMarked = false
   }
 
   getRelevantNotatedDynamics(startTime) {
@@ -343,12 +337,6 @@ class PartTrack {
   signalFermata(xmlNote) {
     this.#fermataOffsetForMeasure += xmlNote.duration
   }
-
-  isMeasureMarked() {
-    const retval = this.#measureMarked
-    if(!retval) this.#measureMarked = true
-    return retval
-  }
 }
 
 export default function parseMusicXml(buffer) {
@@ -396,6 +384,9 @@ export default function parseMusicXml(buffer) {
   // Since measures are cross-part entities,
   // This can be stored in a single place.
   let measureEnd = 0
+  // This is also useful to mark the start of measures.
+  // (The start of a measure is just the end of another one)
+  const measureBounds = new Set([measureEnd])
 
   // console.log("Begin MusicXML parsing")
 
@@ -558,6 +549,8 @@ export default function parseMusicXml(buffer) {
 
       partTrack.cleanUpForMeasure(measureEnd)
     }
+
+    measureBounds.add(measureEnd)
   })
 
   // This isn't very semantically relevant, but it's the best place in the code flow to do so :
@@ -641,7 +634,7 @@ export default function parseMusicXml(buffer) {
 
   const measureStartIndices = new Set(
     allNoteOns.map(
-      (note, index) => note.beginsMeasure ? index : null
+      (note, index) => measureBounds.has(note.delta) ? index : null
     ).filter(
       indexOrNull => indexOrNull !== null
     )
@@ -750,9 +743,7 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
     // Only for parsing and registration purposes
 
     // This is for record-keeping in arpeggio-induced time shifts
-    offsetAtCreation: partTrack.getOffsetForMeasure(),
-    // This is to register the start of measures at wrap-up
-    beginsMeasure: !partTrack.isMeasureMarked()
+    offsetAtCreation: partTrack.getOffsetForMeasure()
   }
 
   partTrack.noteOnEventsToXmlNotes.set(midiNoteOnEvent, xmlNote)
