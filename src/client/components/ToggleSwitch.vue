@@ -1,6 +1,6 @@
 <template>
   <div class="switch-container">
-    <span class="text-label">{{ label }}</span>
+    <span v-if="!!label" class="text-label">{{ label }}</span>
 
     <label class="switch">
       <input

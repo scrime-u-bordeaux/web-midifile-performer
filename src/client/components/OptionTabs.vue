@@ -1,9 +1,16 @@
 <template>
-  <div class="tabs-wrapper" :class="routerMode ? 'router' : 'generic'">
+  <div
+    class="tabs-wrapper"
+    :class="[
+      routerMode ? 'router' : 'generic',
+      vertical ? 'vertical' : 'horizontal'
+    ]"
+  >
     <div class="tab"
         :class="[
           routerMode ? 'router' : 'generic',
-          !routerMode && index === 0 ? 'first-tab' : ''
+          !routerMode && index === 0 ? 'first-tab' : '',
+          !allowNone ? 'color-on-hover' : ''
         ]"
         v-for="(item, index) in items"
     >
@@ -14,9 +21,10 @@
       <div v-else
         :class="[
           selectedTabId === item.id ? 'selected' : '',
-          !!fullRound ? 'full-round': ''
+          !!roundBottom ? 'round-bottom': ''
         ]"
-        @click="selectedTabId = item.id"
+        :data-item-id="item.id"
+        @click="onTabClick"
       >
         {{ item.text }}
       </div>
@@ -39,6 +47,14 @@
 .tabs-wrapper.generic {
   width: 100%;
 }
+.tabs-wrapper.vertical {
+  flex-direction: column;
+  align-items: center;
+}
+.tabs-wrapper.horizontal {
+  flex-direction: row;
+}
+
 .tab {
   margin: 0 0.5em;
 }
@@ -50,7 +66,7 @@
   border-radius: 0.4em 0.4em 0 0;
   transition: all 0.25s;
 }
-.tab > .full-round {
+.tab > .round-bottom {
   border-radius: 1em;
 }
 .tab.router > * {
@@ -63,10 +79,10 @@
 
 /* CSS is such a fun language. */
 .tab.router > *.selected,
-.tab.router > *:hover,
+.tab.router.color-on-hover > *:hover,
 .tab.router > *.router-link-active,
 .tab > *.selected,
-.tab > *:hover,
+.tab.color-on-hover > *:hover,
 .tab > *.router-link-active {
   background-color: var(--button-blue);
   color: white;
@@ -77,7 +93,7 @@
 
 <script>
 export default {
-  props: ['items', 'routerMode', 'fullRound', 'modelValue'],
+  props: ['items', 'vertical', 'routerMode', 'roundBottom', 'modelValue', 'allowNone'],
   emits: ['update:modelValue'],
 
   computed: {
@@ -88,6 +104,16 @@ export default {
       set(value) {
         this.$emit('update:modelValue', value)
       }
+    }
+  },
+
+  methods: {
+    onTabClick(event) {
+      const tab = event.target
+      const itemId = tab.dataset.itemId
+
+      if(this.selectedTabId !== itemId || !this.allowNone) this.selectedTabId = itemId
+      else this.selectedTabId = null
     }
   }
 }

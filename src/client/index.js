@@ -35,11 +35,17 @@ Promise.all([
 
   app.provide('defaultMidiInput', defaultInputs);
 
-  // Utilities
+  // Utility classes ;
+  // They must be provided via injection,
+  // Otherwise Vue's "this" prevents class syntax from working.
+  // JS is wonderful.
 
   app.provide('ioctl', ioctl);
   app.provide('performer', performer);
   app.provide('synth', synth);
+
+  // TODO : However, for these, use direct imports from components instead.
+  // They are functions and have no this-binding problem.
   app.provide('parseMusicXml', parseMusicXml)
   app.provide('getRootFileFromMxl', getRootFileFromMxl)
 

@@ -73,37 +73,12 @@
 
                   <h4>{{ $t('settings.io.channelVelocities.heading') }}</h4>
 
-                  <!-- This contorsion with index is some of the stupidest code I've ever written.
-                  But it's the only way. index is a String, so "index+1" becomes a string concatenation.-->
-
-                  <div class="sliders-container">
-                    <div class="slider-and-toggle"
-                         v-show="fileIncludes(parseInt(parseInt(index)+1, 10))"
-                         v-for="(velocityOffset, index) in settingsBuffer.io.channelControls.channelVelocityOffsets">
-                      <ToggleSwitch
-                        class="vertical-toggle"
-                        v-model="settingsBuffer.io.channelControls.channelActive[index]"/>
-
-                      <!--Seriously :
-                      I can't use interpolation for index+1 in the message JSON, because it's a string concatenation.
-                      I can't use $t()+index+1, because it's a string concatenation. (Okay, that one's fair.)
-                      I can't use $t()+parseInt(index+1), because it's a string concatenation.
-                      JavaScript is so amazing.-->
-
-                      <scroll-bar class="velocity-scroll"
-                        :class="settingsBuffer.io.channelControls.channelActive[index] ? '' : 'muted-channel'"
-                        :hasBounds="false"
-                        :start="-64"
-                        :end="64"
-                        :index="velocityOffset"
-                        :size="129"
-                        :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
-
-                        @index="setVelocityOffset($event, index)"
-                        @reset="setVelocityOffset(currentSettings.io.channelControls.channelVelocityOffsets[index], index)"
-                      />
-                    </div>
-                  </div>
+                  <ChannelManager
+                    :channelVelocityOffsets="settingsBuffer.io.channelControls.channelVelocityOffsets"
+                    v-model:channelActive="settingsBuffer.io.channelControls.channelActive"
+                    @offsetUpdate="setVelocityOffset($event.innerEvent, $event.index)"
+                    @offsetReset="setVelocityOffset(currentSettings.io.channelControls.channelVelocityOffsets[index], $event.index)"
+                  />
                 </div>
               </div>
 
@@ -115,7 +90,7 @@
                   <OptionTabs
                     class="tabs minor"
                     :routerMode="false"
-                    :fullRound="true"
+                    :roundBottom="true"
                     :items="availableVisualizers"
                     v-model="settingsBuffer.visualizer.preferredVisualizer"
                   />
@@ -176,7 +151,7 @@
                   <OptionTabs
                     class="tabs minor"
                     :routerMode="false"
-                    :fullRound="true"
+                    :roundBottom="true"
                     :items="velocityStrategies"
                     v-model="settingsBuffer.performer.preferredVelocityStrategy"
                   />
@@ -291,24 +266,6 @@ h4 {
   padding-bottom: 0.75em;
 }
 
-.channel-velocities .sliders-container > *:not(:last-child) {
-  padding-bottom: 1em;
-}
-.channel-velocities .velocity-scroll {
-  width: 100%;
-}
-.slider-and-toggle {
-  display: flex;
-  flex-direction: row;
-  align-content: center;
-}
-.vertical-toggle {
-  transform: rotate(-90deg);
-}
-.muted-channel {
-  opacity: 0.4
-}
-
 .click-play-inner {
   padding: 0 12em;
 }
@@ -396,12 +353,13 @@ import PopUp from './PopUp.vue'
 import NumberInput from './NumberInput.vue'
 import ScrollBar from './ScrollBar.vue'
 import IOManager from './IOManager.vue';
+import ChannelManager from './ChannelManager.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ScrollBar, NumberInput },
+  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ChannelManager, ScrollBar, NumberInput },
 
   data() {
     return {
@@ -633,6 +591,10 @@ export default {
     setInputs(ids) {
       this.settingsBuffer.io.inputIds = ids
     },
+
+    // This could technically be in the ChannelManager,
+    // But it's more transparent that way.
+    // TODO : I'll probably have to move it there when making the left-side channel panel though...
 
     setVelocityOffset(offset, index) {
       this.settingsBuffer.io.channelControls.channelVelocityOffsets[index] = offset
