@@ -441,8 +441,6 @@ class MidifilePerformer extends EventEmitter {
       }
 
       // console.log("NoTriggerModeSwitch:", this.noTriggerModeSwitch)
-      // console.log("Compared sets", receivedNotes, this.upcomingEndSet)
-      // console.log("Are sets equal", this.#areSameEventSets(receivedNotes, this.upcomingEndSet, true))
 
       // Manage mode auto-switch (based on provided playback triggers)
 
@@ -462,8 +460,8 @@ class MidifilePerformer extends EventEmitter {
         // Evaluate conditions that could lead to mode switch.
         // See methods in question for their formulation.
 
-        if(this.#shouldTriggerAutoListen(receivedNotes)) {
-          // console.log(this.mode === 'perform', this.#areSameEventSets(receivedNotes, this.upcomingEndSet, true))
+        if(!isStartingSet && this.#shouldTriggerAutoListen()) {
+          // console.log(true)
           // console.log("Auto switch to listen")
 
           // Unset this flag : otherwise, jumping in perform mode
@@ -695,7 +693,7 @@ class MidifilePerformer extends EventEmitter {
     // command : { pressed, id, velocity, channel }
     // note : { on, pitch, velocity, channel }
 
-    // console.log("MFP command")
+    // console.log("MFP command, pressed = ", cmd?.pressed)
 
     // console.log("Repeat index flag", this.repeatIndexFromPretendTrigger)
 
@@ -725,15 +723,11 @@ class MidifilePerformer extends EventEmitter {
       // Indicate to listen mode that pretendTrigger was performed,
       // And thus that it should repeat this index if it resumes there
       if(!this.#noInterruptFlag) this.repeatIndexFromPretendTrigger = true;
+      // console.log("Return early from pretend trigger")
       return res;
     }
 
     // this.emit('index', this.index);
-
-    if(cmd.pressed)
-      this.upcomingEndSet = noteEventsFromNoteDataVector(
-        this.performer.peekNextSetPair().end.events
-      )
 
     if(
       (!cmd.pressed &&
@@ -1082,9 +1076,9 @@ class MidifilePerformer extends EventEmitter {
     this.#playbackTriggers.has(when === "next" ? this.#getNextIndex() : this.#getCurrentIndex()) // We have reached a playback trigger
   }
 
-  #shouldTriggerAutoListen(notes) {
+  #shouldTriggerAutoListen() {
     return this.#playbackTriggerReached() &&
-    this.#areSameEventSets(notes, this.upcomingEndSet, true) // We have triggered the last perform-stored end set
+    this.#autoPlaybackSemaphore.isClear() // ALL pressed keys have been released
     // (otherwise legato playing could note steal on trigger sets !)
   }
 
