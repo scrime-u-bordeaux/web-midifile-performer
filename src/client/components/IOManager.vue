@@ -161,7 +161,11 @@ export default {
     },
 
     currentChannelControls(newControls, oldControls) {
-      this.ioctl.refreshChannelControls(toRaw(newControls))
+      this.ioctl.refreshChannelControls({
+        channelVelocityOffsets: toRaw(newControls.channelVelocityOffsets),
+        channelActive: toRaw(newControls.channelActive),
+        channelPerformed: toRaw(newControls.channelPerformed)
+      })
     },
 
     currentInputIds(newIds, oldIds) {
@@ -183,7 +187,8 @@ export default {
     // (Velocities, inputs, output, and channel controls)
 
     this.ioctl.refreshKeyboardVelocities(this.currentKeyboardVelocities);
-    this.ioctl.refreshChannelControls(toRaw(this.currentChannelControls));
+    // Not needed for channel controls now that they are unsaved i.e. always default when loading
+    // this.ioctl.refreshChannelControls(toRaw(this.currentChannelControls));
 
     // But refreshing I/O is not so simple.
     // If inputs were disconnected between sessions,

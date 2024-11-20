@@ -1,6 +1,7 @@
 import EventEmitter from 'events';
 
 import defaultSettings from '../default_settings.json'
+import defaultChannelControls from '../default_channel_controls.json'
 
 const universalLayout = {
   forte: ["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7","Digit8","Digit9","Digit0"],
@@ -49,7 +50,7 @@ class IOController extends EventEmitter {
     this.inputsAwaitingUnplug = new Set()
 
     this.refreshKeyboardVelocities(defaultSettings.io.keyboardRowVelocities)
-    this.refreshChannelControls(defaultSettings.io.channelControls)
+    this.refreshChannelControls(defaultChannelControls)
   }
 
   setInternalSampler(sampler) {

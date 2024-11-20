@@ -436,7 +436,9 @@ export default {
       'setCurrentMode',
       'setNoteSequence',
       'setSetStarts',
-      'setSetEnds'
+      'setSetEnds',
+
+      'resetChannelControls'
     ]),
 
     // -------------------------------------------------------------------------
@@ -500,7 +502,7 @@ export default {
       this.setMfpMidiFile(mfpFile);
       await this.performer.loadMidifile(mfpFile.buffer, isFileSignatureMidi);
 
-      this.updatePlaybackTriggers()
+      this.resetChannelControls()
 
       this.loadingFlag = false;
     },

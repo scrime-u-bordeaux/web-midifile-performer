@@ -73,14 +73,7 @@
 
                   <h4>{{ $t('settings.io.channelVelocities.heading') }}</h4>
 
-                  <ChannelManager
-                    :channelVelocityOffsets="settingsBuffer.io.channelControls.channelVelocityOffsets"
-                    v-model:channelActive="settingsBuffer.io.channelControls.channelActive"
-                    v-model:channelPerformed="settingsBuffer.io.channelControls.channelPerformed"
-                    
-                    @offsetUpdate="setVelocityOffset($event.innerEvent, $event.index)"
-                    @offsetReset="setVelocityOffset(currentSettings.io.channelControls.channelVelocityOffsets[index], $event.index)"
-                  />
+                  <ChannelManager/>
                 </div>
               </div>
 
@@ -379,7 +372,7 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['currentSettings', 'fileIncludes']),
+    ...mapGetters(['currentSettings']),
 
     // Computed because of locale change
     tabItems() {
@@ -535,13 +528,6 @@ export default {
       importedSettings.io.inputIds.every(id => typeof id === "string") &&
       typeof importedSettings.io.outputId === "string" &&
 
-      isEqual(Object.keys(importedSettings.io.channelControls), Object.keys(this.settingsBuffer.io.channelControls)) &&
-      importedSettings.io.channelControls.channelVelocityOffsets.length === 16 &&
-      importedSettings.io.channelControls.channelVelocityOffsets.every(offset => typeof offset === "number") &&
-      importedSettings.io.channelControls.channelVelocityOffsets.every(offset => offset >= -64 && offset <= 64) &&
-      importedSettings.io.channelControls.channelActive.length === 16 &&
-      importedSettings.io.channelControls.channelActive.every(flag => typeof flag === "boolean") &&
-
       isEqual(Object.keys(importedSettings.visualizer), Object.keys(this.settingsBuffer.visualizer)) &&
 
       this.availableVisualizers.map(tab => tab.id).includes(importedSettings.visualizer.preferredVisualizer) &&
@@ -592,14 +578,6 @@ export default {
 
     setInputs(ids) {
       this.settingsBuffer.io.inputIds = ids
-    },
-
-    // This could technically be in the ChannelManager,
-    // But it's more transparent that way.
-    // TODO : I'll probably have to move it there when making the left-side channel panel though...
-
-    setVelocityOffset(offset, index) {
-      this.settingsBuffer.io.channelControls.channelVelocityOffsets[index] = offset
     },
 
     // Queue a list of availble inputs after disconnects between sessions,

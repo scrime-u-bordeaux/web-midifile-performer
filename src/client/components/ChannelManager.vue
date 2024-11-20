@@ -1,12 +1,13 @@
 <template>
   <div class="channel-manager-container">
     <div class="slider-and-toggle"
-         v-show="fileIncludes(parseInt(parseInt(index)+1, 10))"
-         v-for="(velocityOffset, index) in channelVelocityOffsets">
+         v-show="fileIncludesChannel(parseInt(parseInt(index)+1, 10))"
+         v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
 
       <ToggleSwitch
         class="vertical-toggle"
-        v-model="channelPerformed[index]"
+        :modelValue="currentChannelControls.channelPerformed[index]"
+        @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
       />
 
       <OptionTabs
@@ -17,13 +18,13 @@
         :roundBottom="true"
         :items="muteAndSolo"
         :modelValue="muteOrSolo[index]"
-        @update:modelValue="newValue => updateMuteOrSolo({index: parseInt(index), value: newValue})"
+        @update:modelValue="newValue => updateChannelActive(parseInt(index), newValue)"
       />
 
       <!-- Yes, the double parseInt *is* needed. -->
 
       <scroll-bar class="velocity-scroll"
-        :class="channelActive[index] ? '' : 'muted-channel'"
+        :class="currentChannelControls.channelActive[index] ? '' : 'muted-channel'"
         :hasBounds="false"
         :start="-64"
         :end="64"
@@ -31,8 +32,8 @@
         :size="129"
         :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
 
-        @index="$emit('offsetUpdate', {index: index, innerEvent: $event})"
-        @reset="$emit('offsetReset', {index: index})"
+        @index="updateVelocityOffset(parseInt(index), $event)"
+        @reset="updateVelocityOffset(parseInt(index), defaultChannelControls.channelVelocityOffsets[index])"
       />
     </div>
   </div>
@@ -69,18 +70,18 @@
 
 <script>
 import { toRaw } from 'vue'
-import { mapGetters } from 'vuex'
+import { mapState, mapMutations, mapGetters } from 'vuex'
 
 import OptionTabs from './OptionTabs.vue'
 import ScrollBar from './ScrollBar.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
+const isEqual = require('lodash.isequal')
+
 const DRUM_CHANNEL = 9
 
 export default {
   components: { ScrollBar, ToggleSwitch, OptionTabs },
-
-  props: ['channelVelocityOffsets', 'channelActive', 'channelPerformed'],
 
   data() {
     return {
@@ -89,7 +90,8 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['currentSettings', 'fileIncludes']),
+    ...mapState(['currentChannelControls', 'defaultChannelControls']),
+    ...mapGetters(['fileIncludesChannel']),
 
     muteAndSolo() {
       return [
@@ -99,44 +101,76 @@ export default {
     }
   },
 
-  created() {
-    this.channelActive.forEach((isActive, index) => {
-      if(!isActive) this.muteOrSolo[index] = "mute"
-    })
+  watch: {
+    currentChannelControls(newControls, oldControls) {
+      if(isEqual(newControls.channelActive, oldControls.channelActive)) return
 
-    this.toggleSoloIfOneUnmuted()
+      this.updateMuteOrSolo()
+    }
+  },
+
+  created() {
+    this.updateMuteOrSolo()
   },
 
   methods: {
 
+    ...mapMutations(['updateChannelControls']),
+
+    updateVelocityOffset(index, offset) {
+      const clonedVelocityOffsets = structuredClone(toRaw(this.currentChannelControls.channelVelocityOffsets))
+
+      clonedVelocityOffsets[index] = offset
+
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelVelocityOffsets: clonedVelocityOffsets
+      })
+    },
+
+    updateChannelPerformed(index, value) {
+      const clonedChannelPerformed = structuredClone(toRaw(this.currentChannelControls.channelPerformed))
+
+      clonedChannelPerformed[index] = value
+
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelPerformed: clonedChannelPerformed
+      })
+    },
+
     toggleSoloIfOneUnmuted() {
-      if(this.muteOrSolo.filter(which => which === null).length === 1)
+      if(
+        this.muteOrSolo.filter(
+          (which, index) => this.fileIncludesChannel(index+1) && which === null
+        ).length === 1
+      )
         this.muteOrSolo[this.muteOrSolo.indexOf(null)] = "solo"
     },
 
-    updateMuteOrSolo({index, value}) {
+    updateChannelActive(index, value) {
 
-      const emittedChannelActive = structuredClone(toRaw(this.channelActive))
+      const clonedChannelActive = structuredClone(toRaw(this.currentChannelControls.channelActive))
 
       let specialNoEndUpdate = false
 
       switch(value)  {
         case "mute":
           // Just mute. Can only happen outside solo, so no big deal.
-          emittedChannelActive[index] = false
+          clonedChannelActive[index] = false
           break
 
         case "solo":
           // Mute every channel but this one.
-          emittedChannelActive.forEach((_, otherIndex) => {
-            emittedChannelActive[otherIndex] = (otherIndex === index) ? true : false
+          clonedChannelActive.forEach((_, otherIndex) => {
+            clonedChannelActive[otherIndex] = (otherIndex === index) ? true : false
             this.muteOrSolo[otherIndex] = (otherIndex === index) ? "solo" : "mute"
           })
           break
 
         case null:
           // Unmute channel.
-          emittedChannelActive[index] = true
+          clonedChannelActive[index] = true
 
           // If a channel was solo, it no longer is,
           // Because we have at least two unmuted channels now.
@@ -156,11 +190,11 @@ export default {
             (_, otherIndex) => {
               // ...except the drum channel, of course.
               if(otherIndex === DRUM_CHANNEL) {
-                emittedChannelActive[otherIndex] = false
+                clonedChannelActive[otherIndex] = false
                 return
               }
 
-              emittedChannelActive[otherIndex] = true
+              clonedChannelActive[otherIndex] = true
               this.muteOrSolo[otherIndex] = null
             }
           )
@@ -170,7 +204,18 @@ export default {
       // If we muted all channels but one, it's a de facto solo.
       this.toggleSoloIfOneUnmuted()
 
-      this.$emit("update:channelActive", emittedChannelActive)
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelActive: clonedChannelActive
+      })
+    },
+
+    updateMuteOrSolo() {
+      this.currentChannelControls.channelActive.forEach((isActive, index) => {
+        this.muteOrSolo[index] = isActive ? null : "mute"
+      })
+
+      this.toggleSoloIfOneUnmuted()
     }
   }
 }

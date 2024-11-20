@@ -2,6 +2,7 @@ import { toRaw } from 'vue'
 import { createStore } from 'vuex';
 import metaJson from '../../meta.json'
 import defaultSettings from './default_settings.json'
+import defaultChannelControls from './default_channel_controls.json'
 
 import { getSetUtil, getSetIndexUtil } from './utilities/NoteSequenceUtils'
 
@@ -108,10 +109,12 @@ const store = createStore({
       synthNotesFetched: 0,
       synthNotesDecoded: 0,
 
+      defaultChannelControls: defaultChannelControls,
+      currentChannelControls: structuredClone(defaultChannelControls),
+
       currentInputIds: startingSettings.io.inputIds,
       currentOutputId: startingSettings.io.outputId,
       currentKeyboardVelocities: startingSettings.io.keyboardRowVelocities,
-      currentChannelControls: startingSettings.io.channelControls,
 
       preferredVisualizer: startingSettings.visualizer.preferredVisualizer,
       playOnClickInSilentMode: startingSettings.visualizer.clickPlay.silent,
@@ -132,7 +135,7 @@ const store = createStore({
     // midiBuffers: state => state.midiBuffers,
     firstStepsMidiFile: state => state.firstStepsMidiFile,
     mfpMidiFile: state => state.mfpMidiFile,
-    fileIncludes: (state) => (channel) => {
+    fileIncludesChannel: (state) => (channel) => {
       return new Set(state.noteSequence.map(note => note.channel)).has(channel)
     },
 
@@ -157,8 +160,7 @@ const store = createStore({
         io: {
           inputIds: toRaw(state.currentInputIds),
           outputId: state.currentOutputId,
-          keyboardRowVelocities: { ... state.currentKeyboardVelocities },
-          channelControls: toRaw(state.currentChannelControls)
+          keyboardRowVelocities: { ... state.currentKeyboardVelocities }
         },
 
         visualizer: {
@@ -221,7 +223,6 @@ const store = createStore({
       state.currentInputIds = settings.io.inputIds
       state.currentOutputId = settings.io.outputId
       state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
-      state.currentChannelControls = settings.io.channelControls
 
       state.preferredVisualizer = settings.visualizer.preferredVisualizer
       state.playOnClickInSilentMode = settings.visualizer.clickPlay.silent
@@ -233,6 +234,16 @@ const store = createStore({
       state.performerConstructorOptions = settings.performer.constructorOptions
 
       localStorage.setItem("settings", JSON.stringify(settings))
+    },
+
+    // Channel-based settings are not to be saved, and thus are stored separately.
+
+    updateChannelControls(state, controls) {
+      state.currentChannelControls = controls
+    },
+
+    resetChannelControls(state) {
+      state.currentChannelControls = defaultChannelControls
     },
 
     animateNoteOn(state, note) {
