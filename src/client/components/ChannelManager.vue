@@ -135,7 +135,7 @@ export default {
 
     areAllChannelsPerformed() {
       return this.currentChannelControls.channelPerformed.filter(
-        (_, index) => this.fileIncludesChannel(index+1)
+        (_, index) => index !== DRUM_CHANNEL && this.fileIncludesChannel(index+1)
       ).every(
         isPerformed => isPerformed
       )
@@ -143,7 +143,7 @@ export default {
 
     areAllChannelsUnmuted() {
       return this.currentChannelControls.channelActive.filter(
-        (_, index) => this.fileIncludesChannel(index+1)
+        (_, index) => index !== DRUM_CHANNEL && this.fileIncludesChannel(index+1)
       ).every(
         isActive => isActive
       )
@@ -277,7 +277,7 @@ export default {
     unmuteAllChannels() {
       this.updateChannelControls({
         ...this.currentChannelControls,
-        channelActive: new Array(16).fill(true)
+        channelActive: this.defaultChannelControls.channelActive
       })
     },
 
@@ -291,7 +291,7 @@ export default {
     performAllChannels() {
       this.updateChannelControls({
         ...this.currentChannelControls,
-        channelPerformed: new Array(16).fill(true)
+        channelPerformed: this.defaultChannelControls.channelPerformed
       })
     }
   }
