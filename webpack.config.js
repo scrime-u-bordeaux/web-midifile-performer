@@ -1,27 +1,28 @@
+const Dotenv = require('dotenv-webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { VueLoaderPlugin } = require('vue-loader');
 const webpack = require('webpack');
 const express = require('express');
 const path = require('path');
-const config = require('./config');
+// const config = require('./config');
 // console.log(env == 'production' || env == 'none' ? env : 'development',);
 
 // for multiple html files generation, see :
 // https://stackoverflow.com/questions/39798095/multiple-html-files-using-webpack
 
-module.exports = {
-  performance: { hints: false }, // AVOID MAX ASSETS SIZE WARNING
-  mode: process.env.NODE_ENV == 'production' ? 'production' : 'development',
+module.exports = (env) => { return {
+  // AVOID MAX ASSETS SIZE WARNING :
+  performance: { hints: false },
+  // tell webpack to do its stuff for production or development :
+  mode: env.NODE_ENV || 'development', // is this even working ? maybe webpack 5 and webpack-cli 4 make a mess together ?
   entry: [ './src/client/index' ],
   output: {
-    publicPath: config.publicPath,
+    // apparently, this is sufficient for all known use cases (for use with createWebHashHistory) ...
+    publicPath: '',
+    // but if we want to use connect-history with vue-router (using createWebHistory), we need this :
+    // publicPath: env.PUBLIC_PATH || '/',
   },
-  // entry: {
-  //   'home':               './src/client/home',
-  //   'first-steps':        './src/client/first-steps',
-  //   'midifile-performer': './src/client/midifile-performer',
-  // },
   module: {
     rules: [
       {
@@ -58,6 +59,7 @@ module.exports = {
     // }
   },
   plugins: [
+    new Dotenv(),
     new CopyWebpackPlugin({
       patterns: [
         { from: 'src/client/assets', to: '' }
@@ -82,4 +84,4 @@ module.exports = {
     asyncWebAssembly: true,
     syncWebAssembly: true,
   },
-};
+}};
