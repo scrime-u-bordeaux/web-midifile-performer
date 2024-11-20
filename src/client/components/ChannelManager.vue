@@ -6,52 +6,22 @@
 
         @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
       >
-        <div class="img-container">
-          <img
-            :src="`pics/piano_icon_${
-              areAllChannelsPerformed ? 'off' : 'on'
-            }_${
-              isHoverPiano ? 'hover' : 'normal'
-            }.png`"
-
-            @mouseenter="isHoverPiano = true"
-            @mouseleave="isHoverPiano = false"
-          />
-        </div>
-        <div
-          class="touch-feedback"
-          :class="isHoverPiano ? 'pseudo-hover' : ''"
-
-          @mouseenter="isHoverPiano = true"
-          @mouseleave="isHoverPiano = false"
-        >
-        </div>
+        <img
+          class="piano"
+          :class="areAllChannelsPerformed ? 'off' : 'on'"
+        />
+        <div class="touch-feedback"></div>
       </div>
       <div
         class="img-and-touch-feedback"
 
         @click="areAllChannelsUnmuted ? muteAllChannels() : unmuteAllChannels()"
       >
-        <div class="img-container">
-          <img
-            :src="`pics/volume_icon_${
-              areAllChannelsUnmuted ? 'off' : 'on'
-            }_${
-              isHoverVolume ? 'hover' : 'normal'
-            }.png`"
-
-            @mouseenter="isHoverVolume = true"
-            @mouseleave="isHoverVolume = false"
-          />
-        </div>
-        <div
-          class="touch-feedback"
-          :class="isHoverVolume ? 'pseudo-hover' : ''"
-
-          @mouseenter="isHoverVolume = true"
-          @mouseleave="isHoverVolume = false"
-        >
-        </div>
+        <img
+          class="volume"
+          :class="areAllChannelsUnmuted ? 'off' : 'on'"
+        />
+        <div class="touch-feedback"></div>
       </div>
       <div class="placeholder"></div>
     </div>
@@ -107,19 +77,50 @@
   position: relative;
   width: 40px;
   height: 40px;
-  cursor: pointer;
 }
 
-.img-container {
+img {
   position: relative;
   z-index: 100;
   width: 30px;
   height: 30px;
+  cursor: pointer;
 }
 
-img {
-  width: 100%;
-  height: 100%;
+/* I really hope these relative URLs don't break in the prod env,
+Because they are the only alternative to setting URLs with event listeners,
+Which is UNGODLY slow.*/
+
+img.piano.on {
+  content: url('../assets/pics/piano_icon_on_normal.png')
+}
+
+img.piano.on:hover {
+  content: url('../assets/pics/piano_icon_on_hover.png')
+}
+
+img.piano.off {
+  content: url('../assets/pics/piano_icon_off_normal.png')
+}
+
+img.piano.off:hover {
+  content: url('../assets/pics/piano_icon_off_hover.png')
+}
+
+img.volume.on {
+  content: url('../assets/pics/volume_icon_on_normal.png')
+}
+
+img.volume.on:hover {
+  content: url('../assets/pics/volume_icon_on_hover.png')
+}
+
+img.volume.off {
+  content: url('../assets/pics/volume_icon_off_normal.png')
+}
+
+img.volume.off:hover {
+  content: url('../assets/pics/volume_icon_off_hover.png')
 }
 
 .touch-feedback {
@@ -142,9 +143,8 @@ img {
   /* transition: opacity ease-in-out 0.05s; */
 }
 
-.touch-feedback:hover,
-.touch-feedback:active,
-.touch-feedback.pseudo-hover {
+/* Actual hover cannot happen, as the high z-index image covers it.*/
+img:hover + .touch-feedback {
   opacity: 1;
 }
 
