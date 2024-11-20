@@ -1,57 +1,90 @@
 <template>
   <div class="channel-manager-container">
-    <div class="slider-and-toggle"
-         v-show="fileIncludesChannel(parseInt(parseInt(index)+1, 10))"
-         v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
+    <div class="global-icons">
+      <div class="grid-cell">
+        <img
+          :src="`pics/piano_icon_${areAllChannelsPerformed? 'off' : 'on'}_normal.png`"
+          @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
+        />
+      </div>
+      <div class="grid-cell">
+        <img
+          :src="`pics/volume_icon_${areAllChannelsUnmuted ? 'off' : 'on'}_normal.png`"
+          @click="areAllChannelsUnmuted ? muteAllChannels() : unmuteAllChannels()"
+        />
+      </div>
+      <div class="placeholder"></div>
+    </div>
 
-      <ToggleSwitch
-        class="vertical-toggle"
-        :modelValue="currentChannelControls.channelPerformed[index]"
-        @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
-      />
+    <div class="channel-list">
+      <div class="channel"
+           v-show="fileIncludesChannel(parseInt(parseInt(index)+1, 10))"
+           v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
 
-      <OptionTabs
-        class="tabs"
-        :allowNone="true"
-        :vertical="true"
-        :routerMode="false"
-        :roundBottom="true"
-        :items="muteAndSolo"
-        :modelValue="muteOrSolo[index]"
-        @update:modelValue="newValue => updateChannelActive(parseInt(index), newValue)"
-      />
+        <ToggleSwitch
+          class="vertical-toggle"
+          :modelValue="currentChannelControls.channelPerformed[index]"
+          @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
+        />
 
-      <!-- Yes, the double parseInt *is* needed. -->
+        <OptionTabs
+          class="tabs"
+          :allowNone="true"
+          :vertical="true"
+          :routerMode="false"
+          :roundBottom="true"
+          :items="muteAndSolo"
+          :modelValue="muteOrSolo[index]"
+          @update:modelValue="newValue => updateChannelActive(parseInt(index), newValue)"
+        />
 
-      <scroll-bar class="velocity-scroll"
-        :class="currentChannelControls.channelActive[index] ? '' : 'muted-channel'"
-        :hasBounds="false"
-        :start="-64"
-        :end="64"
-        :index="velocityOffset"
-        :size="129"
-        :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
+        <!-- Yes, the double parseInt *is* needed. -->
 
-        @index="updateVelocityOffset(parseInt(index), $event)"
-        @reset="updateVelocityOffset(parseInt(index), defaultChannelControls.channelVelocityOffsets[index])"
-      />
+        <scroll-bar class="velocity-scroll"
+          :class="currentChannelControls.channelActive[index] ? '' : 'muted-channel'"
+          :hasBounds="false"
+          :start="-64"
+          :end="64"
+          :index="velocityOffset"
+          :size="129"
+          :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
+
+          @index="updateVelocityOffset(parseInt(index), $event)"
+          @reset="updateVelocityOffset(parseInt(index), defaultChannelControls.channelVelocityOffsets[index])"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <style lang="css" scoped>
-.channel-manager-container > *:not(:last-child) {
+
+.channel-list > *:not(:last-child) {
   padding-bottom: 1em;
+}
+
+img {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
 }
 
 .tabs {
   color: #888;
 }
 
-.slider-and-toggle {
+.channel, .global-icons {
   display: grid;
-  grid-template-columns: 8% 5% 87%;
   align-content: center;
+}
+
+.channel {
+  grid-template-columns: 8% 5% 87%;
+}
+
+.global-icons {
+  grid-template-columns: 6.5% 5% 89%;
+  margin-left: 0.95em;
 }
 
 .vertical-toggle {
@@ -98,6 +131,22 @@ export default {
         {id: 'mute', text: "M"},
         {id: 'solo', text: "S"}
       ]
+    },
+
+    areAllChannelsPerformed() {
+      return this.currentChannelControls.channelPerformed.filter(
+        (_, index) => this.fileIncludesChannel(index+1)
+      ).every(
+        isPerformed => isPerformed
+      )
+    },
+
+    areAllChannelsUnmuted() {
+      return this.currentChannelControls.channelActive.filter(
+        (_, index) => this.fileIncludesChannel(index+1)
+      ).every(
+        isActive => isActive
+      )
     }
   },
 
@@ -216,6 +265,34 @@ export default {
       })
 
       this.toggleSoloIfOneUnmuted()
+    },
+
+    muteAllChannels() {
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelActive: new Array(16).fill(false)
+      })
+    },
+
+    unmuteAllChannels() {
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelActive: new Array(16).fill(true)
+      })
+    },
+
+    performNoChannels() {
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelPerformed: new Array(16).fill(false)
+      })
+    },
+
+    performAllChannels() {
+      this.updateChannelControls({
+        ...this.currentChannelControls,
+        channelPerformed: new Array(16).fill(true)
+      })
     }
   }
 }
