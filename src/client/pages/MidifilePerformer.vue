@@ -284,6 +284,7 @@ export default {
   computed: {
     ...mapState([
       'mfpMidiFile',
+      'currentChannelControls',
       'performerConstructorOptions',
       'minKeyboardNote',
       'maxKeyboardNote',
@@ -329,9 +330,15 @@ export default {
   },
   watch: {
 
-    async performerConstructorOptions(newOptions, oldOptions) {
-      if(isEqual(newOptions, oldOptions)) return // necessary because these are objects,
+    currentChannelControls(newControls, oldControls) {
+      if(isEqual(newControls, oldControls)) return // necessary because these are objects,
       // so this listener *will* fire every time settings are applied.
+
+      this.updatePlaybackTriggers()
+    },
+
+    async performerConstructorOptions(newOptions, oldOptions) {
+      if(isEqual(newOptions, oldOptions)) return // same as above
 
       this.performer.constructInnerPerformer(newOptions)
       if(!!this.mfpMidiFile.buffer) { // Should normally always be the case in this listener.
@@ -493,6 +500,8 @@ export default {
       this.setMfpMidiFile(mfpFile);
       await this.performer.loadMidifile(mfpFile.buffer, isFileSignatureMidi);
 
+      this.updatePlaybackTriggers()
+
       this.loadingFlag = false;
     },
 
@@ -624,6 +633,19 @@ export default {
       this.performer.setMode('silent');
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
+    },
+
+    updatePlaybackTriggers() {
+      this.performer.updatePlaybackTriggers({
+        triggerType: "channels",
+        triggerCriteria: new Set(
+          this.currentChannelControls.channelPerformed.map(
+            (isPerformed, index) => isPerformed ? index+1 : null
+          ).filter(
+            indexOrNull => indexOrNull !== null
+          )
+        )
+      })
     },
 
     getFileExtension(fileName) {

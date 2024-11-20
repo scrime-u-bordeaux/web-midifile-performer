@@ -854,7 +854,10 @@ class MidifilePerformer extends EventEmitter {
 
     else if(triggerType === 'channels') {
 
-      if(triggerCriteria.size === 0) return
+      // Was used only in testing.
+      // With the actual implementation, the default criteria lists all channels, not none
+      // So this is no longer true.
+      // if(triggerCriteria.size === 0) return
 
       const playbackChannels = new Set(
         Array.from({length: 16}, (_, index) => index + 1)

@@ -6,6 +6,7 @@
 
       <ToggleSwitch
         class="vertical-toggle"
+        v-model="channelPerformed[index]"
       />
 
       <OptionTabs
@@ -79,7 +80,7 @@ const DRUM_CHANNEL = 9
 export default {
   components: { ScrollBar, ToggleSwitch, OptionTabs },
 
-  props: ['channelVelocityOffsets', 'channelActive'],
+  props: ['channelVelocityOffsets', 'channelActive', 'channelPerformed'],
 
   data() {
     return {
@@ -166,7 +167,7 @@ export default {
       }
 
       if(!specialNoEndUpdate) this.muteOrSolo[index] = value
-      // If we muted all channels but one, it's a de facto solo. 
+      // If we muted all channels but one, it's a de facto solo.
       this.toggleSoloIfOneUnmuted()
 
       this.$emit("update:channelActive", emittedChannelActive)

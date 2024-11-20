@@ -76,6 +76,8 @@
                   <ChannelManager
                     :channelVelocityOffsets="settingsBuffer.io.channelControls.channelVelocityOffsets"
                     v-model:channelActive="settingsBuffer.io.channelControls.channelActive"
+                    v-model:channelPerformed="settingsBuffer.io.channelControls.channelPerformed"
+                    
                     @offsetUpdate="setVelocityOffset($event.innerEvent, $event.index)"
                     @offsetReset="setVelocityOffset(currentSettings.io.channelControls.channelVelocityOffsets[index], $event.index)"
                   />
