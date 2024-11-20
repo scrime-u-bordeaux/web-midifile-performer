@@ -1,17 +1,57 @@
 <template>
   <div class="channel-manager-container">
     <div class="global-icons">
-      <div class="grid-cell">
-        <img
-          :src="`pics/piano_icon_${areAllChannelsPerformed? 'off' : 'on'}_normal.png`"
-          @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
-        />
+      <div
+        class="img-and-touch-feedback"
+
+        @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
+      >
+        <div class="img-container">
+          <img
+            :src="`pics/piano_icon_${
+              areAllChannelsPerformed ? 'off' : 'on'
+            }_${
+              isHoverPiano ? 'hover' : 'normal'
+            }.png`"
+
+            @mouseenter="isHoverPiano = true"
+            @mouseleave="isHoverPiano = false"
+          />
+        </div>
+        <div
+          class="touch-feedback"
+          :class="isHoverPiano ? 'pseudo-hover' : ''"
+
+          @mouseenter="isHoverPiano = true"
+          @mouseleave="isHoverPiano = false"
+        >
+        </div>
       </div>
-      <div class="grid-cell">
-        <img
-          :src="`pics/volume_icon_${areAllChannelsUnmuted ? 'off' : 'on'}_normal.png`"
-          @click="areAllChannelsUnmuted ? muteAllChannels() : unmuteAllChannels()"
-        />
+      <div
+        class="img-and-touch-feedback"
+
+        @click="areAllChannelsUnmuted ? muteAllChannels() : unmuteAllChannels()"
+      >
+        <div class="img-container">
+          <img
+            :src="`pics/volume_icon_${
+              areAllChannelsUnmuted ? 'off' : 'on'
+            }_${
+              isHoverVolume ? 'hover' : 'normal'
+            }.png`"
+
+            @mouseenter="isHoverVolume = true"
+            @mouseleave="isHoverVolume = false"
+          />
+        </div>
+        <div
+          class="touch-feedback"
+          :class="isHoverVolume ? 'pseudo-hover' : ''"
+
+          @mouseenter="isHoverVolume = true"
+          @mouseleave="isHoverVolume = false"
+        >
+        </div>
       </div>
       <div class="placeholder"></div>
     </div>
@@ -63,10 +103,49 @@
   padding-bottom: 1em;
 }
 
-img {
+.img-and-touch-feedback {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.img-container {
+  position: relative;
+  z-index: 100;
   width: 30px;
   height: 30px;
+}
+
+img {
+  width: 100%;
+  height: 100%;
+}
+
+.touch-feedback {
+  background-color: var(--button-blue);
+
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: -5px;
+  right: -5px;
+
+  width: 100%;
+  height: 100%;
+
+  border-radius: 50%;
+
   cursor: pointer;
+
+  opacity: 0;
+  /* transition: opacity ease-in-out 0.05s; */
+}
+
+.touch-feedback:hover,
+.touch-feedback:active,
+.touch-feedback.pseudo-hover {
+  opacity: 1;
 }
 
 .tabs {
@@ -118,7 +197,10 @@ export default {
 
   data() {
     return {
-      muteOrSolo: new Array(16).fill(null)
+      muteOrSolo: new Array(16).fill(null),
+
+      isHoverPiano: false,
+      isHoverVolume: false
     }
   },
 
