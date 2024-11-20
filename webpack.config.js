@@ -19,9 +19,9 @@ module.exports = (env) => { return {
   entry: [ './src/client/index' ],
   output: {
     // apparently, this is sufficient for all known use cases (for use with createWebHashHistory) ...
-    // publicPath: '',
+    publicPath: '',
     // but if we want to use connect-history with vue-router (using createWebHistory), we need this :
-    publicPath: env.PUBLIC_PATH || '/',
+    // publicPath: env.PUBLIC_PATH || '/',
   },
   module: {
     rules: [

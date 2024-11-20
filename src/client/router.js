@@ -8,13 +8,10 @@ import pages from './pages';
 
 const router = createRouter({
   // '/' seems sufficient for local dev and prod with nginx reverse proxy :
-  // history: createWebHashHistory('/'),
-  // history: createWebHashHistory('/web-midifile-performer/'),
+  history: createWebHashHistory('/'),
   // history: createWebHashHistory(process.env.PUBLIC_PATH),
 
-  // history: createWebHistory('/'),
-  // history: createWebHistory('/web-midifile-performer/'),
-  history: createWebHistory(process.env.PUBLIC_PATH),
+  // history: createWebHistory(process.env.PUBLIC_PATH),
   routes: [
     {
       path: '/',

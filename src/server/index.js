@@ -5,7 +5,7 @@ const history = require('connect-history-api-fallback');
 
 const app = express();
 
-app.use(history());
+// app.use(history()); // use this once figured out how to pass env vars to webpack
 // app.use(history({
 //   rewrites: [
 //     // { from: '*', to: '' }
