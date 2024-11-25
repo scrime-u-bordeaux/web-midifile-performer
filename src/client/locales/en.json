@@ -71,7 +71,12 @@
     "firstImplem": "First implementation",
     "cppLib": "C++ library",
     "website": "and website",
-    "samples": "Recording and processing of piano samples"
+    "samples": "Recording and processing of piano samples",
+    "icons": {
+      "icons": "Icons",
+      "piano": "Piano",
+      "volume": "Volume"
+    }
   },
   "guide": {
     "title": "Help",

@@ -71,7 +71,12 @@
     "firstImplem": "Première implémentation",
     "cppLib": "Librairie C++",
     "website": "et site Internet",
-    "samples": "Enregistrement et traitement des échantillons de piano"
+    "samples": "Enregistrement et traitement des échantillons de piano",
+    "icons": {
+      "icons": "Icônes",
+      "piano": "Piano",
+      "volume": "Volume"
+    }
   },
   "guide": {
 

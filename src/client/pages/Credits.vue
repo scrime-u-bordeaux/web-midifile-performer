@@ -25,6 +25,25 @@
         {{ $t('credits.samples') }} <br/>
         <strong>Joseph Larralde</strong>
       </p>
+
+      <p>
+        {{ $t('credits.icons.icons') }} <br/>
+
+        <a href="https://www.flaticon.com/free-icons/speaker"
+          title="speaker icons"
+        >
+          {{ $t('credits.icons.volume') }}
+        </a> :
+        <strong>Google, Flaticon</strong>
+
+        <br/>
+
+        <a href="https://www.flaticon.com/free-icons/piano"
+          title="piano icons">
+          {{ $t('credits.icons.piano') }}
+        </a> :
+        <strong>Smartline, Flaticon</strong>
+      </p>
     </div>
 
     <div class="meta-info">
