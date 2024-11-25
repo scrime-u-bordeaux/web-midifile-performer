@@ -73,37 +73,7 @@
 
                   <h4>{{ $t('settings.io.channelVelocities.heading') }}</h4>
 
-                  <!-- This contorsion with index is some of the stupidest code I've ever written.
-                  But it's the only way. index is a String, so "index+1" becomes a string concatenation.-->
-
-                  <div class="sliders-container">
-                    <div class="slider-and-toggle"
-                         v-show="fileIncludes(parseInt(parseInt(index)+1, 10))"
-                         v-for="(velocityOffset, index) in settingsBuffer.io.channelControls.channelVelocityOffsets">
-                      <ToggleSwitch
-                        class="vertical-toggle"
-                        v-model="settingsBuffer.io.channelControls.channelActive[index]"/>
-
-                      <!--Seriously :
-                      I can't use interpolation for index+1 in the message JSON, because it's a string concatenation.
-                      I can't use $t()+index+1, because it's a string concatenation. (Okay, that one's fair.)
-                      I can't use $t()+parseInt(index+1), because it's a string concatenation.
-                      JavaScript is so amazing.-->
-
-                      <scroll-bar class="velocity-scroll"
-                        :class="settingsBuffer.io.channelControls.channelActive[index] ? '' : 'muted-channel'"
-                        :hasBounds="false"
-                        :start="-64"
-                        :end="64"
-                        :index="velocityOffset"
-                        :size="129"
-                        :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
-
-                        @index="setVelocityOffset($event, index)"
-                        @reset="setVelocityOffset(currentSettings.io.channelControls.channelVelocityOffsets[index], index)"
-                      />
-                    </div>
-                  </div>
+                  <ChannelManager/>
                 </div>
               </div>
 
@@ -115,7 +85,7 @@
                   <OptionTabs
                     class="tabs minor"
                     :routerMode="false"
-                    :fullRound="true"
+                    :roundBottom="true"
                     :items="availableVisualizers"
                     v-model="settingsBuffer.visualizer.preferredVisualizer"
                   />
@@ -176,7 +146,7 @@
                   <OptionTabs
                     class="tabs minor"
                     :routerMode="false"
-                    :fullRound="true"
+                    :roundBottom="true"
                     :items="velocityStrategies"
                     v-model="settingsBuffer.performer.preferredVelocityStrategy"
                   />
@@ -291,24 +261,6 @@ h4 {
   padding-bottom: 0.75em;
 }
 
-.channel-velocities .sliders-container > *:not(:last-child) {
-  padding-bottom: 1em;
-}
-.channel-velocities .velocity-scroll {
-  width: 100%;
-}
-.slider-and-toggle {
-  display: flex;
-  flex-direction: row;
-  align-content: center;
-}
-.vertical-toggle {
-  transform: rotate(-90deg);
-}
-.muted-channel {
-  opacity: 0.4
-}
-
 .click-play-inner {
   padding: 0 12em;
 }
@@ -396,12 +348,13 @@ import PopUp from './PopUp.vue'
 import NumberInput from './NumberInput.vue'
 import ScrollBar from './ScrollBar.vue'
 import IOManager from './IOManager.vue';
+import ChannelManager from './ChannelManager.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ScrollBar, NumberInput },
+  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ChannelManager, ScrollBar, NumberInput },
 
   data() {
     return {
@@ -419,7 +372,7 @@ export default {
   },
 
   computed: {
-    ...mapGetters(['currentSettings', 'fileIncludes']),
+    ...mapGetters(['currentSettings']),
 
     // Computed because of locale change
     tabItems() {
@@ -575,13 +528,6 @@ export default {
       importedSettings.io.inputIds.every(id => typeof id === "string") &&
       typeof importedSettings.io.outputId === "string" &&
 
-      isEqual(Object.keys(importedSettings.io.channelControls), Object.keys(this.settingsBuffer.io.channelControls)) &&
-      importedSettings.io.channelControls.channelVelocityOffsets.length === 16 &&
-      importedSettings.io.channelControls.channelVelocityOffsets.every(offset => typeof offset === "number") &&
-      importedSettings.io.channelControls.channelVelocityOffsets.every(offset => offset >= -64 && offset <= 64) &&
-      importedSettings.io.channelControls.channelActive.length === 16 &&
-      importedSettings.io.channelControls.channelActive.every(flag => typeof flag === "boolean") &&
-
       isEqual(Object.keys(importedSettings.visualizer), Object.keys(this.settingsBuffer.visualizer)) &&
 
       this.availableVisualizers.map(tab => tab.id).includes(importedSettings.visualizer.preferredVisualizer) &&
@@ -632,10 +578,6 @@ export default {
 
     setInputs(ids) {
       this.settingsBuffer.io.inputIds = ids
-    },
-
-    setVelocityOffset(offset, index) {
-      this.settingsBuffer.io.channelControls.channelVelocityOffsets[index] = offset
     },
 
     // Queue a list of availble inputs after disconnects between sessions,

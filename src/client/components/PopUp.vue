@@ -64,7 +64,7 @@
   .close-button svg {
     width: 20px;
 
-    stroke: var(--light-button-blue);
+    stroke: var(--button-blue-light-90);
     stroke-width: 20px;
     stroke-linecap: round;
     cursor: pointer;

@@ -28,6 +28,7 @@ svg {
  */
 
 import { mapState, mapGetters, mapMutations } from 'vuex'
+import { noteMapKey } from '../utilities/NoteSequenceUtils'
 
 export default {
 
@@ -61,15 +62,6 @@ export default {
       minPitch: 17,
       maxPitch: 112,
 
-      // The main visualizer model, adapted from Magenta's own.
-      // Contains notes with their MFP information,
-      // Their start, and end times.
-      noteSequence: [],
-
-      // Convenience arrays to switch between noteSequence indexes and set indexes.
-      setStarts: [], // index of the first note for each set
-      setEnds:[], // index of the last note for each set
-
       // Keep track of notes for dynamic highlight,
       // When the user triggers a note off out of sync with the original file.
       activeNotes: new Map(),
@@ -100,14 +92,16 @@ export default {
     ...mapState([
       'currentMode', // used only for watcher
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
+      'noteSequence', 'setStarts', 'setEnds',
       'minKeyboardNote', 'keyboardState',
       'highlightPalette',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
     ]),
 
-    ...mapGetters(
-      ['isModeSilent', 'isModePerform']
-    ),
+    ...mapGetters([
+      'isModeSilent', 'isModePerform',
+      'getSet', 'getSetIndex'
+    ]),
 
     activeNoteRGB() {
       return this.highlightPalette.get(
@@ -128,6 +122,29 @@ export default {
   },
 
   watch: {
+
+    noteSequence(newSequence, oldSequence) {
+      this.clear()
+
+      this.setSize()
+      this.draw()
+      this.paintCurrentSet()
+
+      // Okay, so, hello to future me or anyone who might be wondering what this setTimeout is.
+      // Normally, this shouldn't be needed.
+      // On loading a new file, the sequence index is set to 0 and the autoscroll goes to 0 too.
+      // ...except, right *after* that, and for no explainable reason,
+      // the container receives a scrollEvent with isTrusted set to true
+      // that cannot be cancelled, and that resets the scroll value to whatever it previously was.
+      // All my efforts to track down the origin of this scroll event,
+      // or to prevent its effects through CSS or JS,
+      // have failed. So instead, I do this.
+      // The setTimeout is necessary because the event is received after this function ends.
+      // Of course, like any setTimeout hack, it might not actually work on other machines.
+      // When it doesn't, we can look at this issue again.
+      // For now I need to move on.
+      setTimeout(() => {this.$refs.container.scrollLeft = 0}, 50)
+    },
 
     currentMode(newMode, oldMode) {
       if(newMode === 'silent') {
@@ -185,46 +202,12 @@ export default {
   methods: {
 
     ...mapMutations([
-      'setNoteSequence',
-      'setSetStarts',
-      'setSetEnds',
       'setActiveNotes'
     ]),
 
     // -------------------------------------------------------------------------
     // -----------------------------MAIN LOGIC----------------------------------
     // -------------------------------------------------------------------------
-
-    updateNoteSequence(chronology) {
-
-      this.clear()
-
-      this.convertChronologyToNoteSequence(chronology)
-
-      this.setNoteSequence(this.noteSequence)
-      this.setSetStarts(this.setStarts)
-      this.setSetEnds(this.setEnds)
-
-      this.setSize()
-      this.draw()
-      this.paintCurrentSet()
-
-
-      // Okay, so, hello to future me or anyone who might be wondering what this setTimeout is.
-      // Normally, this shouldn't be needed.
-      // On loading a new file, the sequence index is set to 0 and the autoscroll goes to 0 too.
-      // ...except, right *after* that, and for no explainable reason,
-      // the container receives a scrollEvent with isTrusted set to true
-      // that cannot be cancelled, and that resets the scroll value to whatever it previously was.
-      // All my efforts to track down the origin of this scroll event,
-      // or to prevent its effects through CSS or JS,
-      // have failed. So instead, I do this.
-      // The setTimeout is necessary because the event is received after this function ends.
-      // Of course, like any setTimeout hack, it might not actually work on other machines.
-      // When it doesn't, we can look at this issue again.
-      // For now I need to move on.
-      setTimeout(() => {this.$refs.container.scrollLeft = 0}, 50)
-    },
 
     refresh(setIndex) {
       const activeNotes = this.refreshActiveNotes(setIndex)
@@ -241,12 +224,6 @@ export default {
       this.paintCurrentSet()
     },
 
-    clearNoteSequence() {
-      this.noteSequence = []
-      this.setStarts = []
-      this.setEnds = []
-    },
-
     clearActiveNotes() {
       this.activeNotes.clear()
       this.setActiveNotes(this.activeNotes)
@@ -259,7 +236,6 @@ export default {
     },
 
     clear() {
-      this.clearNoteSequence()
       this.clearActiveNotes()
       this.clearGraphics()
     },
@@ -382,97 +358,6 @@ export default {
     },
 
     // -------------------------------------------------------------------------
-    // ------------------------------CONVERT------------------------------------
-    // -------------------------------------------------------------------------
-
-    convertChronologyToNoteSequence(chronology) {
-
-      // Ideally, we would love to phase out the "note sequence",
-      // and directly use the chronology as our working type.
-
-      // For now, we keep this, and we do it from the chronology and not the file,
-      // So notes we have artificially synced through temporal resolution are also synced.
-
-      let msDate = 0;
-      let boundaryCounter = 0; // keep track of set starts and ends
-      const noteMap = new Map()
-      // We use this map to keep a stack of note ons/off for a give note/pitch.
-      // We could instead store arrays of the notes and calculate their size,
-      // But this way is easier to read, so I favor it.
-      const noteCountMap = new Map()
-
-      // Incidentally : this code will unavoidably be very similar to that
-      // of the AllNoteEventsAnalyzer.
-
-      chronology.forEach(set => {
-        msDate += set.dt;
-
-        const isStartingSet = set.type === "start"
-        if(isStartingSet) this.setStarts.push(boundaryCounter)
-
-        const setLength = set.events.length
-
-        set.events.forEach((note, index) => {
-
-          const mapKey = `p${note.pitch}c${note.channel}`
-          const noteCounter = noteCountMap.get(mapKey) || 0
-
-          // In a file with no duplicate note ons, when noteMap has the mapKey,
-          // it will always be because noteCounter === 1
-          // (<=> we're encountering the note off for the singular stacked note on).
-
-          // If the file *has* duplicate note ons,
-          // any new note on must still be pushed,
-          // regardless of how many have been stacked (or we lose notes).
-
-          // But in all cases, a note off can only trigger a push
-          // if it's the last one in a stack — i.e. : if noteCounter === 1.
-          // In other words : the final on in a stack of multiples
-          // will be terminated by as many offs as there were on's before it.
-
-          const shouldPushNote = noteMap.has(mapKey) && (note.on || noteCounter === 1)
-
-          if(shouldPushNote) {
-            const timedNote = noteMap.get(mapKey)
-            timedNote.endTime = msDate * 0.001
-            this.noteSequence.push(timedNote)
-          }
-
-          if(note.on) {
-            boundaryCounter++;
-            const timedNote = { startTime: msDate * 0.001, ...note }
-            noteMap.set(mapKey, timedNote)
-            noteCountMap.set(mapKey, noteCounter+1)
-          }
-
-          else {
-            if(noteCounter - 1 === 0 ) { // final note on in this stack
-              noteCountMap.delete(mapKey)
-              noteMap.delete(mapKey)
-            }
-            // Unstack note offs one by one. Every duplicate note on should have a matching amount of note offs.
-            // (Else we have notes that never end...)
-            else noteCountMap.set(mapKey, noteCounter - 1)
-          }
-
-          if(isStartingSet && index === setLength - 1) this.setEnds.push(boundaryCounter - 1)
-        })
-      })
-
-      // Add the supplementary intra-set pitch order,
-      // To ensure the exactitude of indices given by the MusicXML parser.
-
-      this.noteSequence.sort((noteA, noteB) => {
-        if(noteA.startTime !== noteB.startTime)
-          return noteA.startTime - noteB.startTime
-
-        else return noteA.pitch - noteB.pitch
-      })
-
-      this.noteSequence.forEach((note, index) => note.index = index)
-    },
-
-    // -------------------------------------------------------------------------
     // -------------------------------DRAW--------------------------------------
     // -------------------------------------------------------------------------
 
@@ -486,7 +371,7 @@ export default {
         const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
         const fillOpacity = this.getNoteFillOpacity(note)
 
-        // Magenta being written in TS used custom types here,
+        // Magenta, being written in TS, used custom types here ;
         // We use anonymous objects instead.
 
         const dataAttributes = [
@@ -685,15 +570,6 @@ export default {
       return {x, y, w, h: this.noteHeight}
     },
 
-    getSet(setIndex) {
-      return this.noteSequence.slice(this.setStarts[setIndex], this.setEnds[setIndex]+1)
-    },
-
-    getSetIndex(noteIndex) {
-      const tentativeSetIndex = this.setStarts.findIndex(i => i > noteIndex)
-      return tentativeSetIndex > 0 ? tentativeSetIndex - 1 : this.setStarts.length - 1
-    },
-
     getNoteIndexFromRect(rect) {
       return parseInt(rect.getAttribute('data-index'), 10)
     },
@@ -759,7 +635,7 @@ export default {
         // the factorization ?
         // Depending on how JS behaves, it could slow down the playback.
 
-        const mapKey = `p${note.pitch}c${note.channel}`
+        const mapKey = noteMapKey(note)
         const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
         const isPlaying = pitchMask & 1 << note.channel
 
@@ -769,7 +645,7 @@ export default {
       const set = this.getSet(setIndex)
 
       set.forEach((note, index) => {
-        const mapKey = `p${note.pitch}c${note.channel}`
+        const mapKey = noteMapKey(note)
         const pitchMask = this.keyboardState[note.pitch - this.minKeyboardNote]
         const isPlaying = pitchMask & 1 << note.channel
 

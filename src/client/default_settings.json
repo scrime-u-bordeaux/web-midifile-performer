@@ -7,11 +7,7 @@
       "pianissimo": 15
     },
     "inputIds": ["0"],
-    "outputId": "0",
-    "channelControls": {
-      "channelVelocityOffsets": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      "channelActive": [true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true]
-    }
+    "outputId": "0"
   },
 
   "visualizer": {

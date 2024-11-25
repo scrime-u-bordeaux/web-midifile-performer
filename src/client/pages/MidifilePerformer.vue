@@ -284,6 +284,7 @@ export default {
   computed: {
     ...mapState([
       'mfpMidiFile',
+      'currentChannelControls',
       'performerConstructorOptions',
       'minKeyboardNote',
       'maxKeyboardNote',
@@ -329,9 +330,15 @@ export default {
   },
   watch: {
 
-    async performerConstructorOptions(newOptions, oldOptions) {
-      if(isEqual(newOptions, oldOptions)) return // necessary because these are objects,
+    currentChannelControls(newControls, oldControls) {
+      if(isEqual(newControls, oldControls)) return // necessary because these are objects,
       // so this listener *will* fire every time settings are applied.
+
+      this.updatePlaybackTriggers()
+    },
+
+    async performerConstructorOptions(newOptions, oldOptions) {
+      if(isEqual(newOptions, oldOptions)) return // same as above
 
       this.performer.constructInnerPerformer(newOptions)
       if(!!this.mfpMidiFile.buffer) { // Should normally always be the case in this listener.
@@ -375,7 +382,7 @@ export default {
 
     this.performer.addListener('mode', this.setCurrentMode)
 
-    this.performer.addListener('chronology', this.onChronology)
+    this.performer.addListener('noteSequenceInfo', this.onNoteSequenceInfo)
 
     this.performer.addListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.addListener('musicXmlChannels', this.onMusicXmlChannels)
@@ -413,7 +420,7 @@ export default {
     document.removeEventListener('keydown',this.onKeyDown)
     document.removeEventListener('keyup',this.onKeyUp)
 
-    this.performer.removeListener('chronology', this.onChronology)
+    this.performer.removeListener('noteSequenceInfo', this.onNoteSequenceInfo)
 
     this.performer.removeListener('musicXmlTempos', this.onMusicXmlTempos)
     this.performer.removeListener('musicXmlChannels', this.onMusicXmlChannels)
@@ -426,7 +433,12 @@ export default {
   methods: {
     ...mapMutations([
       'setMfpMidiFile',
-      'setCurrentMode'
+      'setCurrentMode',
+      'setNoteSequence',
+      'setSetStarts',
+      'setSetEnds',
+
+      'resetChannelControls'
     ]),
 
     // -------------------------------------------------------------------------
@@ -490,6 +502,8 @@ export default {
       this.setMfpMidiFile(mfpFile);
       await this.performer.loadMidifile(mfpFile.buffer, isFileSignatureMidi);
 
+      this.resetChannelControls()
+
       this.loadingFlag = false;
     },
 
@@ -509,8 +523,11 @@ export default {
     onModeChange(mode) {
       this.performer.setMode(mode);
     },
-    onChronology(chronology) {
-      this.$refs.pianoRoll.updateNoteSequence(chronology)
+
+    onNoteSequenceInfo({noteSequence, setStarts, setEnds}) {
+      this.setNoteSequence(noteSequence)
+      this.setSetStarts(setStarts)
+      this.setSetEnds(setEnds)
     },
 
     onMusicXmlTempos(tempoEvents) {
@@ -533,8 +550,8 @@ export default {
       // scrollbar callback, i is chordSequence index
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
+      this.performer.markIndexJump()
       this.performer.setSequenceIndex(i);
-      this.performer.setRepeatCurrent()
 
       this.$refs.pianoRoll.stop()
       this.$refs.sheetMusic.stop()
@@ -618,6 +635,19 @@ export default {
       this.performer.setMode('silent');
       this.performer.setPlaybackSpeed(1)
       this.performer.setSequenceIndex(0);
+    },
+
+    updatePlaybackTriggers() {
+      this.performer.updatePlaybackTriggers({
+        triggerType: "channels",
+        triggerCriteria: new Set(
+          this.currentChannelControls.channelPerformed.map(
+            (isPerformed, index) => isPerformed ? index+1 : null
+          ).filter(
+            indexOrNull => indexOrNull !== null
+          )
+        )
+      })
     },
 
     getFileExtension(fileName) {
