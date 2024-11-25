@@ -32,7 +32,7 @@
            v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
 
         <ToggleSwitch
-          class="vertical-toggle"
+          :vertical="true"
           :modelValue="currentChannelControls.channelPerformed[index]"
           @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
         />
@@ -58,6 +58,8 @@
           :end="64"
           :index="velocityOffset"
           :size="129"
+          :customBarHeight="20"
+          :customCursorSize="50"
           :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
 
           @index="updateVelocityOffset(parseInt(index), $event)"
@@ -69,6 +71,11 @@
 </template>
 
 <style lang="css" scoped>
+
+.channel-list {
+  height: 75vh;
+  overflow: scroll;
+}
 
 .channel-list > *:not(:last-child) {
   padding-bottom: 1em;
@@ -130,8 +137,7 @@ img.volume.off:hover {
   position: absolute;
   top: -5px;
   bottom: -5px;
-  left: -5px;
-  right: -5px;
+  left: 0px;
 
   width: 100%;
   height: 100%;
@@ -165,16 +171,8 @@ img:hover + .touch-feedback {
 }
 
 .global-icons {
-  grid-template-columns: 6.5% 5% 89%;
-  margin-left: 0.95em;
-}
-
-.vertical-toggle {
-  transform: rotate(-90deg);
-}
-
-.velocity-scroll {
-  width: 100%;
+  grid-template-columns: 6.5% 6% 87.5%;
+  margin-left: 0.4em;
 }
 
 .muted-channel {

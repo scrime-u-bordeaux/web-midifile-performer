@@ -1,15 +1,15 @@
 <template>
-  <div class="switch-container">
+  <div class="switch-container" :class="vertical ? 'vertical' : 'horizontal'">
     <span v-if="!!label" class="text-label">{{ label }}</span>
 
-    <label class="switch">
+    <label class="switch" :class="vertical ? 'vertical' : 'horizontal'">
       <input
         type="checkbox"
         class="hidden-checkbox"
         v-model="modelValue"
         @input="$emit('update:modelValue', $event.target.checked)"
       />
-      <span class="background"></span>
+      <span class="background" :class="vertical ? 'vertical' : 'horizontal'"></span>
     </label>
   </div>
 </template>
@@ -22,13 +22,27 @@
   align-items: center;
 }
 
+.switch-container.vertical {
+  flex-direction: column;
+  justify-content: center;
+}
+
 .switch {
   position: relative;
   display: inline-block;
-  height: 2em;
-  width: 3.6em;
+
   cursor: pointer;
   overflow: hidden;
+}
+
+.switch.horizontal {
+  height: 2em;
+  width: 3.6em;
+}
+
+.switch.vertical {
+  width: 2em;
+  height: 3.6em;
 }
 
 .hidden-checkbox {
@@ -58,20 +72,33 @@
   content: "";
   display: inline-block;
 	position: absolute;
-	top: 50%;
-  left: 0.25em;
 
   width: 1.5em;
   height: 1.5em;
   border-radius: 50%;
   background: white;
 
-  transform: translateY(-50%);
   transition: all .3s;
 }
 
-.hidden-checkbox:checked + .background:before {
+.hidden-checkbox + .background.horizontal:before {
+  top: 50%;
+  left: 0.25em;
+  transform: translateY(-50%);
+}
+
+.hidden-checkbox + .background.vertical:before {
+  left: 50%;
+  top: 1.85em;
+  transform: translateX(-50%);
+}
+
+.hidden-checkbox:checked + .background.horizontal:before {
   left: 1.85em;
+}
+
+.hidden-checkbox:checked + .background.vertical:before {
+  top: 0.2em;
 }
 
 .text-label {
@@ -81,7 +108,7 @@
 
 <script>
 export default {
-  props: ['label', 'modelValue'],
+  props: ['label', 'modelValue', 'vertical'],
   emits: ['update:modelValue']
 }
 </script>
