@@ -40,6 +40,7 @@
         <OptionTabs
           class="tabs"
           :allowNone="true"
+          :forceSize="true"
           :vertical="true"
           :routerMode="false"
           :roundBottom="true"
@@ -150,6 +151,8 @@ img:hover + .touch-feedback {
 
 .tabs {
   color: #888;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 
 .channel, .global-icons {

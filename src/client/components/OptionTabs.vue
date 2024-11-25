@@ -10,6 +10,7 @@
         :class="[
           routerMode ? 'router' : 'generic',
           !routerMode && index === 0 ? 'first-tab' : '',
+          forceSize ? 'force-size' : ''
         ]"
         v-for="(item, index) in items"
     >
@@ -18,6 +19,7 @@
       </router-link>
 
       <div v-else
+        class = "tab-text"
         :class="[
           selectedTabId === item.id ? 'selected' : '',
           !!roundBottom ? 'round-bottom': ''
@@ -57,6 +59,11 @@
 .tab {
   margin: 0 0.5em;
 }
+.tab.force-size {
+  width: 2em;
+  /* forcing height is not needed */
+}
+
 .tab > * {
   cursor: pointer;
   text-decoration: none;
@@ -87,12 +94,15 @@
   color: white;
 }
 
+.tab-text {
+  text-align: center;
+}
 
 </style>
 
 <script>
 export default {
-  props: ['items', 'vertical', 'routerMode', 'roundBottom', 'modelValue', 'allowNone'],
+  props: ['items', 'vertical', 'routerMode', 'roundBottom', 'forceSize', 'modelValue', 'allowNone'],
   emits: ['update:modelValue'],
 
   computed: {
