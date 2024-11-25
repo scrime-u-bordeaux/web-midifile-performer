@@ -6,11 +6,10 @@
       vertical ? 'vertical' : 'horizontal'
     ]"
   >
-    <div class="tab"
+    <div class="tab color-on-hover"
         :class="[
           routerMode ? 'router' : 'generic',
           !routerMode && index === 0 ? 'first-tab' : '',
-          !allowNone ? 'color-on-hover' : ''
         ]"
         v-for="(item, index) in items"
     >
