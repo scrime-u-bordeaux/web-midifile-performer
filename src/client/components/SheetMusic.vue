@@ -61,6 +61,10 @@ export default {
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
              (this.isModePerform && this.playOnClickInPerformMode)
+    },
+
+    shouldNotAct() {
+      return this.mfpMidiFile.isMidi || !this.mfpMidiFile.musicXmlString
     }
   },
 
@@ -167,29 +171,29 @@ export default {
 
   watch: {
     async mfpMidiFile(newFile, oldFile) {
-      if(newFile.isMidi || !newFile.musicXmlString) return
+      if(this.shouldNotAct) return
       await this.updateScore()
     },
 
     currentMode(newMode, oldMode) {
-      if(!this.drawn) return
+      if(!this.drawn || this.shouldNotAct) return
       this.updateCursorColor()
 
       if(newMode === 'silent') this.stop()
     },
 
     sequenceStart(newStart, oldStart) {
-      if(this.drawn) this.moveCursorToSet(newStart, "start")
+      if(this.drawn && !this.shouldNotAct) this.moveCursorToSet(newStart, "start")
     },
 
     sequenceEnd(newEnd, oldEnd) {
-      if(this.drawn) this.moveCursorToSet(newEnd + 1, "end")
+      if(this.drawn && !this.shouldNotAct) this.moveCursorToSet(newEnd + 1, "end")
     },
 
     noteSequence(newSequence, oldSequence) {
       // This is called AFTER setGraceNoteInfo/setArpeggioInfo !!
 
-      if(this.mfpMidiFile.isMidi) return
+      if(this.shouldNotAct) return
 
       this.graceNoteInfo.forEach(info => {
         const graceNote = newSequence[info.graceIndex]
