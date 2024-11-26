@@ -75,7 +75,8 @@
     "icons": {
       "icons": "Icons",
       "piano": "Piano",
-      "volume": "Volume"
+      "volume": "Volume",
+      "sliders": "Sliders"
     }
   },
   "guide": {

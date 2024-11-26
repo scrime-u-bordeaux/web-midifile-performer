@@ -16,11 +16,12 @@
       class="mfp-and-controls"
       :class="[
         displayLoadingScreen ? 'hide' : 'show',
-        mfpMidiFile.buffer ? 'grid' : ''
+        mfpMidiFile.buffer ? 'with-channels' : '',
+        !!$refs.channelManager && $refs.channelManager.velocitiesDisplayed ? 'side-view' : 'normal-view'
       ]">
-      <ChannelManager class="channel-manager" v-if="!!mfpMidiFile.buffer"/>
+      <ChannelManager ref="channelManager" class="channel-manager" v-if="!!mfpMidiFile.buffer"/>
 
-      <div class="mfp-container"
+      <div class="mfp-container" :class="mfpMidiFile.isMidi ? 'midi' : 'musicxml'"
         @dragover="onDragOver"
         @drop="onDrop">
 
@@ -154,10 +155,24 @@
   align-content: center;
   text-align: center;
 }
-.mfp-and-controls.grid {
+
+.mfp-and-controls.with-channels.side-view {
   display: grid;
   grid-template-columns: 47% 53%;
 }
+.mfp-and-controls.with-channels.normal-view {
+  width: 100%;
+  display: flex;
+  justify-content: start;
+}
+.mfp-and-controls.with-channels.normal-view .channel-manager {
+  margin-left: 3em;
+  width: 20vw;
+}
+.mfp-and-controls.with-channels.normal-view .mfp-container.midi {
+  margin-left: -3em; /*This not needed for MusicXML files, and I really do not know why.*/
+}
+
 .mfp-container {
   display: flex;
   flex-direction: column;

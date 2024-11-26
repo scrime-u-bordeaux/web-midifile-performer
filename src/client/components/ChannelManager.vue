@@ -1,6 +1,6 @@
 <template>
   <div class="channel-manager-container">
-    <div class="global-icons">
+    <div class="global-icons" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'">
       <div
         class="img-and-touch-feedback"
 
@@ -23,11 +23,18 @@
         />
         <div class="touch-feedback"></div>
       </div>
-      <div class="placeholder"></div>
+      <div class="icons-right">
+        <img
+          class="sliders"
+          :class="velocitiesDisplayed ? 'displayed' : 'not-displayed'"
+
+          @click="velocitiesDisplayed = !velocitiesDisplayed"
+        />
+      </div>
     </div>
 
     <div class="channel-list">
-      <div class="channel"
+      <div class="channel" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'"
            v-show="fileIncludesChannel(parseInt(parseInt(index)+1, 10))"
            v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
 
@@ -51,7 +58,7 @@
 
         <!-- Yes, the double parseInt *is* needed. -->
 
-        <scroll-bar class="velocity-scroll"
+        <scroll-bar v-show="velocitiesDisplayed" class="velocity-scroll"
           :class="currentChannelControls.channelActive[index] ? '' : 'muted-channel'"
           :hasBounds="false"
           :start="-64"
@@ -65,6 +72,12 @@
           @index="updateVelocityOffset(parseInt(index), $event)"
           @reset="updateVelocityOffset(parseInt(index), defaultChannelControls.channelVelocityOffsets[index])"
         />
+
+        <div class="channel-label" v-show="!velocitiesDisplayed">
+          <span>
+            {{ $t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10) }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -75,6 +88,7 @@
 .channel-list {
   height: 75vh;
   overflow: scroll;
+  /* box-shadow: 1px 1px 3px 1px #dddddd; */
 }
 
 .channel-list > *:not(:last-child) {
@@ -131,6 +145,14 @@ img.volume.off:hover {
   content: url('../assets/pics/volume_icon_off_hover.png')
 }
 
+img.sliders.displayed, img.sliders.not-displayed:hover {
+  content: url('../assets/pics/sliders_enabled.png')
+}
+
+img.sliders.not-displayed, img.sliders.displayed:hover {
+  content: url('../assets/pics/sliders_disabled.png')
+}
+
 .touch-feedback {
   background-color: var(--button-blue);
 
@@ -166,13 +188,40 @@ img:hover + .touch-feedback {
   align-content: center;
 }
 
-.channel {
+.channel.with-scroll {
   grid-template-columns: 8% 5% 87%;
 }
 
-.global-icons {
+.channel.without-scroll {
+  grid-template-columns: 20% 20% 60%;
+}
+
+.channel .channel-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.channel span {
+  height: fit-content;
+  width: fit-content;
+  margin-right: 4em;
+}
+
+.global-icons.with-scroll {
   grid-template-columns: 6.5% 6% 87.5%;
   margin-left: 0.4em;
+}
+
+.global-icons.without-scroll {
+  grid-template-columns: 20.5% 20% 59.5%;
+  margin-left: 0.45em;
+}
+
+.global-icons .icons-right {
+  display: flex;
+  justify-content: end;
 }
 
 .muted-channel {
@@ -200,13 +249,15 @@ export default {
     return {
       muteOrSolo: new Array(16).fill(null),
 
+      velocitiesDisplayed: false,
+
       isHoverPiano: false,
       isHoverVolume: false
     }
   },
 
   computed: {
-    ...mapState(['currentChannelControls', 'defaultChannelControls']),
+    ...mapState(['mfpMidiFile', 'currentChannelControls', 'defaultChannelControls']),
     ...mapGetters(['fileIncludesChannel']),
 
     muteAndSolo() {
@@ -234,6 +285,10 @@ export default {
   },
 
   watch: {
+    mfpMidiFile(newFile, oldFile) {
+      this.velocitiesDisplayed = false
+    },
+    
     currentChannelControls(newControls, oldControls) {
       if(isEqual(newControls.channelActive, oldControls.channelActive)) return
 

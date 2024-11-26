@@ -43,6 +43,13 @@
           {{ $t('credits.icons.piano') }}
         </a> :
         <strong>Smartline, Flaticon</strong>
+
+        <br/>
+
+        <a href="https://www.flaticon.com/free-icons/slider" title="slider icons">
+          {{ $t('credits.icons.sliders') }}
+        </a> :
+        <strong>DailyPM Studio, Flaticon</strong>
       </p>
     </div>
 
