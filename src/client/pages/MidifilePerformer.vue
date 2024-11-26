@@ -39,24 +39,22 @@
         </div>
 
         <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
-          <img :src="`pics/piano_roll_icon_${
-            pianoRollSelected ?
-              (isModeSilent ?
-                'enabled_silent' : 'enabled_play_perform'
-              ) :
-              'disabled'
-            }.png`"
+          <img
+            class="icon piano-roll"
+            :class="[
+              isModeSilent ? 'silent' : 'play-perform',
+              pianoRollSelected ? 'enabled' : 'disabled'
+            ]"
             @click="selectedVisualizer = 'piano'"/>
 
           <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
 
-          <img :src="`pics/music_notes_icon_${
-            sheetMusicSelected ?
-              (isModeSilent ?
-                'enabled_silent' : 'enabled_play_perform'
-              ) :
-              'disabled'
-            }.png`"
+          <img
+            class="icon sheet-music"
+            :class="[
+              isModeSilent ? 'silent' : 'play-perform',
+              sheetMusicSelected ? 'enabled' : 'disabled'
+            ]"
             @click="selectedVisualizer = 'sheet'"/>
         </div>
 
@@ -216,6 +214,31 @@
   height: 30px;
   cursor: pointer;
 }
+
+.icon.piano-roll.disabled {
+  content: url('../assets/pics/piano_roll_icon_disabled.png')
+}
+
+.icon.piano-roll.enabled.silent, .icon.piano-roll.disabled.silent:hover {
+  content: url('../assets/pics/piano_roll_icon_enabled_silent.png')
+}
+
+.icon.piano-roll.enabled.play-perform, .icon.piano-roll.disabled.play-perform:hover {
+  content: url('../assets/pics/piano_roll_icon_enabled_play_perform.png')
+}
+
+.icon.sheet-music.disabled {
+  content: url('../assets/pics/music_notes_icon_disabled.png')
+}
+
+.icon.sheet-music.enabled.silent, .icon.sheet-music.disabled.silent:hover {
+  content: url('../assets/pics/music_notes_icon_enabled_silent.png')
+}
+
+.icon.sheet-music.enabled.play-perform, .icon.sheet-music.disabled.play-perform:hover  {
+  content: url('../assets/pics/music_notes_icon_enabled_play_perform.png')
+}
+
 .file-and-control {
   display: flex;
   align-items: center;
