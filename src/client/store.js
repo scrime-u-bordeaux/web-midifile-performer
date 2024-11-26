@@ -78,6 +78,7 @@ const store = createStore({
       // Their start, and end times.
 
       noteSequence: [],
+      usedChannels: new Set(), // cache for channel manager
 
       // Convenience arrays to switch between noteSequence indexes and set indexes.
 
@@ -136,7 +137,7 @@ const store = createStore({
     firstStepsMidiFile: state => state.firstStepsMidiFile,
     mfpMidiFile: state => state.mfpMidiFile,
     fileIncludesChannel: (state) => (channel) => {
-      return new Set(state.noteSequence.map(note => note.channel)).has(channel)
+      return state.usedChannels.has(channel)
     },
 
     getSet: state => setIndex => {
@@ -201,6 +202,7 @@ const store = createStore({
     },
     setNoteSequence(state, sequence) {
       state.noteSequence = sequence;
+      state.usedChannels = new Set(state.noteSequence.map(note => note.channel))
     },
     setSetStarts(state, starts) {
       state.setStarts = starts;
