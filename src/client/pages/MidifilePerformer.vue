@@ -31,6 +31,13 @@
           <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
         </span>
 
+        <div v-if="!!mfpMidiFile.buffer && mfpMidiFile.isMidi"
+          class="file-name"
+          :title="mfpMidiFile.title"
+        >
+          {{ trimmedTitle }}
+        </div>
+
         <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
           <img :src="`pics/piano_roll_icon_${
             pianoRollSelected ?
@@ -40,6 +47,9 @@
               'disabled'
             }.png`"
             @click="selectedVisualizer = 'piano'"/>
+
+          <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
+
           <img :src="`pics/music_notes_icon_${
             sheetMusicSelected ?
               (isModeSilent ?
@@ -102,13 +112,7 @@
               <label for="file" class="file-label">
                 {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
               </label>
-              <div class="file-name-container" v-if="mfpMidiFile.buffer">
-                <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
-                <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
-                  {{ $t('midiFilePerformer.noScores.standalone') }}
-                </span>
-              </div>
-              <div class="search-score-hint" v-else>
+              <div class="search-score-hint" v-if="!mfpMidiFile.buffer">
                 {{ $t('midiFilePerformer.noScores.message') }}
                 <span class="link" @click="$router.push('/look-for-scores')">
                   {{ $t('midiFilePerformer.noScores.link') }}
@@ -138,6 +142,10 @@
               </button>
             </div>
           </div>
+        </div>
+
+        <div v-if="!!mfpMidiFile.buffer" class="search-score-hint link" @click="$router.push('/look-for-scores')">
+          {{ $t('midiFilePerformer.noScores.standalone') }}
         </div>
       </div>
     </div>
@@ -169,8 +177,8 @@
   margin-left: 3em;
   width: 20vw;
 }
-.mfp-and-controls.with-channels.normal-view .mfp-container.midi {
-  margin-left: -3em; /*This not needed for MusicXML files, and I really do not know why.*/
+.mfp-and-controls.with-channels.normal-view .mfp-container {
+  margin-left: 2.5em;
 }
 
 .mfp-container {
@@ -200,6 +208,7 @@
   width: var(--score-width);
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 1em;
 }
 .visualizer-selector img {
@@ -224,22 +233,11 @@
 .file-input.align-column {
   flex-direction: column;
 }
-.file-name-container {
-  margin-bottom: 0.25em;
-  padding: 0.5em 1em;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
 .file-name {
-  margin: 0 0.25em 0.25em;
-  padding: 0.5em 1em;
   height: fit-content;
-}
-.file-name {
   display: inline-block;
-  color: #999;
+  color: #777;
+  font-style: italic;
 }
 .file-label {
   margin-bottom: 12px;
@@ -253,7 +251,7 @@
   height: fit-content;
   margin-bottom: 12px;
 }
-span.link {
+.link {
   text-decoration: underline;
   cursor: pointer;
 }
