@@ -1,82 +1,100 @@
 <template>
   <div class="channel-manager-container">
-    <div class="global-icons" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'">
+    <div class="expander-container" v-show="collapsed">
       <div
         class="img-and-touch-feedback"
 
-        @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
+        @click="expand"
       >
         <img
-          class="piano"
-          :class="areAllChannelsPerformed ? 'off' : 'on'"
+          class="volume expander"
         />
         <div class="touch-feedback"></div>
       </div>
-      <div
-        class="img-and-touch-feedback"
 
-        @click="areAllChannelsUnmuted ? muteAllChannels() : unmuteAllChannels()"
-      >
-        <img
-          class="volume"
-          :class="areAllChannelsUnmuted ? 'off' : 'on'"
-        />
-        <div class="touch-feedback"></div>
-      </div>
-      <div class="icons-right">
-        <img
-          class="sliders"
-          :class="velocitiesDisplayed ? 'displayed' : 'not-displayed'"
-
-          @click="velocitiesDisplayed = !velocitiesDisplayed"
-        />
-      </div>
+      <span @click="expand">{{ $t('midiFilePerformer.channels.manager') }}</span>
     </div>
+    <div class="channel-manager-contents" v-show="!collapsed">
+      <div class="global-icons" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'">
+        <div
+          class="img-and-touch-feedback"
 
-    <div class="channel-list">
-      <div class="channel" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'"
-           v-show="fileIncludesChannel(parseInt(parseInt(index)+1, 10))"
-           v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
+          @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
+        >
+          <img
+            class="piano"
+            :class="areAllChannelsPerformed ? 'off' : 'on'"
+          />
+          <div class="touch-feedback"></div>
+        </div>
+        <div
+          class="img-and-touch-feedback"
 
-        <ToggleSwitch
-          :vertical="true"
-          :modelValue="currentChannelControls.channelPerformed[index]"
-          @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
-        />
+          @click="areAllChannelsUnmuted ? muteAllChannels() : unmuteAllChannels()"
+        >
+          <img
+            class="volume"
+            :class="areAllChannelsUnmuted ? 'off' : 'on'"
+          />
+          <div class="touch-feedback"></div>
+        </div>
+        <div class="icons-right">
+          <img
+            class="sliders"
+            :class="velocitiesDisplayed ? 'displayed' : 'not-displayed'"
 
-        <OptionTabs
-          class="tabs"
-          :allowNone="true"
-          :forceSize="true"
-          :vertical="true"
-          :routerMode="false"
-          :roundBottom="true"
-          :items="muteAndSolo"
-          :modelValue="muteOrSolo[index]"
-          @update:modelValue="newValue => updateChannelActive(parseInt(index), newValue)"
-        />
+            @click="velocitiesDisplayed = !velocitiesDisplayed"
+          />
 
-        <!-- Yes, the double parseInt *is* needed. -->
+          <CloseIcon :size="24" @close="collapse"/>
+        </div>
+      </div>
 
-        <scroll-bar v-show="velocitiesDisplayed" class="velocity-scroll"
-          :class="currentChannelControls.channelActive[index] ? '' : 'muted-channel'"
-          :hasBounds="false"
-          :start="-64"
-          :end="64"
-          :index="velocityOffset"
-          :size="129"
-          :customBarHeight="20"
-          :customCursorSize="50"
-          :indexLabel="$t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10)"
+      <div class="channel-list">
+        <div class="channel" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'"
+             v-show="fileIncludesChannel(parseInt(parseInt(index)+1, 10))"
+             v-for="(velocityOffset, index) in currentChannelControls.channelVelocityOffsets">
 
-          @index="updateVelocityOffset(parseInt(index), $event)"
-          @reset="updateVelocityOffset(parseInt(index), defaultChannelControls.channelVelocityOffsets[index])"
-        />
+          <ToggleSwitch
+            :vertical="true"
+            :modelValue="currentChannelControls.channelPerformed[index]"
+            @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
+          />
 
-        <div class="channel-label" v-show="!velocitiesDisplayed">
-          <span>
-            {{ $t('settings.io.channelVelocities.channel')+parseInt(parseInt(index)+1, 10) }}
-          </span>
+          <OptionTabs
+            class="tabs"
+            :allowNone="true"
+            :forceSize="true"
+            :vertical="true"
+            :routerMode="false"
+            :roundBottom="true"
+            :items="muteAndSolo"
+            :modelValue="muteOrSolo[index]"
+            @update:modelValue="newValue => updateChannelActive(parseInt(index), newValue)"
+          />
+
+          <!-- Yes, the double parseInt *is* needed. -->
+
+          <scroll-bar v-show="velocitiesDisplayed" class="velocity-scroll"
+            :class="currentChannelControls.channelActive[index] ? '' : 'muted-channel'"
+            :hasBounds="false"
+            :start="-64"
+            :end="64"
+            :index="velocityOffset"
+            :size="129"
+            :customBarHeight="20"
+            :customCursorSize="50"
+            :indexLabel="$t('midiFilePerformer.channels.channel')+parseInt(parseInt(index)+1, 10)"
+
+            @index="updateVelocityOffset(parseInt(index), $event)"
+            @reset="updateVelocityOffset(parseInt(index), defaultChannelControls.channelVelocityOffsets[index])"
+          />
+
+          <div class="channel-label" v-show="!velocitiesDisplayed">
+            <span>
+              {{ $t('midiFilePerformer.channels.channel')+parseInt(parseInt(index)+1, 10) }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -129,11 +147,11 @@ img.piano.off:hover {
   content: url('../assets/pics/piano_icon_off_hover.png')
 }
 
-img.volume.on {
+img.volume.on, img.volume.expander {
   content: url('../assets/pics/volume_icon_on_normal.png')
 }
 
-img.volume.on:hover {
+img.volume.on:hover, img.volume.expander:hover, .img-and-touch-feedback:has(+ span:hover) img.volume.expander {
   content: url('../assets/pics/volume_icon_on_hover.png')
 }
 
@@ -172,8 +190,7 @@ img.sliders.not-displayed, img.sliders.displayed:hover {
   /* transition: opacity ease-in-out 0.05s; */
 }
 
-/* Actual hover cannot happen, as the high z-index image covers it.*/
-img:hover + .touch-feedback {
+img:hover + .touch-feedback, .img-and-touch-feedback:has(+ span:hover) .touch-feedback  {
   opacity: 1;
 }
 
@@ -222,10 +239,35 @@ img:hover + .touch-feedback {
 .global-icons .icons-right {
   display: flex;
   justify-content: end;
+  align-items: center;
+  height: fit-content;
+}
+
+.global-icons .icons-right > *:not(:first-child) {
+  padding-left: 1em;
 }
 
 .muted-channel {
   opacity: 0.4
+}
+
+.expander-container {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.expander-container span {
+  margin-bottom: 10px;
+  height: fit-content;
+  font-style: italic;
+  color: #777;
+  cursor: pointer;
+}
+
+.expander-container span:hover, .img-and-touch-feedback:has(> img.volume.expander:hover) + span {
+  color: var(--button-blue);
+  /* transition: all 0.3s; */
 }
 
 /* FIXME : Webkit (Chrome et al.) scrollbars offset the icon alignment,
@@ -247,19 +289,23 @@ import { mapState, mapMutations, mapGetters } from 'vuex'
 import OptionTabs from './OptionTabs.vue'
 import ScrollBar from './ScrollBar.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
+import CloseIcon from './CloseIcon.vue'
 
 const isEqual = require('lodash.isequal')
 
 const DRUM_CHANNEL = 9
 
 export default {
-  components: { ScrollBar, ToggleSwitch, OptionTabs },
+  components: { ScrollBar, ToggleSwitch, OptionTabs, CloseIcon },
 
   data() {
     return {
       muteOrSolo: new Array(16).fill(null),
 
       velocitiesDisplayed: false,
+      // This one does not need reactivity for now.
+      // previousVelocitiesDisplayed: false,
+      collapsed: true,
 
       isHoverPiano: false,
       isHoverVolume: false
@@ -441,6 +487,17 @@ export default {
         ...this.currentChannelControls,
         channelPerformed: this.defaultChannelControls.channelPerformed
       })
+    },
+
+    collapse() {
+      this.previousVelocitiesDisplayed = this.velocitiesDisplayed
+      this.velocitiesDisplayed = false
+      this.collapsed = true
+    },
+
+    expand() {
+      this.velocitiesDisplayed = this.previousVelocitiesDisplayed
+      this.collapsed = false
     }
   }
 }

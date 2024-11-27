@@ -3,12 +3,7 @@
     <div class="pop-up">
 
       <div class="content-and-close">
-        <div class="close-button">
-          <svg @click="close()" viewBox="0 0 100 100">
-            <line x1="10" y1="10" x2="90" y2="90" />
-            <line x1="90" y1="10" x2="10" y2="90" />
-          </svg>
-        </div>
+        <CloseIcon class="close-button" :size="20" @close="close()"/>
 
         <div class="pop-up-content">
           <slot />
@@ -58,21 +53,17 @@
     position: relative;
     z-index: 1;
     top: 1em;
-    left: 47.5em;
+    left: 52em;
     width: fit-content;
-  }
-  .close-button svg {
-    width: 20px;
-
-    stroke: var(--button-blue-light-90);
-    stroke-width: 20px;
-    stroke-linecap: round;
-    cursor: pointer;
   }
 </style>
 
 <script>
+import CloseIcon from './CloseIcon.vue'
+
 export default {
+
+  components: { CloseIcon },
 
   data() {
     return {
