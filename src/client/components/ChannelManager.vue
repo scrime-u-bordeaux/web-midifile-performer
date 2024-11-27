@@ -228,6 +228,16 @@ img:hover + .touch-feedback {
   opacity: 0.4
 }
 
+/* FIXME : Webkit (Chrome et al.) scrollbars offset the icon alignment,
+  but the only apparent solution would be to make them invisible,
+  thereby removing any information telling the user that the compont is scrollable
+  scrollbar-gutter: stable does not work either.
+  Thus I prefer leaving them misaligned and give that feedback still.
+*/
+
+/* ::-webkit-scrollbar {
+  width: 0px;
+} */
 </style>
 
 <script>
@@ -288,7 +298,7 @@ export default {
     mfpMidiFile(newFile, oldFile) {
       this.velocitiesDisplayed = false
     },
-    
+
     currentChannelControls(newControls, oldControls) {
       if(isEqual(newControls.channelActive, oldControls.channelActive)) return
 
