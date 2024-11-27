@@ -17,146 +17,148 @@
     </div>
   </div>
 
-  <div :class="!hasBounds ? 'reduced-width' : 'full-width'">
-    <!-- @mousedown="startDrag"> -->
+  <div class="slider-container" :class="{grid: !hasBounds}">
+    <div class="slider" :class="!hasBounds ? 'shift-top' : 'full-width'">
+      <!-- @mousedown="startDrag"> -->
 
-    <svg
-      style="/*display: none;*/"
-      ref="scroll-bar"
-      width="100%" height="100%" :viewBox="`0 0 ${layout.width} ${layout.height}`"
-      @mousedown="startDrag">
-      <rect
-        class="line-bg"
-        x="0"
-        :y="(layout.height - layout.barHeight) / 2"
-        :width="layout.width"
-        :height="layout.barHeight" />
-      <!-- <rect
-        class="line-fg"
-        x="0"
-        :y="(layout.height - layout.barHeight) / 2"
-        :width="(position * layout.width)"
-        :height="layout.barHeight" /> -->
-      <rect
-        class="line-fg"
-        x="0"
-        :y="(layout.height - layout.barHeight) / 2"
-        :width="((index - initialStart) / (size - 1)) * layout.width"
-        :height="layout.barHeight" />
-      <!-- <circle
-        class="cursor"
-        :cx="position * layout.width"
-        :cx2="position * (layout.width - layout.cursorSize) + layout.cursorSize / 2"
-        :cy="layout.height / 2"
-        :r="layout.cursorSize / 2" /> -->
-      <circle
-        class="cursor"
-        :cx="((index - initialStart) / (size - 1)) * (layout.width - layout.cursorSize) + (layout.cursorSize / 2)"
-        :cy="layout.height / 2"
-        :r="layout.cursorSize / 2"/>
-      <rect
-        v-if="hasBounds"
-        ref="loop-start"
-        class="loop-bar"
-        :x="layout.loopStartFlagLeft"
-        y="0"
-        :width="layout.loopBarWidth"
-        :height="layout.height" />
-      <polygon
-        v-if="hasBounds"
-        id="left"
-        class="loop-flag"
-        :points="`
-          ${layout.loopStartFlagLeft},0
-          ${layout.loopStartFlagLeft + layout.loopFlagWidth},${layout.loopFlagHeight / 2}
-          ${layout.loopStartFlagLeft},${layout.loopFlagHeight}
-        `" />
-      <rect
-        v-if="hasBounds"
-        ref="loop-end"
-        class="loop-bar"
-        :x="layout.loopEndFlagRight - layout.loopBarWidth"
-        y="0"
-        :width="layout.loopBarWidth"
-        :height="layout.height" />
-      <polygon
-        v-if="hasBounds"
-        id="right"
-        class="loop-flag"
-        :points="`
-          ${layout.loopEndFlagRight},0
-          ${layout.loopEndFlagRight - layout.loopFlagWidth},${layout.loopFlagHeight / 2}
-          ${layout.loopEndFlagRight},${layout.loopFlagHeight}
-        `" />
-    </svg>
-  </div>
+      <svg
+        style="/*display: none;*/"
+        ref="scroll-bar"
+        width="100%" height="100%" :viewBox="`0 0 ${layout.width} ${layout.height}`"
+        @mousedown="startDrag">
+        <rect
+          class="line-bg"
+          x="0"
+          :y="(layout.height - layout.barHeight) / 2"
+          :width="layout.width"
+          :height="layout.barHeight" />
+        <!-- <rect
+          class="line-fg"
+          x="0"
+          :y="(layout.height - layout.barHeight) / 2"
+          :width="(position * layout.width)"
+          :height="layout.barHeight" /> -->
+        <rect
+          class="line-fg"
+          x="0"
+          :y="(layout.height - layout.barHeight) / 2"
+          :width="((index - initialStart) / (size - 1)) * layout.width"
+          :height="layout.barHeight" />
+        <!-- <circle
+          class="cursor"
+          :cx="position * layout.width"
+          :cx2="position * (layout.width - layout.cursorSize) + layout.cursorSize / 2"
+          :cy="layout.height / 2"
+          :r="layout.cursorSize / 2" /> -->
+        <circle
+          class="cursor"
+          :cx="((index - initialStart) / (size - 1)) * (layout.width - layout.cursorSize) + (layout.cursorSize / 2)"
+          :cy="layout.height / 2"
+          :r="layout.cursorSize / 2"/>
+        <rect
+          v-if="hasBounds"
+          ref="loop-start"
+          class="loop-bar"
+          :x="layout.loopStartFlagLeft"
+          y="0"
+          :width="layout.loopBarWidth"
+          :height="layout.height" />
+        <polygon
+          v-if="hasBounds"
+          id="left"
+          class="loop-flag"
+          :points="`
+            ${layout.loopStartFlagLeft},0
+            ${layout.loopStartFlagLeft + layout.loopFlagWidth},${layout.loopFlagHeight / 2}
+            ${layout.loopStartFlagLeft},${layout.loopFlagHeight}
+          `" />
+        <rect
+          v-if="hasBounds"
+          ref="loop-end"
+          class="loop-bar"
+          :x="layout.loopEndFlagRight - layout.loopBarWidth"
+          y="0"
+          :width="layout.loopBarWidth"
+          :height="layout.height" />
+        <polygon
+          v-if="hasBounds"
+          id="right"
+          class="loop-flag"
+          :points="`
+            ${layout.loopEndFlagRight},0
+            ${layout.loopEndFlagRight - layout.loopFlagWidth},${layout.loopFlagHeight / 2}
+            ${layout.loopEndFlagRight},${layout.loopFlagHeight}
+          `" />
+      </svg>
+    </div>
 
-  <div class="indices" v-if="hasBounds">
-    <div class="play-button-container">
-      <div class="play-button"
-       :class="isModeListen ? 'pause-icon' : 'play-icon'"
-       @click="toggleListen">
+    <div class="indices" v-if="hasBounds">
+      <div class="play-button-container">
+        <div class="play-button"
+         :class="isModeListen ? 'pause-icon' : 'play-icon'"
+         @click="toggleListen">
+        </div>
+      </div>
+
+      <div class="speed-input">
+        <NumberInput
+          ref="speed-input"
+          :label="$t('scrollBar.speed')"
+          :min="0.1"
+          :max="10"
+          :step="0.1"
+          :value="1"
+          :allowNaN="false"
+          @input="onPlaybackSpeedChanged"
+        />
+      </div>
+
+      <div>
+        <NumberInput
+          ref="start-input"
+          :label="$t('scrollBar.start')"
+          :min="1"
+          :max="end + 1"
+          :step="1"
+          :value="start + 1"
+          :allowNaN="true"
+          @input="onStartInput"
+        />
+      </div>
+
+      <div>
+        <NumberInput
+          ref="index-input"
+          :label="capitalizedIndexLabel || $t('scrollBar.current')"
+          :min="hasBounds ? start + 1 : start"
+          :max="hasBounds ? end + 1 : end"
+          :step="1"
+          :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
+          :allowNaN="true"
+          @input="onIndexInput"
+        />
+      </div>
+
+      <div>
+        <NumberInput
+          ref="end-input"
+          :label="$t('scrollBar.end')"
+          :min="start + 1"
+          :max="Math.max(1, size)"
+          :step="1"
+          :value="end + 1"
+          :allowNaN="true"
+          @input="onEndInput"
+        />
+      </div>
+
+      <div class="stop-button-container">
+        <div class="stop-button" @click="silence()"></div>
       </div>
     </div>
 
-    <div class="speed-input">
-      <NumberInput
-        ref="speed-input"
-        :label="$t('scrollBar.speed')"
-        :min="0.1"
-        :max="10"
-        :step="0.1"
-        :value="1"
-        :allowNaN="false"
-        @input="onPlaybackSpeedChanged"
-      />
-    </div>
-
-    <div>
-      <NumberInput
-        ref="start-input"
-        :label="$t('scrollBar.start')"
-        :min="1"
-        :max="end + 1"
-        :step="1"
-        :value="start + 1"
-        :allowNaN="true"
-        @input="onStartInput"
-      />
-    </div>
-
-    <div>
-      <NumberInput
-        ref="index-input"
-        :label="capitalizedIndexLabel || $t('scrollBar.current')"
-        :min="hasBounds ? start + 1 : start"
-        :max="hasBounds ? end + 1 : end"
-        :step="1"
-        :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
-        :allowNaN="true"
-        @input="onIndexInput"
-      />
-    </div>
-
-    <div>
-      <NumberInput
-        ref="end-input"
-        :label="$t('scrollBar.end')"
-        :min="start + 1"
-        :max="Math.max(1, size)"
-        :step="1"
-        :value="end + 1"
-        :allowNaN="true"
-        @input="onEndInput"
-      />
-    </div>
-
-    <div class="stop-button-container">
-      <div class="stop-button" @click="silence()"></div>
-    </div>
+    <span v-else class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
   </div>
-
-  <span v-else class="pseudo-link" @click="$emit('reset')">{{ $t('scrollBar.reset') }}</span>
 </div>
 </template>
 
@@ -170,21 +172,25 @@
   width: var(--score-width)
 }
 .horizontal-layout {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 40% 60%;
   align-items: center;
   justify-content: space-between;
 }
-.horizontal-layout .reduced-width {
+.horizontal-layout .shift-top {
   margin-top: 2em;
-  width: 60%;
+}
+.slider-container.grid {
+  display: grid;
+  grid-template-columns: 75% 25%;
 }
 .pseudo-link {
+  text-align: center;
   font-style: italic;
   color: var(--hint-blue);
   text-decoration: underline;
   cursor: pointer;
-  margin-top: 1.5em;
+  margin-top: 1.93em;
 }
 /* diable pointer events on all children : */
 rect, circle {
@@ -217,8 +223,9 @@ rect, circle {
   stroke: black;
   stroke-width: 1;
 }
-.indices {
-  width: fit-content;
+.indices:has(.no-bounds-indice) {
+  display: flex;
+  justify-content: start;
 }
 .indices > div {
   display: inline-block;
@@ -270,7 +277,7 @@ import { mapState, mapGetters } from 'vuex';
 
 export default {
   // TODO : should we keep exposing start and end as props instead of through mapState ?
-  props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'indexLabel' ],
+  props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'customBarHeight', 'customCursorSize', 'indexLabel' ],
   components: { NumberInput },
   data() {
     return {
@@ -314,8 +321,8 @@ export default {
       const layout = {
         width: 1000,
         height: 60,
-        barHeight: this.hasBounds ? 2 : 10,
-        cursorSize: this.hasBounds ? 20 : 30,
+        barHeight: this.hasBounds ? 2 : this.customBarHeight || 10,
+        cursorSize: this.hasBounds ? 20 : this.customCursorSize || 30,
         loopBarWidth: 2,
         loopFlagHeight: 15,
         loopFlagWidth: 18,

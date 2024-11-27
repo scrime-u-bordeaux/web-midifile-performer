@@ -68,13 +68,6 @@
 
                   </div>
                 </div>
-
-                <div class="channel-velocities">
-
-                  <h4>{{ $t('settings.io.channelVelocities.heading') }}</h4>
-
-                  <ChannelManager/>
-                </div>
               </div>
 
               <div class="tab-section" v-show="visibleTab === 'visualizer'">
@@ -261,6 +254,16 @@ h4 {
   padding-bottom: 0.75em;
 }
 
+.velocity-scroll::v-deep.horizontal-layout {
+  grid-template-columns: 30% 70%
+}
+.velocity-scroll::v-deep .slider-container {
+  grid-template-columns: 80% 20%;
+}
+.velocity-scroll::v-deep .pseudo-link {
+  margin-top: 2.25em;
+}
+
 .click-play-inner {
   padding: 0 12em;
 }
@@ -348,13 +351,12 @@ import PopUp from './PopUp.vue'
 import NumberInput from './NumberInput.vue'
 import ScrollBar from './ScrollBar.vue'
 import IOManager from './IOManager.vue';
-import ChannelManager from './ChannelManager.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 
 import defaultSettings from '../default_settings.json'
 
 export default {
-  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ChannelManager, ScrollBar, NumberInput },
+  components: { OptionTabs, ToggleSwitch, PopUp, IOManager, ScrollBar, NumberInput },
 
   data() {
     return {

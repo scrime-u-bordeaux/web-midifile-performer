@@ -62,6 +62,10 @@
       "link": "here!",
       "standalone": "Find more scores"
     },
+    "channels": {
+      "channel": "Channel ",
+      "manager": "Channel manager"
+    },
     "help": "? Help",
     "settings": "⚙ Settings"
   },
@@ -75,7 +79,8 @@
     "icons": {
       "icons": "Icons",
       "piano": "Piano",
-      "volume": "Volume"
+      "volume": "Volume",
+      "sliders": "Sliders"
     }
   },
   "guide": {
@@ -273,12 +278,6 @@
           "mezzo": "QWERTY row",
           "forte": "Number row"
         }
-      },
-
-      "channelVelocities": {
-        "heading": "Channel velocity offsets",
-
-        "channel": "Channel "
       }
     },
 

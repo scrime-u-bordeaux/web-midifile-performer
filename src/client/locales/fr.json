@@ -62,6 +62,10 @@
       "link": "ici !",
       "standalone": "Trouver d'autres partitions"
     },
+    "channels": {
+      "channel": "Canal ",
+      "manager": "Gestion des canaux"
+    },
     "help": "? Aide",
     "settings": "⚙ Paramètres"
   },
@@ -75,7 +79,8 @@
     "icons": {
       "icons": "Icônes",
       "piano": "Piano",
-      "volume": "Volume"
+      "volume": "Volume",
+      "sliders": "Sliders"
     }
   },
   "guide": {
@@ -274,12 +279,6 @@
           "mezzo": "Rangée AZERTY",
           "forte": "Rangée numérique"
         }
-      },
-
-      "channelVelocities": {
-        "heading": "Offsets de vélocité des canaux",
-
-        "channel": "Canal "
       }
     },
 

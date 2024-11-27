@@ -6,128 +6,144 @@
   />
 
   <div class="mfp-and-loading-container">
-    <LoadingScreen v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
+    <LoadingScreen class="loading-screen" v-if="displayLoadingScreen" :genericCondition="loadingFlag"/>
 
     <!--Using v-if won't work because we need access to the elements.
     Using v-show won't work because it would make the width 0
     (and sheet music needs an actual width to render)-->
 
-    <div class="mfp-container" :class="displayLoadingScreen ? 'hide' : 'show'"
-      @dragover="onDragOver"
-      @drop="onDrop">
+    <div
+      class="mfp-and-controls"
+      :class="[
+        displayLoadingScreen ? 'hide' : 'show',
+        mfpMidiFile.buffer ? 'with-channels' : '',
+        !!$refs.channelManager && $refs.channelManager.velocitiesDisplayed ? 'side-view' : 'normal-view'
+      ]">
+      <ChannelManager ref="channelManager" class="channel-manager" v-if="!!mfpMidiFile.buffer"/>
 
-      <span class="contextualization" v-if="!mfpMidiFile.buffer">
-        <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
-        <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
-        <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
-      </span>
+      <div class="mfp-container" :class="mfpMidiFile.isMidi ? 'midi' : 'musicxml'"
+        @dragover="onDragOver"
+        @drop="onDrop">
 
-      <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
-        <img :src="`pics/piano_roll_icon_${
-          pianoRollSelected ?
-            (isModeSilent ?
-              'enabled_silent' : 'enabled_play_perform'
-            ) :
-            'disabled'
-          }.png`"
-          @click="selectedVisualizer = 'piano'"/>
-        <img :src="`pics/music_notes_icon_${
-          sheetMusicSelected ?
-            (isModeSilent ?
-              'enabled_silent' : 'enabled_play_perform'
-            ) :
-            'disabled'
-          }.png`"
-          @click="selectedVisualizer = 'sheet'"/>
-      </div>
+        <span class="contextualization" v-if="!mfpMidiFile.buffer">
+          <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
+          <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
+          <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
+        </span>
 
-      <SheetMusic
-        class="sheet-music"
-        :class="!mfpMidiFile.isMidi && mfpMidiFile.buffer && sheetMusicSelected ? 'show' : 'hide'"
-        ref="sheetMusic"
-        @play="onVisualizerPlay"
-        @stop="onVisualizerStop"
-        @index="onIndexChange"
-        @start="onStartChange"
-        @end="onEndChange"
-      />
+        <div v-if="!!mfpMidiFile.buffer && mfpMidiFile.isMidi"
+          class="file-name"
+          :title="mfpMidiFile.title"
+        >
+          {{ trimmedTitle }}
+        </div>
 
-      <PianoRoll
-        class="piano-roll"
-        :class="mfpMidiFile.buffer && pianoRollSelected ? 'show' : 'hide'"
-        ref="pianoRoll"
-        @play="onVisualizerPlay"
-        @stop="onVisualizerStop"
-        @index="onIndexChange"
-        @start="onStartChange"
-        @end="onEndChange"/>
+        <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
+          <img
+            class="icon piano-roll"
+            :class="[
+              isModeSilent ? 'silent' : 'play-perform',
+              pianoRollSelected ? 'enabled' : 'disabled'
+            ]"
+            @click="selectedVisualizer = 'piano'"/>
 
-      <Keyboard
-        ref="keyboard"
-        class="keyboard"
-        :minNote="minKeyboardNote"
-        :maxNote="maxKeyboardNote"
-        :state="keyboardState"
-        :whiteNoteWidth="15"/>
+          <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
 
-      <scroll-bar
-        ref="mainScrollBar"
-        v-if="mfpMidiFile.buffer"
-        class="index-scroll"
-        :has-bounds="true"
-        :start="sequenceStart"
-        :end="sequenceEnd"
-        :index="sequenceIndex"
-        :size="sequenceLength"
-        @modeChange="onModeChange"
-        @index="onIndexChange"
-        @start="onStartChange"
-        @end="onEndChange"
-        @speed="onSpeedChange"
-        @silence="onSilence"/>
+          <img
+            class="icon sheet-music"
+            :class="[
+              isModeSilent ? 'silent' : 'play-perform',
+              sheetMusicSelected ? 'enabled' : 'disabled'
+            ]"
+            @click="selectedVisualizer = 'sheet'"/>
+        </div>
 
-      <div class="file-and-control">
-        <div class="file-input-wrapper">
-          <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
-            <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
-            <label for="file" class="file-label">
-              {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
-            </label>
-            <div class="file-name-container" v-if="mfpMidiFile.buffer">
-              <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
-              <span class="search-score-hint link" @click="$router.push('/look-for-scores')">
-                {{ $t('midiFilePerformer.noScores.standalone') }}
-              </span>
+        <SheetMusic
+          class="sheet-music"
+          :class="!mfpMidiFile.isMidi && mfpMidiFile.buffer && sheetMusicSelected ? 'show' : 'hide'"
+          ref="sheetMusic"
+          @play="onVisualizerPlay"
+          @stop="onVisualizerStop"
+          @index="onIndexChange"
+          @start="onStartChange"
+          @end="onEndChange"
+        />
+
+        <PianoRoll
+          class="piano-roll"
+          :class="mfpMidiFile.buffer && pianoRollSelected ? 'show' : 'hide'"
+          ref="pianoRoll"
+          @play="onVisualizerPlay"
+          @stop="onVisualizerStop"
+          @index="onIndexChange"
+          @start="onStartChange"
+          @end="onEndChange"/>
+
+        <Keyboard
+          ref="keyboard"
+          class="keyboard"
+          :minNote="minKeyboardNote"
+          :maxNote="maxKeyboardNote"
+          :state="keyboardState"
+          :whiteNoteWidth="15"/>
+
+        <scroll-bar
+          ref="mainScrollBar"
+          v-if="mfpMidiFile.buffer"
+          class="index-scroll"
+          :has-bounds="true"
+          :start="sequenceStart"
+          :end="sequenceEnd"
+          :index="sequenceIndex"
+          :size="sequenceLength"
+          @modeChange="onModeChange"
+          @index="onIndexChange"
+          @start="onStartChange"
+          @end="onEndChange"
+          @speed="onSpeedChange"
+          @silence="onSilence"/>
+
+        <div class="file-and-control">
+          <div class="file-input-wrapper">
+            <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
+              <input accept=".mid, .midi, .musicxml, .xml, .mxl" type="file" id="file" class="file" @change="onFileInput" @click="() => { this.value = null; }"/>
+              <label for="file" class="file-label">
+                {{ $t('midiFilePerformer.upload.' + (!mfpMidiFile.buffer ? 'first' : 'change')) }}
+              </label>
+              <div class="search-score-hint" v-if="!mfpMidiFile.buffer">
+                {{ $t('midiFilePerformer.noScores.message') }}
+                <span class="link" @click="$router.push('/look-for-scores')">
+                  {{ $t('midiFilePerformer.noScores.link') }}
+                </span>
+              </div>
             </div>
-            <div class="search-score-hint" v-else>
-              {{ $t('midiFilePerformer.noScores.message') }}
-              <span class="link" @click="$router.push('/look-for-scores')">
-                {{ $t('midiFilePerformer.noScores.link') }}
-              </span>
+          </div>
+
+          <div v-if="mfpMidiFile.buffer">
+            <div class="control-button-container">
+
+              <button
+                @click="$router.push('/guide')">
+                {{ $t("midiFilePerformer.help") }}
+              </button>
+
+              <button
+                @click="openSettings">
+                {{ $t('midiFilePerformer.settings') }}
+              </button>
+
+              <button
+                style="display: none;"
+                @click="onClickExport"
+                :disabled="isModeSilent">
+                {{ $t('midiFilePerformer.export') }}
+              </button>
             </div>
           </div>
         </div>
 
-        <div v-if="mfpMidiFile.buffer">
-          <div class="control-button-container">
-
-            <button
-              @click="$router.push('/guide')">
-              {{ $t("midiFilePerformer.help") }}
-            </button>
-
-            <button
-              @click="openSettings">
-              {{ $t('midiFilePerformer.settings') }}
-            </button>
-
-            <button
-              style="display: none;"
-              @click="onClickExport"
-              :disabled="isModeSilent">
-              {{ $t('midiFilePerformer.export') }}
-            </button>
-          </div>
+        <div v-if="!!mfpMidiFile.buffer" class="search-score-hint link" @click="$router.push('/look-for-scores')">
+          {{ $t('midiFilePerformer.noScores.standalone') }}
         </div>
       </div>
     </div>
@@ -135,21 +151,42 @@
 </template>
 
 <style scoped>
+.loading-screen {
+  position: absolute;
+  width: 100%;
+}
 .mfp-and-loading-container {
   display: flex;
   justify-content: center;
   align-content: center;
   text-align: center;
 }
+
+.mfp-and-controls.with-channels.side-view {
+  display: grid;
+  grid-template-columns: 47% 53%;
+}
+.mfp-and-controls.with-channels.normal-view {
+  width: 100%;
+  display: flex;
+  justify-content: start;
+}
+.mfp-and-controls.with-channels.normal-view .channel-manager {
+  margin-left: 3em;
+  width: 20vw;
+}
+.mfp-and-controls.with-channels.normal-view .mfp-container {
+  margin-left: 2.5em;
+}
+
 .mfp-container {
-  position: absolute;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 500px;
 }
-.mfp-container.hide {
+.mfp-and-controls.hide {
   z-index: -100;
   opacity: 0;
 }
@@ -166,15 +203,42 @@
   margin-bottom: 4px;
 }
 .visualizer-selector {
+  width: var(--score-width);
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 1em;
 }
 .visualizer-selector img {
-  width: 5%;
-  height: 5%;
+  width: 30px;
+  height: 30px;
   cursor: pointer;
 }
+
+.icon.piano-roll.disabled {
+  content: url('../assets/pics/piano_roll_icon_disabled.png')
+}
+
+.icon.piano-roll.enabled.silent, .icon.piano-roll.disabled.silent:hover {
+  content: url('../assets/pics/piano_roll_icon_enabled_silent.png')
+}
+
+.icon.piano-roll.enabled.play-perform, .icon.piano-roll.disabled.play-perform:hover {
+  content: url('../assets/pics/piano_roll_icon_enabled_play_perform.png')
+}
+
+.icon.sheet-music.disabled {
+  content: url('../assets/pics/music_notes_icon_disabled.png')
+}
+
+.icon.sheet-music.enabled.silent, .icon.sheet-music.disabled.silent:hover {
+  content: url('../assets/pics/music_notes_icon_enabled_silent.png')
+}
+
+.icon.sheet-music.enabled.play-perform, .icon.sheet-music.disabled.play-perform:hover  {
+  content: url('../assets/pics/music_notes_icon_enabled_play_perform.png')
+}
+
 .file-and-control {
   display: flex;
   align-items: center;
@@ -192,22 +256,11 @@
 .file-input.align-column {
   flex-direction: column;
 }
-.file-name-container {
-  margin-bottom: 0.25em;
-  padding: 0.5em 1em;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
 .file-name {
-  margin: 0 0.25em 0.25em;
-  padding: 0.5em 1em;
   height: fit-content;
-}
-.file-name {
   display: inline-block;
-  color: #999;
+  color: #777;
+  font-style: italic;
 }
 .file-label {
   margin-bottom: 12px;
@@ -221,7 +274,7 @@
   height: fit-content;
   margin-bottom: 12px;
 }
-span.link {
+.link {
   text-decoration: underline;
   cursor: pointer;
 }
@@ -259,6 +312,7 @@ import { nextTick } from 'vue';
 import { mapMutations, mapGetters, mapState } from 'vuex';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
+import ChannelManager from '../components/ChannelManager.vue';
 import LoadingScreen from '../components/LoadingScreen.vue'
 import PianoRoll from '../components/PianoRoll.vue'
 import SheetMusic from '../components/SheetMusic.vue'
@@ -270,7 +324,7 @@ const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { Keyboard, ScrollBar, LoadingScreen, PianoRoll, SheetMusic, Settings },
+  components: { Keyboard, ScrollBar, ChannelManager, LoadingScreen, PianoRoll, SheetMusic, Settings },
   data() {
     return {
       selectedVisualizer: null, // computed properties cannot be accessed in data
