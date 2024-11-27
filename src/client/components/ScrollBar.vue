@@ -275,6 +275,8 @@ rect, circle {
 import NumberInput from './NumberInput.vue';
 import { mapState, mapGetters } from 'vuex';
 
+const throttle = require('lodash.throttle');
+
 export default {
   // TODO : should we keep exposing start and end as props instead of through mapState ?
   props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'customBarHeight', 'customCursorSize', 'indexLabel' ],
@@ -339,13 +341,14 @@ export default {
     //*/
   },
   created() {
-    document.addEventListener('mousemove', this.drag);
+    this.throttled_drag = throttle(this.drag, 100) // Empirical value
+    document.addEventListener('mousemove', this.throttled_drag);
     document.addEventListener('mouseup', this.endDrag);
     document.addEventListener('keydown', this.onKeyDown);
     this.initialStart = this.start
   },
   beforeUnmount() {
-    document.removeEventListener('mousemove', this.drag);
+    document.removeEventListener('mousemove', this.throttled_drag);
     document.removeEventListener('mouseup', this.endDrag);
     document.removeEventListener('keydown', this.onKeyDown);
   },
