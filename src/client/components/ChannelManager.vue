@@ -211,7 +211,7 @@ img:hover + .touch-feedback {
 
 .global-icons.with-scroll {
   grid-template-columns: 6.5% 6% 87.5%;
-  margin-left: 0.4em;
+  margin-left: 0.25em;
 }
 
 .global-icons.without-scroll {
