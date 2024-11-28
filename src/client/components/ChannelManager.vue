@@ -18,8 +18,9 @@
       <div class="global-icons" :class="velocitiesDisplayed ? 'with-scroll' : 'without-scroll'">
         <div
           class="img-and-touch-feedback"
+          :class="{disabled: disablePerformToggles}"
 
-          @click="areAllChannelsPerformed ? performNoChannels() : performAllChannels()"
+          @click="areAllChannelsPerformed && !disablePerformToggles ? performNoChannels() : performAllChannels()"
         >
           <img
             class="piano"
@@ -57,6 +58,7 @@
 
           <ToggleSwitch
             :vertical="true"
+            :disabled="disablePerformToggles"
             :modelValue="currentChannelControls.channelPerformed[index]"
             @update:modelValue="newValue => updateChannelPerformed(parseInt(index), newValue)"
           />
@@ -127,6 +129,11 @@ img {
   cursor: pointer;
 }
 
+.img-and-touch-feedback.disabled img {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* I really hope these relative URLs don't break in the prod env,
 Because they are the only alternative to setting URLs with event listeners,
 Which is UNGODLY slow.*/
@@ -143,7 +150,7 @@ img.piano.off {
   content: url('../assets/pics/piano_icon_off_normal.png')
 }
 
-img.piano.off:hover {
+.img-and-touch-feedback:not(.disabled) img.piano.off:hover {
   content: url('../assets/pics/piano_icon_off_hover.png')
 }
 
@@ -190,7 +197,12 @@ img.sliders.not-displayed, img.sliders.displayed:hover {
   /* transition: opacity ease-in-out 0.05s; */
 }
 
-img:hover + .touch-feedback, .img-and-touch-feedback:has(+ span:hover) .touch-feedback  {
+.img-and-touch-feedback.disabled .touch-feedback {
+  cursor: default;
+}
+
+.img-and-touch-feedback:not(.disabled) img:hover + .touch-feedback,
+.img-and-touch-feedback:has(+ span:hover) .touch-feedback  {
   opacity: 1;
 }
 
@@ -300,11 +312,16 @@ export default {
 
   data() {
     return {
+      muteAndSolo: [
+        {id: 'mute', text: "M"},
+        {id: 'solo', text: "S"}
+      ],
       muteOrSolo: new Array(16).fill(null),
 
       velocitiesDisplayed: false,
       // This one does not need reactivity for now.
       // previousVelocitiesDisplayed: false,
+      disablePerformToggles: false,
       collapsed: true,
 
       isHoverPiano: false,
@@ -315,13 +332,6 @@ export default {
   computed: {
     ...mapState(['mfpMidiFile', 'currentChannelControls', 'defaultChannelControls']),
     ...mapGetters(['fileIncludesChannel']),
-
-    muteAndSolo() {
-      return [
-        {id: 'mute', text: "M"},
-        {id: 'solo', text: "S"}
-      ]
-    },
 
     areAllChannelsPerformed() {
       return this.currentChannelControls.channelPerformed.filter(
@@ -487,6 +497,32 @@ export default {
         ...this.currentChannelControls,
         channelPerformed: this.defaultChannelControls.channelPerformed
       })
+    },
+
+    // These two methods are used for MusicXML tempo-based play
+    // (By measure or beat)
+
+    // This one is used to prevent channel selection while such criteria are active
+
+    disablePerformChoice() {
+      // If some channels were unselected,
+      // MFP.vue would receive the channelControls update
+      // And call updatePlaybackTriggers with everything enabled
+      // Therefore deactivating tempo-based play.
+      // The noUpdateTriggers flag prevents that.
+
+      this.$emit('noUpdateTriggers')
+
+      this.performAllChannels()
+      this.disablePerformToggles = true
+    },
+
+    // And this one enables them again once "every event" is selected,
+    // or a MIDI file is loaded (which do not support these granularities)
+
+    enablePerformChoice() {
+      this.$emit('updateTriggers')
+      this.disablePerformToggles = false
     },
 
     collapse() {

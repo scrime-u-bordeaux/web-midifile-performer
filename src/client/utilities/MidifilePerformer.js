@@ -451,7 +451,7 @@ class MidifilePerformer extends EventEmitter {
         // In the case of autoplayed notes, it's necessary to kill sound manually without relying on the lib
         // Because the AVS returns no off events regarding them.
         // By extension, this applies on top of the existing off events sent for ordinary index updates.
-        this.emit('allnotesoff')
+        if(this.#getCurrentIndex() !== this.#getLoopStartIndex()) this.emit('allnotesoff')
 
         // The flag will be set back to true if we jump again.
         this.noTriggerModeSwitch = false
@@ -516,10 +516,12 @@ class MidifilePerformer extends EventEmitter {
       this.#playbackTriggerDescription?.triggerType === 'channels' ||
       (
         !this.#isFileMusicXml &&
-        this.#playbackTriggerDescription?.triggertype === 'tempo'
+        this.#playbackTriggerDescription?.triggerType === 'tempo'
       )
     ) {
       this.#playbackTriggerDescription = null
+      this.emit('enablePerformChoice') // Re-enable channel perform selection,
+      // In case this is a MIDI and we had it disabled in the previously loaded MusicXML
     }
 
     // ... in-between calculations ... /////////////////////////////////////////
@@ -546,7 +548,7 @@ class MidifilePerformer extends EventEmitter {
       )
     } else this.#measureStartingSetIndices = null
 
-    if(this.#playbackTriggerDescription?.type === "tempo")
+    if(this.#playbackTriggerDescription?.triggerType === "tempo")
       this.#setPlaybackTriggersFromMeasures()
 
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////

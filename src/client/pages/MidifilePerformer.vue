@@ -19,7 +19,14 @@
         mfpMidiFile.buffer ? 'with-channels' : '',
         !!$refs.channelManager && $refs.channelManager.velocitiesDisplayed ? 'side-view' : 'normal-view'
       ]">
-      <ChannelManager ref="channelManager" class="channel-manager" v-if="!!mfpMidiFile.buffer"/>
+      <ChannelManager
+        ref="channelManager"
+        class="channel-manager"
+        v-if="!!mfpMidiFile.buffer"
+
+        @noUpdateTriggers='noUpdateTriggers = true'
+        @updateTriggers='noUpdateTriggers = false'
+      />
 
       <div class="mfp-container" :class="mfpMidiFile.isMidi ? 'midi' : 'musicxml'"
         @dragover="onDragOver"
@@ -146,6 +153,13 @@
           {{ $t('midiFilePerformer.noScores.standalone') }}
         </div>
       </div>
+
+      <PerformGranularity
+        v-if="!mfpMidiFile.isMidi"
+        class="perform-granularity"
+        :modelValue="musicXmlGranularity"
+        @update:modelValue="changeMusicXmlGranularity"
+      />
     </div>
   </div>
 </template>
@@ -305,6 +319,10 @@
   padding-bottom: 12px;
   display: flex;
 }
+
+.perform-granularity {
+  width: 26vw;
+}
 </style>
 
 <script>
@@ -313,6 +331,7 @@ import { mapMutations, mapGetters, mapState } from 'vuex';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import ChannelManager from '../components/ChannelManager.vue';
+import PerformGranularity from '../components/PerformGranularity.vue'
 import LoadingScreen from '../components/LoadingScreen.vue'
 import PianoRoll from '../components/PianoRoll.vue'
 import SheetMusic from '../components/SheetMusic.vue'
@@ -324,7 +343,7 @@ const noInputFileMsg = 'Aucun fichier sélectionné';
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { Keyboard, ScrollBar, ChannelManager, LoadingScreen, PianoRoll, SheetMusic, Settings },
+  components: { Keyboard, ScrollBar, ChannelManager, PerformGranularity, LoadingScreen, PianoRoll, SheetMusic, Settings },
   data() {
     return {
       selectedVisualizer: null, // computed properties cannot be accessed in data
@@ -332,7 +351,11 @@ export default {
       fileArrayBuffer: null,
       spacePressed: false,
       pauseWithRelease: false,
-      MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()),
+
+      musicXmlGranularity: 'all',
+      noUpdateTriggers: false,
+
+      MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()), // why is this in data ?
     };
   },
   computed: {
@@ -388,7 +411,7 @@ export default {
       if(isEqual(newControls, oldControls)) return // necessary because these are objects,
       // so this listener *will* fire every time settings are applied.
 
-      this.updatePlaybackTriggers()
+      if(!this.noUpdateTriggers) this.updatePlaybackTriggers()
     },
 
     async performerConstructorOptions(newOptions, oldOptions) {
@@ -446,6 +469,8 @@ export default {
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
 
+    this.performer.addListener('enablePerformChoice', this.reenablePerformChoice)
+
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
       this.loadingFlag = true;
@@ -457,6 +482,8 @@ export default {
 
     // FIXME : delegate speed to the store so it reacts...
     // ...or rather, integrate v-model to the scroll-bar !!
+    // FIXME : this does nothing at all : $refs is not accessible during the mounted() hook
+    // (why ?? isn't the hook called after the component's children are initialized ?)
     this.$refs.mainScrollBar?.resetSpeedDisplay();
 
     // Watchers are not called on mount
@@ -483,6 +510,8 @@ export default {
 
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
+
+    this.performer.removeListener('enablePerformChoice', this.reenablePerformChoice)
   },
   methods: {
     ...mapMutations([
@@ -702,6 +731,25 @@ export default {
           )
         )
       })
+    },
+
+    changeMusicXmlGranularity(granularity) {
+      this.musicXmlGranularity = granularity
+
+      this.performer.updatePlaybackTriggers({
+        triggerType: "tempo",
+        triggerCriteria: granularity
+      })
+
+      if(granularity !== 'all') this.$refs.channelManager.disablePerformChoice()
+      else this.$refs.channelManager.enablePerformChoice()
+    },
+
+    // Most notably called when a MIDI is loaded in after a MusicXML.
+
+    reenablePerformChoice() {
+      this.musicXmlGranularity = 'all'
+      this.$refs.channelManager.enablePerformChoice()
     },
 
     getFileExtension(fileName) {

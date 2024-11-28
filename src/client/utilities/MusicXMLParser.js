@@ -384,15 +384,19 @@ export default function parseMusicXml(buffer) {
   // Since measures are cross-part entities,
   // This can be stored in a single place.
   let measureEnd = 0
+
+  let measureStart = null
   // This is also useful to mark the start of measures.
   // (The start of a measure is just the end of another one)
-  const measureBounds = new Set([measureEnd])
+  const measureStarts = new Set()
 
   // console.log("Begin MusicXML parsing")
 
   xmlScore.measures.forEach((measure, index) => {
 
     // console.log(`Measure ${index}`)
+
+    measureStart = null
 
     for(const partID in measure.parts) {
       const partTrack = trackMap.get(partID)
@@ -523,6 +527,11 @@ export default function parseMusicXml(buffer) {
                   partTrack.events.push(
                     ...getMidiNoteEventPair(event, partTrack)
                   )
+
+              if(!event.ties || (event.ties.length === 1 && event.ties[0].type === TIE_START))
+                measureStart = measureStart !== null ?
+                  Math.min(measureStart, partTrack.currentDelta) :
+                  partTrack.currentDelta
             }
 
             // Notes bearing a "chord" attribute are synced to the previous pitch that did not bear one.
@@ -550,7 +559,7 @@ export default function parseMusicXml(buffer) {
       partTrack.cleanUpForMeasure(measureEnd)
     }
 
-    measureBounds.add(measureEnd)
+    measureStarts.add(measureStart)
   })
 
   // This isn't very semantically relevant, but it's the best place in the code flow to do so :
@@ -634,7 +643,7 @@ export default function parseMusicXml(buffer) {
 
   const measureStartIndices = new Set(
     allNoteOns.map(
-      (note, index) => measureBounds.has(note.delta) ? index : null
+      (note, index) => measureStarts.has(note.delta) ? index : null
     ).filter(
       indexOrNull => indexOrNull !== null
     )

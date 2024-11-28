@@ -1,10 +1,22 @@
 <template>
-  <div class="switch-container" :class="vertical ? 'vertical' : 'horizontal'">
+  <div
+    class="switch-container"
+    :class="
+      vertical ? 'vertical' : 'horizontal',
+      disabled ? 'disabled' : 'enabled'
+    ">
     <span v-if="!!label" class="text-label">{{ label }}</span>
 
-    <label class="switch" :class="vertical ? 'vertical' : 'horizontal'">
+    <label
+      class="switch"
+      :class="
+        vertical ? 'vertical' : 'horizontal',
+        disabled ? 'disabled' : 'enabled'
+      "
+    >
       <input
         type="checkbox"
+        :disabled="disabled"
         class="hidden-checkbox"
         v-model="modelValue"
         @input="$emit('update:modelValue', $event.target.checked)"
@@ -27,12 +39,18 @@
   justify-content: center;
 }
 
+.switch-container.disabled {
+  opacity: 0.4
+}
+
 .switch {
   position: relative;
   display: inline-block;
-
-  cursor: pointer;
   overflow: hidden;
+}
+
+.switch.enabled {
+  cursor: pointer;
 }
 
 .switch.horizontal {
@@ -108,7 +126,7 @@
 
 <script>
 export default {
-  props: ['label', 'modelValue', 'vertical'],
+  props: ['label', 'modelValue', 'vertical', 'disabled'],
   emits: ['update:modelValue']
 }
 </script>
