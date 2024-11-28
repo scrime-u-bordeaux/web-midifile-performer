@@ -451,7 +451,7 @@ class MidifilePerformer extends EventEmitter {
         // In the case of autoplayed notes, it's necessary to kill sound manually without relying on the lib
         // Because the AVS returns no off events regarding them.
         // By extension, this applies on top of the existing off events sent for ordinary index updates.
-        this.emit('allnotesoff')
+        if(this.#getCurrentIndex() !== this.#getLoopStartIndex()) this.emit('allnotesoff')
 
         // The flag will be set back to true if we jump again.
         this.noTriggerModeSwitch = false
