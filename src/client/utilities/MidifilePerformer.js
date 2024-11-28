@@ -516,10 +516,12 @@ class MidifilePerformer extends EventEmitter {
       this.#playbackTriggerDescription?.triggerType === 'channels' ||
       (
         !this.#isFileMusicXml &&
-        this.#playbackTriggerDescription?.triggertype === 'tempo'
+        this.#playbackTriggerDescription?.triggerType === 'tempo'
       )
     ) {
       this.#playbackTriggerDescription = null
+      this.emit('enablePerformChoice') // Re-enable channel perform selection,
+      // In case this is a MIDI and we had it disabled in the previously loaded MusicXML
     }
 
     // ... in-between calculations ... /////////////////////////////////////////
@@ -546,7 +548,7 @@ class MidifilePerformer extends EventEmitter {
       )
     } else this.#measureStartingSetIndices = null
 
-    if(this.#playbackTriggerDescription?.type === "tempo")
+    if(this.#playbackTriggerDescription?.triggerType === "tempo")
       this.#setPlaybackTriggersFromMeasures()
 
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////

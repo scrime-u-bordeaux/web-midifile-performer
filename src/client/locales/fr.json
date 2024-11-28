@@ -66,6 +66,11 @@
       "channel": "Canal ",
       "manager": "Gestion des canaux"
     },
+    "granularities": {
+      "context": "Jouer...",
+      "measure": "À la mesure",
+      "all": "À la note"
+    },
     "help": "? Aide",
     "settings": "⚙ Paramètres"
   },
