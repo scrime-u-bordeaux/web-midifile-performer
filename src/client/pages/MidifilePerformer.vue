@@ -341,7 +341,7 @@ import Settings from '../components/Settings.vue'
 
 const isEqual = require('lodash.isequal')
 
-const noInputFileMsg = 'Aucun fichier sélectionné';
+const MIDI_FILE_SIGNATURE = [..."MThd"].map(c => c.charCodeAt())
 
 export default {
   inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
@@ -356,8 +356,6 @@ export default {
 
       musicXmlGranularity: 'all',
       noUpdateTriggers: false,
-
-      MIDI_FILE_SIGNATURE: [..."MThd"].map(c => c.charCodeAt()), // why is this in data ?
     };
   },
   computed: {
@@ -534,7 +532,7 @@ export default {
       // test based on initial characters "MThd" rather than file extension or MIME
       const testForMidiSignature = async (file) => {
         const matchesMidiSignature = (buffer) => {
-          return buffer.every((byte, index) => byte === this.MIDI_FILE_SIGNATURE[index])
+          return buffer.every((byte, index) => byte === MIDI_FILE_SIGNATURE[index])
         }
 
         const signatureSlice = new Uint8Array(await file.slice(0,4).arrayBuffer())
