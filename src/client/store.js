@@ -103,6 +103,7 @@ const store = createStore({
       sequenceStart: 0,
       sequenceEnd: 0,
       sequenceIndex: 0,
+      playbackSpeed: 1,
       currentMode: 'silent',
 
       midiAccessRequested: false,
@@ -299,6 +300,9 @@ const store = createStore({
         Math.max(index, state.sequenceStart),
         state.sequenceEnd
       );
+    },
+    setPlaybackSpeed(state, speed) {
+      state.playbackSpeed = speed
     },
     setMidiAccessRequested(state) {
       state.midiAccessRequested = true;

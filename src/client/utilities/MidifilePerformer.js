@@ -601,6 +601,7 @@ class MidifilePerformer extends EventEmitter {
 
   setPlaybackSpeed(s) {
     this.playbackSpeed = s
+    this.emit('speed', s)
   }
 
   setPreferredVelocityStrategy(s) {

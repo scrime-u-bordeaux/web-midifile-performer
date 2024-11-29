@@ -55,6 +55,7 @@ export default {
       'setSequenceStart',
       'setSequenceEnd',
       'setSequenceIndex',
+      'setPlaybackSpeed',
       'setMidiAccessRequested',
       'setUserClickOccurred',
       'setSynthNotesFetched',
@@ -95,6 +96,9 @@ export default {
       // console.log('calling setSequenceIndex(' + index + ')');
       this.setSequenceIndex(index);
     },
+    onPlaybackSpeedChanged(speed) {
+      this.setPlaybackSpeed(speed)
+    },
     async onUserClick(e) {
       document.removeEventListener('click', this.onUserClick);
       this.setUserClickOccurred()
@@ -122,6 +126,8 @@ export default {
     // await this.$store.dispatch('loadMidiBuffers');
     // await this.performer.initialize();
 
+    // TODO : should these be moved to MFP.vue instead ?
+    // The semantic separation isn't too clear at the moment.
     this.performer.addListener('notes', this.onNotes);
     this.performer.addListener('allnotesoff', () => {
       this.ioctl.allNotesOff();
@@ -129,6 +135,7 @@ export default {
     });
     this.performer.addListener('sequence', this.onSequenceChanged);
     this.performer.addListener('index', this.onSequenceIndex);
+    this.performer.addListener('speed', this.onPlaybackSpeedChanged);
     // this.performer.addListener('start', this.onSequenceStart);
     // this.performer.addListener('end', this.onSequenceEnd);
 
@@ -293,6 +300,7 @@ export default {
     this.performer.removeListener('noteon', this.onNoteOn);
     this.performer.removeListener('noteoff', this.onNoteOff);
     this.performer.removeListener('sequence', this.onPerformerBufferChanged);
+    this.performer.removeListener('speed', this.onPlaybackSpeedChanged);
   },
 };
 </script>

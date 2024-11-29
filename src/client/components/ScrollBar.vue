@@ -107,7 +107,7 @@
           :min="0.1"
           :max="10"
           :step="0.1"
-          :value="1"
+          :value="speed"
           :allowNaN="false"
           @input="onPlaybackSpeedChanged"
         />
@@ -279,7 +279,7 @@ const throttle = require('lodash.throttle');
 
 export default {
   // TODO : should we keep exposing start and end as props instead of through mapState ?
-  props: [ 'start', 'end', 'index', 'size', 'hasBounds', 'customBarHeight', 'customCursorSize', 'indexLabel' ],
+  props: [ 'start', 'end', 'index', 'speed', 'size', 'hasBounds', 'customBarHeight', 'customCursorSize', 'indexLabel' ],
   components: { NumberInput },
   data() {
     return {
@@ -441,11 +441,6 @@ export default {
         if(e.code==="ArrowLeft") this.$emit("index",this.index - 1)
         if(e.code==="ArrowRight") this.$emit("index",this.index + 1)
       }
-    },
-    resetSpeedDisplay() {
-      // FIXME : REPLACE THIS WITH REACTIVITY BY CHANGING THE COMPONENT STRUCTURE
-      // (divorce ScrollBar from Slider, and give ScrollBar a "speed" prop)
-      this.$refs['speed-input'].reset()
     },
     silence() {
       this.$emit('silence')

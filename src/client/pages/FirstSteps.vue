@@ -219,7 +219,6 @@ export default {
       this.performer.addListener('index', this.onPerformerIndexChange);
       this.performer.setSequenceBounds(0, 63);
       this.performer.setSequenceIndex(0);
-      // this.$refs.scrollBar.resetSpeedDisplay();
       this.cursor = { x: -100, y: 0 };
     },
     onScrollBarStartChange(i) {

@@ -102,6 +102,7 @@
           :start="sequenceStart"
           :end="sequenceEnd"
           :index="sequenceIndex"
+          :speed="playbackSpeed"
           :size="sequenceLength"
           @modeChange="onModeChange"
           @index="onIndexChange"
@@ -371,6 +372,7 @@ export default {
       'sequenceEnd',
       'sequenceIndex',
       'sequenceLength',
+      'playbackSpeed',
       'currentOutputId',
       'synthNotesDecoded',
       'preferredVisualizer',
@@ -479,12 +481,6 @@ export default {
     } else {
       console.log('no buffer yet');
     }
-
-    // FIXME : delegate speed to the store so it reacts...
-    // ...or rather, integrate v-model to the scroll-bar !!
-    // FIXME : this does nothing at all : $refs is not accessible during the mounted() hook
-    // (why ?? isn't the hook called after the component's children are initialized ?)
-    this.$refs.mainScrollBar?.resetSpeedDisplay();
 
     // Watchers are not called on mount
     // And we can't do this on create, because otherwise, remounting the page never sets this again
