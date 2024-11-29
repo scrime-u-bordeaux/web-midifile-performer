@@ -69,6 +69,7 @@
           class="sheet-music"
           :class="!mfpMidiFile.isMidi && mfpMidiFile.buffer && sheetMusicSelected ? 'show' : 'hide'"
           ref="sheetMusic"
+          @drawn="loadingFlag = false"
           @play="onVisualizerPlay"
           @stop="onVisualizerStop"
           @index="onIndexChange"
@@ -583,7 +584,10 @@ export default {
 
       this.resetChannelControls()
 
-      this.loadingFlag = false;
+      // Otherwise wait for the SheetMusic to finish rendering
+      if(mfpFile.isMidi) this.loadingFlag = false;
+      // (no, await'ing this.$refs.sheetMusic.updateScore() here instead of doing it in a watcher
+      // will not work ; I tried.)
     },
 
     musicXmlToMidi(xmlString) {

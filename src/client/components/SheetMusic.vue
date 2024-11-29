@@ -267,6 +267,8 @@ export default {
       this.cursor.show()
 
       this.drawn = true
+
+      this.$emit('drawn') // Necessary because mfpMidiFile watcher is not awaited in file load
     },
 
     // TODO : is this wrapper really necessary ?
