@@ -59,6 +59,7 @@ export default {
     granularities() {
       return [
         { 'id': 'measure', 'text': this.$t('midiFilePerformer.granularities.measure') },
+        { 'id': 'beat', 'text': this.$t('midiFilePerformer.granularities.beat') },
         { 'id': 'all', 'text': this.$t('midiFilePerformer.granularities.all') }
       ]
     }

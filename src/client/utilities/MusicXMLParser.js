@@ -126,8 +126,10 @@ class PartTrack {
   // To mitigate this effect, we keep track of :
   #arpDurations = new Map() // The extra duration incurred by each arp
   #arpOffsetForMeasure = 0 // The sum of these durations over the measure
+  #totalArpOffset = 0 // The sum of these durations over the whole piece (for beat tracking)
 
   #fermataOffsetForMeasure = 0
+  #totalFermataOffset = 0
 
   // For later identification of notes in the OSMD visualizer,
   // We need to keep track of each part's channel throughout the totality of the file.
@@ -151,6 +153,11 @@ class PartTrack {
   // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
   // when dealing with notes in a chord.
   lastIncrement = 0
+
+  // Consists of the base increment in time units for each beat,
+  // And the delta at which this criteria begins, as an additive offset
+  // To the increment multiplication
+  #beatCriteria = null
 
   // A binary flag holder. From most to least significant bit :
   // Fermata, accent, marcato, staccatissimo, staccato
@@ -279,6 +286,10 @@ class PartTrack {
     return this.#arpOffsetForMeasure + this.#fermataOffsetForMeasure
   }
 
+  getOffsetOverPiece() {
+    return this.#totalArpOffset + this.#totalFermataOffset
+  }
+
   registerArp(arp) {
     this.#lastArpeggiatedChordDelta = this.currentDelta
     this.lastArpeggiatedChord = new Set(arp)
@@ -306,6 +317,7 @@ class PartTrack {
     if(xmlNote.lastArpeggiatedChordNoteFlag) {
       // Add total arpeggio offset to measure accumulator
       this.#arpOffsetForMeasure += arpDuration
+      this.#totalArpOffset += arpDuration
 
       // Shift every registered event that comes after the arp,
       // So everything remains in sync.
@@ -336,6 +348,29 @@ class PartTrack {
 
   signalFermata(xmlNote) {
     this.#fermataOffsetForMeasure += xmlNote.duration
+    this.#totalFermataOffset += xmlNote.duration
+  }
+
+  updateBeatCriteria(timeSignatureEvent) {
+    const baseUnit = this.divisions * (2 ** (2 - Math.log2(timeSignatureEvent.beatTypes[0])))
+
+    const numerator = parseInt(timeSignatureEvent.beats[0], 10)
+
+    const beatIncrement =
+      numerator % 3 === 0 && numerator !== 3 ?
+        3 * baseUnit : // Compound meter
+        baseUnit // Simple or complex meter
+
+    const baseDelta = this.currentDelta
+
+    this.#beatCriteria = {
+      increment: beatIncrement,
+      baseDelta: baseDelta
+    }
+  }
+
+  isOnBeat() {
+    return (this.currentDelta - (this.#beatCriteria.baseDelta + this.getOffsetOverPiece())) % this.#beatCriteria.increment === 0
   }
 }
 
@@ -429,6 +464,10 @@ export default function parseMusicXml(buffer) {
             }
 
             if(!!event.transposes) partTrack.transpose = parseInt(event.transposes[0].chromatic, 10)
+
+            if(!!event.times && event.times[0].beats && event.times[0].beatTypes)
+              partTrack.updateBeatCriteria(event.times[0])
+
             break
 
           case "Direction":
@@ -649,6 +688,14 @@ export default function parseMusicXml(buffer) {
     )
   )
 
+  const beatIndices = new Set(
+    allNoteOns.map(
+      (note, index) => note.isOnBeat ? index : null
+    ).filter(
+      indexOrNull => indexOrNull !== null
+    )
+  )
+
   // Using allNoteOns, we can get the noteSequence-compatible index of every grace note,
   // And its principal.
 
@@ -704,6 +751,7 @@ export default function parseMusicXml(buffer) {
     format: 1,
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
     measureStartIndices: measureStartIndices,
+    beatIndices: beatIndices,
     tempoEvents: tempoEvents,
     channelChanges: channelChanges,
     graceNoteInfo: graceNoteInfo,
@@ -752,7 +800,8 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
     // Only for parsing and registration purposes
 
     // This is for record-keeping in arpeggio-induced time shifts
-    offsetAtCreation: partTrack.getOffsetForMeasure()
+    offsetAtCreation: partTrack.getOffsetForMeasure(),
+    isOnBeat: partTrack.isOnBeat()
   }
 
   partTrack.noteOnEventsToXmlNotes.set(midiNoteOnEvent, xmlNote)
