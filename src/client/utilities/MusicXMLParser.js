@@ -149,6 +149,8 @@ class PartTrack {
   // But otherwise processing is a nightmare.
   currentDelta = DEFAULT_DELTA
 
+  #backupPerformed = false
+
   // Unfortunately, a single accumulator is not enough :
   // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
   // when dealing with notes in a chord.
@@ -191,6 +193,15 @@ class PartTrack {
   constructor(startingChannel) {
     this.activeChannel = startingChannel
     this.channelHistory = [getChannelChangePseudoEvent(startingChannel, DEFAULT_DELTA)]
+  }
+
+  backup(event) {
+    this.currentDelta -= event.duration + this.getOffsetForMeasure()
+    this.#backupPerformed = true
+  }
+
+  forward(event) {
+    this.currentDelta += event.duration + this.getOffsetForMeasure()
   }
 
   addNotatedDynamics(xmlDirections) {
@@ -248,12 +259,23 @@ class PartTrack {
 
     this.#arpOffsetForMeasure = 0
     this.#fermataOffsetForMeasure = 0
+
+    this.#backupPerformed = false
+  }
+
+  cleanUpForNote() {
+    this.#backupPerformed = false
   }
 
   getRelevantNotatedDynamics(startTime) {
     return this.notatedDynamics.findLast(
       dynamics => dynamics.delta <= startTime
     )?.value
+  }
+
+  getNoteStartTime(xmlNote) {
+    return xmlNote.chord && !isArpeggiatedChordNote(xmlNote) ?
+      this.currentDelta - this.lastIncrement : this.currentDelta
   }
 
   getArpCompensation(xmlNote) {
@@ -266,7 +288,7 @@ class PartTrack {
     // Check if an arp was registered at this delta.
     // If so, add its extra duration to the delta increment.
 
-    const durationMapAtDelta = this.#arpDurations.get(getNoteStartTime(xmlNote, this))
+    const durationMapAtDelta = this.#arpDurations.get(this.getNoteStartTime(xmlNote))
 
     if(!durationMapAtDelta) return 0
 
@@ -516,7 +538,7 @@ export default function parseMusicXml(buffer) {
 
           case "Backup":
 
-            partTrack.currentDelta -= event.duration + partTrack.getOffsetForMeasure()
+            partTrack.backup(event)
 
             break
 
@@ -524,7 +546,7 @@ export default function parseMusicXml(buffer) {
 
           case "Forward":
 
-            partTrack.currentDelta += event.duration + partTrack.getOffsetForMeasure()
+            partTrack.forward(event)
 
             break
 
@@ -588,6 +610,8 @@ export default function parseMusicXml(buffer) {
 
               if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
             }
+
+            partTrack.cleanUpForNote()
 
             break
         }
@@ -786,7 +810,9 @@ function getMidiNoteEventPair(xmlNote, partTrack) {
 function getMidiNoteOnEvent(xmlNote, partTrack) {
   manageNoteArticulations(xmlNote, partTrack)
 
-  const startTime = getNoteStartTime(xmlNote, partTrack)
+  const startTime = partTrack.getNoteStartTime(xmlNote)
+
+  // console.log(isArpeggiatedChordNote(xmlNote))
 
   const midiNoteOnEvent = {
     delta: startTime,
@@ -816,7 +842,7 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
   // I don't want to remove it and risk breakign something, but...
   manageNoteArticulations(xmlNote, partTrack, false)
 
-  const startTime = getNoteStartTime(xmlNote, partTrack)
+  const startTime = partTrack.getNoteStartTime(xmlNote)
   const duration = getTrueNoteDuration(xmlNote, partTrack, true)
 
   const midiNoteOffEvent = {
@@ -841,11 +867,6 @@ function getMidiNoteOffEvent(xmlNote, partTrack) {
   )
 
   return midiNoteOffEvent
-}
-
-function getNoteStartTime(xmlNote, partTrack) {
-  return xmlNote.chord && !isArpeggiatedChordNote(xmlNote) ?
-    partTrack.currentDelta - partTrack.lastIncrement : partTrack.currentDelta
 }
 
 function manageNoteArticulations(xmlNote, partTrack, signalFermata = true) {
