@@ -391,8 +391,42 @@ class PartTrack {
     }
   }
 
-  isOnBeat() {
-    return (this.currentDelta - (this.#beatCriteria.baseDelta + this.getOffsetOverPiece())) % this.#beatCriteria.increment === 0
+  isOnBeat(xmlNote) {
+    console.log(
+      this.getNoteStartTime(xmlNote) - (
+        this.#beatCriteria.baseDelta +
+        (
+          this.getOffsetOverPiece() -
+          // If a backup has just been performed, the measure offset has already been deduced,
+          // Hence it must be added again
+          (this.#backupPerformed ? this.getOffsetForMeasure() : 0)
+        )
+      ),
+
+      this.#beatCriteria.increment,
+
+      (this.getNoteStartTime(xmlNote) - (
+        this.#beatCriteria.baseDelta +
+        (
+          this.getOffsetOverPiece() -
+          // If a backup has just been performed, the measure offset has already been deduced,
+          // Hence it must be added again
+          (this.#backupPerformed ? this.getOffsetForMeasure() : 0)
+        )
+      )) % this.#beatCriteria.increment
+    )
+
+    return (
+      this.getNoteStartTime(xmlNote) - (
+        this.#beatCriteria.baseDelta +
+        (
+          this.getOffsetOverPiece() -
+          // If a backup has just been performed, the measure offset has already been deduced,
+          // Hence it must be added again
+          (this.#backupPerformed ? this.getOffsetForMeasure() : 0)
+        )
+      )
+    ) % this.#beatCriteria.increment === 0
   }
 }
 
@@ -827,7 +861,7 @@ function getMidiNoteOnEvent(xmlNote, partTrack) {
 
     // This is for record-keeping in arpeggio-induced time shifts
     offsetAtCreation: partTrack.getOffsetForMeasure(),
-    isOnBeat: partTrack.isOnBeat()
+    isOnBeat: partTrack.isOnBeat(xmlNote)
   }
 
   partTrack.noteOnEventsToXmlNotes.set(midiNoteOnEvent, xmlNote)
