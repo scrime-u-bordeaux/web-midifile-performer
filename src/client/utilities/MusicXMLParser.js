@@ -125,10 +125,14 @@ class PartTrack {
   // Arpeggios disturb the synchronization of part events through backups.
   // To mitigate this effect, we keep track of :
   #arpDurations = new Map() // The extra duration incurred by each arp
+  #arpOffsetSinceLastBackup = 0 // The sum of these durations since the last backup
   #arpOffsetForMeasure = 0 // The sum of these durations over the measure
+  #maxArpOffsetForMeasure = 0 // The biggest individual arp offset across one non-backup iteration of the measure
   #totalArpOffset = 0 // The sum of these durations over the whole piece (for beat tracking)
 
+  #fermataOffsetSinceLastBackup = 0
   #fermataOffsetForMeasure = 0
+  #maxFermataOffsetForMeasure = 0
   #totalFermataOffset = 0
 
   // For later identification of notes in the OSMD visualizer,
@@ -149,7 +153,8 @@ class PartTrack {
   // But otherwise processing is a nightmare.
   currentDelta = DEFAULT_DELTA
 
-  #backupPerformed = false
+  #backupJustPerformed = false
+  #backupPerformedInMeasure = false
 
   // Unfortunately, a single accumulator is not enough :
   // Because of how the musicXML sync system works, we need to rewind the accumulator by one step
@@ -197,7 +202,14 @@ class PartTrack {
 
   backup(event) {
     this.currentDelta -= event.duration + this.getOffsetForMeasure()
-    this.#backupPerformed = true
+    this.#backupJustPerformed = true
+    this.#backupPerformedInMeasure = true
+
+    this.#maxArpOffsetForMeasure = Math.max(this.#arpOffsetSinceLastBackup, this.#maxArpOffsetForMeasure)
+    this.#maxFermataOffsetForMeasure = Math.max(this.#fermataOffsetSinceLastBackup, this.#maxFermataOffsetForMeasure)
+
+    this.#arpOffsetSinceLastBackup = 0
+    this.#fermataOffsetSinceLastBackup = 0
   }
 
   forward(event) {
@@ -257,14 +269,27 @@ class PartTrack {
       this.currentDelta = measureEnd
     }
 
-    this.#arpOffsetForMeasure = 0
-    this.#fermataOffsetForMeasure = 0
+    this.#maxArpOffsetForMeasure = Math.max(this.#arpOffsetSinceLastBackup, this.#maxArpOffsetForMeasure)
+    this.#maxFermataOffsetForMeasure = Math.max(this.#fermataOffsetSinceLastBackup, this.#maxFermataOffsetForMeasure)
 
-    this.#backupPerformed = false
+    this.#totalArpOffset += this.#maxArpOffsetForMeasure
+    this.#totalFermataOffset += this.#maxFermataOffsetForMeasure
+
+    this.#arpOffsetForMeasure = 0
+    this.#arpOffsetSinceLastBackup = 0
+    this.#maxArpOffsetForMeasure = 0
+
+    this.#fermataOffsetForMeasure = 0
+    this.#fermataOffsetSinceLastBackup = 0
+    this.#maxFermataOffsetForMeasure = 0
+
+    this.#backupJustPerformed = false
+    this.#backupPerformedInMeasure = false
   }
 
-  cleanUpForNote() {
-    this.#backupPerformed = false
+  cleanUpForNote(xmlNote) {
+    if(!isArpeggiatedChordNote(xmlNote) || xmlNote.lastArpeggiatedChordNoteFlag)
+      this.#backupJustPerformed = false
   }
 
   getRelevantNotatedDynamics(startTime) {
@@ -304,6 +329,10 @@ class PartTrack {
     return offset || 0
   }
 
+  getOffsetSinceLastBackup() {
+    return this.#arpOffsetSinceLastBackup + this.#fermataOffsetSinceLastBackup
+  }
+
   getOffsetForMeasure() {
     return this.#arpOffsetForMeasure + this.#fermataOffsetForMeasure
   }
@@ -338,8 +367,8 @@ class PartTrack {
 
     if(xmlNote.lastArpeggiatedChordNoteFlag) {
       // Add total arpeggio offset to measure accumulator
+      this.#arpOffsetSinceLastBackup += arpDuration
       this.#arpOffsetForMeasure += arpDuration
-      this.#totalArpOffset += arpDuration
 
       // Shift every registered event that comes after the arp,
       // So everything remains in sync.
@@ -369,8 +398,8 @@ class PartTrack {
   }
 
   signalFermata(xmlNote) {
+    this.#fermataOffsetSinceLastBackup += xmlNote.duration
     this.#fermataOffsetForMeasure += xmlNote.duration
-    this.#totalFermataOffset += xmlNote.duration
   }
 
   updateBeatCriteria(timeSignatureEvent) {
@@ -392,39 +421,60 @@ class PartTrack {
   }
 
   isOnBeat(xmlNote) {
-    console.log(
-      this.getNoteStartTime(xmlNote) - (
-        this.#beatCriteria.baseDelta +
-        (
-          this.getOffsetOverPiece() -
-          // If a backup has just been performed, the measure offset has already been deduced,
-          // Hence it must be added again
-          (this.#backupPerformed ? this.getOffsetForMeasure() : 0)
-        )
-      ),
 
-      this.#beatCriteria.increment,
+    // Due to how arps, fermatas etc work,
+    // The note start time is not enough to see if a note is on beat ;
+    // We must subtract from that start time a variable offset.
 
-      (this.getNoteStartTime(xmlNote) - (
-        this.#beatCriteria.baseDelta +
-        (
-          this.getOffsetOverPiece() -
-          // If a backup has just been performed, the measure offset has already been deduced,
-          // Hence it must be added again
-          (this.#backupPerformed ? this.getOffsetForMeasure() : 0)
-        )
-      )) % this.#beatCriteria.increment
-    )
+    // The base of that offset is as follows :
+
+    const baseOffset = this.getOffsetOverPiece() + this.getOffsetForMeasure()
+    // This sum is needed because offsetOverPiece is only incremented at the end of each measure,
+    // To ensure that the right increment is selected.
+
+    // However, in certain cases, this baseOffset is too large,
+    // And must be reduced by another quantity.
+
+    let offsetNotConsidered = 0
+
+    // If a backup has just been performed, the measure offset has already been deduced,
+    // Hence none of it is to be subtracted again.
+    if(this.#backupJustPerformed)
+      offsetNotConsidered = this.getOffsetForMeasure()
+
+    // If other offsets have begun since the last backup,
+    // Then only they must be considered,
+    // And the rest of the measure total discarded.
+    else if(this.#backupPerformedInMeasure && !!this.getOffsetSinceLastBackup())
+      offsetNotConsidered = this.getOffsetForMeasure() - this.getOffsetSinceLastBackup()
+
+    const finalOffset = baseOffset - offsetNotConsidered
+
+    // console.log(
+    //   "Actual note start time :", this.getNoteStartTime(xmlNote),
+    //
+    //   "Base offset to subtract :", this.#beatCriteria.baseDelta + baseOffset,
+    //
+    //   "Not subtracted for special cases :", offsetNotConsidered,
+    //
+    //   "Total subtracted :", this.#beatCriteria.baseDelta + finalOffset,
+    //
+    //   "Evaluated value :", this.getNoteStartTime(xmlNote) - (
+    //     this.#beatCriteria.baseDelta + finalOffset
+    //   ),
+    //
+    //   "Beat increment :", this.#beatCriteria.increment,
+    //
+    //   "Remainder of eval by beat increment : ", (
+    //     this.getNoteStartTime(xmlNote) - (
+    //       this.#beatCriteria.baseDelta + finalOffset
+    //     )
+    //   ) % this.#beatCriteria.increment
+    // )
 
     return (
       this.getNoteStartTime(xmlNote) - (
-        this.#beatCriteria.baseDelta +
-        (
-          this.getOffsetOverPiece() -
-          // If a backup has just been performed, the measure offset has already been deduced,
-          // Hence it must be added again
-          (this.#backupPerformed ? this.getOffsetForMeasure() : 0)
-        )
+        this.#beatCriteria.baseDelta + finalOffset
       )
     ) % this.#beatCriteria.increment === 0
   }
@@ -645,7 +695,7 @@ export default function parseMusicXml(buffer) {
               if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
             }
 
-            partTrack.cleanUpForNote()
+            partTrack.cleanUpForNote(event)
 
             break
         }
