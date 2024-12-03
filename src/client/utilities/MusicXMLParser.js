@@ -638,6 +638,9 @@ export default function parseMusicXml(buffer) {
 
           case "Note":
 
+            if(!!event.intendedStartDelta && partTrack.currentDelta !== event.intendedStartDelta)
+              partTrack.currentDelta = Math.round(partTrack.currentDelta)
+
             if(!event.rest) { // Rests are not actual pitches, and thus need not be pushed.
 
               if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.has(event))
@@ -1046,6 +1049,8 @@ function gatherGraceNoteData(partArray, initialGraceNoteIndex) {
   for(; i < partArray.length && partArray[i].grace ; i++) graceNoteSequence.push(partArray[i])
 
   // There may not always be a following non-grace note in the measure.
+  // Note that this following note may very well be a rest with this implementation ;
+  // Is this a good thing ?
   const followingXmlNote = partArray[i]?._class !== "Note" || !!partArray[i]?.grace ? null : partArray[i]
 
   let j = initialGraceNoteIndex - 1
@@ -1084,6 +1089,8 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
     graceNote.principal = principalNotes[index]
   })
 
+  // I don't think making it a set will improve performance that much,
+  // Because grace note sequences are very short arrays.
   const chordGraceNoteIndices = graceNoteSequence.map((graceNote, index) => {
     return graceNote.chord ? index : null
   }).filter(indexOrNull => indexOrNull !== null)
@@ -1136,15 +1143,7 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
       + stealTimeFollowing[index] * (followingXmlNote?.duration || 0)
   })
 
-  // Since the following note hasn't been parsed yet, its duration can simply be changed in place.
-  if(!!followingXmlNote)
-    followingXmlNote.duration *= 1 - stealTimeFollowing.filter(
-      (_, index) => !chordGraceNoteIndices.includes(index)
-    ).reduce(
-      (acc, curr) => acc + curr, 0
-    )
-
-  // However, the previous note has already been parsed.
+  // The previous note, if extant, has already been parsed.
   // Hence, it's the MIDI note off event that must be modified.
 
   const { previousNoteOff, start, duration } = { ...partTrack.xmlNotesToNoteOffEvents.get(previousXmlNote) }
@@ -1162,6 +1161,32 @@ function resolveGraceNoteDurations(partTrack, { graceNoteSequence, followingXmlN
     // The accumulator is always exactly where it was when this note off event was pushed.
     // Hence, it can simply be rewound like so.
     partTrack.currentDelta -= duration * stolenPrevious
+  }
+
+  if(!!followingXmlNote) {
+
+    // Since the following note hasn't been parsed yet,
+    // its duration can simply be changed in place.
+
+    followingXmlNote.duration *= 1 - stealTimeFollowing.filter(
+      (_, index) => !chordGraceNoteIndices.includes(index)
+    ).reduce(
+      (acc, curr) => acc + curr, 0
+    )
+
+    // For beat tracking purposes, it is important to ensure that the grace note sequence
+    // Leaves the accumulator exactly as it would have been without it.
+
+    // This means : ensure that the sum of grace note durations
+    // Is equal to the eventual reached value of the accumulator after the sequence ends.
+
+    const sequenceDuration = graceNoteSequence.filter(
+      (_, index) => !chordGraceNoteIndices.includes(index)
+    ).reduce(
+      (acc, curr) => acc + curr.duration, 0
+    )
+
+    followingXmlNote.intendedStartDelta = partTrack.currentDelta + sequenceDuration
   }
 }
 
