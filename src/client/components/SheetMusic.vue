@@ -230,6 +230,7 @@ export default {
     initOsmd() {
       this.osmd = new OpenSheetMusicDisplay('osmd-container')
       this.osmd.setOptions(this.osmdOptions)
+      this.osmd.EngravingRules.TupletNumberLimitConsecutiveRepetitions = false
     },
 
     async updateScore(calculateAnchors = true) {
