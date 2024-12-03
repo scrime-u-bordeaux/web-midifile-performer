@@ -904,6 +904,13 @@ export default {
 
     findNearestCursorDate(setStartIndex, searchData) {
       // console.log(`Finding nearest cursor date for set ${this.setStarts.indexOf(setStartIndex)}`)
+
+      const allCursorDates = searchData.dates
+
+      // Escape hatch : this only happens in files where this setup step is broken.
+      // This way, the score still displays, even though the cursor will break.
+      if(searchData.currentIndex > allCursorDates.length - 1) return allCursorDates[allCursorDates.length - 1]
+
       const set = this.getSet(this.setStarts.indexOf(setStartIndex))
       // console.log("Set in question is : ", set)
 
@@ -936,8 +943,6 @@ export default {
 
         else searchData.upcomingPrincipal = relevantPrincipal
       }
-
-      const allCursorDates = searchData.dates
 
       // If we are dealing with a grace note cluster, the normal search process does not apply.
       // TODO : perhaps move this block to a single-use function.
@@ -1164,6 +1169,8 @@ export default {
 
     moveCursorToSet(setIndex, which = "index") {
 
+      // console.log("Moving cursor to set", setIndex)
+
       const chosenCursor = this.osmd.cursors[this.cursorNames.indexOf(which)]
 
       const desiredDate = this.cursorAnchors[setIndex]
@@ -1172,6 +1179,7 @@ export default {
         throw new Error(`Could not move to set ${setIndex} : undefined cursor anchor`)
 
       while(this.currentCursorDate(chosenCursor) !== desiredDate) { // thanks to the cursor anchors, we can use equality
+        // console.log("Current cursor date :", this.currentCursorDate(chosenCursor), "Desired date :", desiredDate)
         if(this.currentCursorDate(chosenCursor) < desiredDate) chosenCursor.next()
         else if(this.currentCursorDate(chosenCursor) > desiredDate) chosenCursor.previous()
       }
