@@ -186,7 +186,11 @@ export default function parseMusicXml(buffer) {
 
               if(isArpeggiatedChordNote(event) && !partTrack.lastArpeggiatedChord?.has(event)) {
                 const arpeggiatedChord = markArpeggio(partArray, index)
-                partTrack.registerArp(arpeggiatedChord)
+
+                // In some broken exported files, we find arpeggios on single notes,
+                // Which is obviously a mistake, and thus warrants aborting the process
+                if(arpeggiatedChord.length > 1) partTrack.registerArp(arpeggiatedChord)
+                else throw new Error("Invalid arpeggio detected : parsing aborted")
               }
 
               if(event.grace && !partTrack.lastAnalyzedGraceNoteSequence?.includes(event)) {
