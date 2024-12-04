@@ -264,7 +264,11 @@ class PartTrack {
   cleanUpForMeasure(measureEnd) {
     // Ensure measures do not encroach on each other,
     // Even if backups end up in the middle of one.
-    if(this.currentDelta < measureEnd) {
+
+    // !!measureEnd tests if the file *has* explicit measures, or is free-meter ;
+    // Since a measure would never end at delta 0,
+    // This is a valid way of doing so.
+    if(!!measureEnd && this.currentDelta < measureEnd) {
       // console.log("Delta over measure, correcting to", measureEnd)
       this.currentDelta = measureEnd
     }
@@ -422,6 +426,10 @@ class PartTrack {
 
   isOnBeat(xmlNote) {
 
+    // This happens when no time signature was provided before notes are written
+    // This is the case in free meter files
+    if(!this.#beatCriteria) return false
+
     // Due to how arps, fermatas etc work,
     // The note start time is not enough to see if a note is on beat ;
     // We must subtract from that start time a variable offset.
@@ -445,6 +453,15 @@ class PartTrack {
     // If other offsets have begun since the last backup,
     // Then only they must be considered,
     // And the rest of the measure total discarded.
+
+    // FIXME : this is the wrong condition.
+    // The actual check must be : are we past the point of applying a certain arp's offset ?
+    // If we are before that arp, no ; otherwise yes.
+    // This can be done through durationMapAtDelta.
+
+    // However, to do that, the entire arp algorithm should be rewritten,
+    // Because backups too should only take into account the offsets
+    // That take place in the space that they traverse.
     else if(this.#backupPerformedInMeasure && !!this.getOffsetSinceLastBackup())
       offsetNotConsidered = this.getOffsetForMeasure() - this.getOffsetSinceLastBackup()
 
@@ -484,6 +501,14 @@ export default function parseMusicXml(buffer) {
   const xmlScore = parseScore(buffer) // Always returns a timewise score, even from a partwise file.
   const trackMap = new Map()
 
+  // Because the score is always timewise, the score object will always have logical measures,
+  // But if there are actual, engraved measures, then at least some will be explicit.
+  const hasMeasures = xmlScore.measures.some(measure => !measure.implicit)
+
+  // Whether a score has beats (= a time signature) cannot so easily be said.
+  // It will only be made true if and when we encounter a time signature along the way.
+  let hasBeats = false
+
   let divisions = 0
 
   // We're always gonna list through measures, because the score is timewise.
@@ -520,15 +545,17 @@ export default function parseMusicXml(buffer) {
   // That the last stated events of a measure are not at the end of it.
   // (For instance : the measure has two voices, the first voice goes to the end,
   // then a backup and the second voice isn't filled to the end with rests)
+
   // In such cases, we need to enforce measure boundaries nonetheless
   // (relying on the fact that backups SHOULD NOT cross measure bounds)
+
   // Since measures are cross-part entities,
   // This can be stored in a single place.
-  let measureEnd = 0
+  let measureEnd = hasMeasures ? 0 : null
 
+  // The start of measures (= the delta of the first note on in that measure) is marked separately,
+  // Because a measure may start with rests.
   let measureStart = null
-  // This is also useful to mark the start of measures.
-  // (The start of a measure is just the end of another one)
   const measureStarts = new Set()
 
   // console.log("Begin MusicXML parsing")
@@ -571,8 +598,10 @@ export default function parseMusicXml(buffer) {
 
             if(!!event.transposes) partTrack.transpose = parseInt(event.transposes[0].chromatic, 10)
 
-            if(!!event.times && event.times[0].beats && event.times[0].beatTypes)
+            if(!!event.times && event.times[0].beats && event.times[0].beatTypes) {
               partTrack.updateBeatCriteria(event.times[0])
+              hasBeats = true
+            }
 
             break
 
@@ -676,7 +705,13 @@ export default function parseMusicXml(buffer) {
                     ...getMidiNoteEventPair(event, partTrack)
                   )
 
-              if(!event.ties || (event.ties.length === 1 && event.ties[0].type === TIE_START))
+              if(
+                hasMeasures &&
+                (
+                  !event.ties ||
+                  (event.ties.length === 1 && event.ties[0].type === TIE_START)
+                )
+              )
                 measureStart = measureStart !== null ?
                   Math.min(measureStart, partTrack.currentDelta) :
                   partTrack.currentDelta
@@ -695,7 +730,7 @@ export default function parseMusicXml(buffer) {
               partTrack.currentDelta += increment
               partTrack.lastIncrement = increment
 
-              if(partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
+              if(hasMeasures && partTrack.currentDelta > measureEnd) measureEnd = partTrack.currentDelta
             }
 
             partTrack.cleanUpForNote(event)
@@ -709,7 +744,7 @@ export default function parseMusicXml(buffer) {
       partTrack.cleanUpForMeasure(measureEnd)
     }
 
-    measureStarts.add(measureStart)
+    if(hasMeasures) measureStarts.add(measureStart)
   })
 
   // This isn't very semantically relevant, but it's the best place in the code flow to do so :
@@ -791,21 +826,21 @@ export default function parseMusicXml(buffer) {
   // However, it might have several more uses in the future
   // (e.g. : jump to / loop on measure)
 
-  const measureStartIndices = new Set(
+  const measureStartIndices = hasMeasures ? new Set(
     allNoteOns.map(
       (note, index) => measureStarts.has(note.delta) ? index : null
     ).filter(
       indexOrNull => indexOrNull !== null
     )
-  )
+  ) : new Set()
 
-  const beatIndices = new Set(
+  const beatIndices = hasBeats ? new Set(
     allNoteOns.map(
       (note, index) => note.isOnBeat ? index : null
     ).filter(
       indexOrNull => indexOrNull !== null
     )
-  )
+  ) : new Set()
 
   // Using allNoteOns, we can get the noteSequence-compatible index of every grace note,
   // And its principal.
@@ -861,10 +896,16 @@ export default function parseMusicXml(buffer) {
     division: divisions,
     format: 1,
     tracks: Array.from(trackMap.values()).map(track => convertToRelative(track.events)),
+
+    hasMeasures: hasMeasures,
+    hasBeats: hasBeats,
+
     measureStartIndices: measureStartIndices,
     beatIndices: beatIndices,
+
     tempoEvents: tempoEvents,
     channelChanges: channelChanges,
+
     graceNoteInfo: graceNoteInfo,
     arpeggioInfo: arpeggioInfo
   }

@@ -8,6 +8,7 @@
   >
     <div class="tab color-on-hover"
         :class="[
+          !!disabledItems && disabledItems.has(item.id) ? 'disabled' : 'enabled',
           routerMode ? 'router' : 'generic',
           !routerMode && index === 0 ? 'first-tab' : '',
           forceSize ? 'force-size' : ''
@@ -21,6 +22,7 @@
       <div v-else
         class = "tab-text"
         :class="[
+          !!disabledItems && disabledItems.has(item.id) ? 'disabled' : '',
           selectedTabId === item.id ? 'selected' : '',
           !!roundBottom ? 'round-bottom': ''
         ]"
@@ -65,12 +67,17 @@
 }
 
 .tab > * {
-  cursor: pointer;
   text-decoration: none;
   line-height: 1em;
   border: 0;
   border-radius: 0.4em 0.4em 0 0;
+}
+.tab.enabled > * {
+  cursor: pointer;
   transition: all 0.25s;
+}
+.tab.disabled > * {
+  opacity: 0.4
 }
 .tab > .round-bottom {
   border-radius: 1em;
@@ -84,12 +91,12 @@
 }
 
 /* CSS is such a fun language. */
-.tab.router > *.selected,
-.tab.router.color-on-hover > *:hover,
-.tab.router > *.router-link-active,
-.tab > *.selected,
-.tab.color-on-hover > *:hover,
-.tab > *.router-link-active {
+.tab.enabled.router > *.selected,
+.tab.enabled.router.color-on-hover > *:hover,
+.tab.enabled.router > *.router-link-active,
+.tab.enabled > *.selected,
+.tab.enabled.color-on-hover > *:hover,
+.tab.enabled > *.router-link-active {
   background-color: var(--button-blue);
   color: white;
 }
@@ -102,7 +109,7 @@
 
 <script>
 export default {
-  props: ['items', 'vertical', 'routerMode', 'roundBottom', 'forceSize', 'modelValue', 'allowNone'],
+  props: ['items', 'disabledItems', 'vertical', 'routerMode', 'roundBottom', 'forceSize', 'modelValue', 'allowNone'],
   emits: ['update:modelValue'],
 
   computed: {
@@ -121,7 +128,11 @@ export default {
       const tab = event.target
       const itemId = tab.dataset.itemId
 
-      if(this.selectedTabId !== itemId || !this.allowNone) this.selectedTabId = itemId
+      if(this.selectedTabId !== itemId || !this.allowNone) {
+        if(this.disabledItems?.has(itemId)) return
+
+        this.selectedTabId = itemId
+      }
       else this.selectedTabId = null
     }
   }

@@ -10,6 +10,7 @@
       class="tabs"
       :vertical="true"
       :items="granularities"
+      :disabledItems="disabledGranularities"
       :roundBottom="true"
       :modelValue="modelValue"
       @update:modelValue="$emit('update:modelValue', $event)"
@@ -55,6 +56,12 @@ export default {
   props: ['modelValue'],
   emits: ['update:modelValue'],
 
+  data() {
+    return {
+      disabledGranularities: new Set()
+    }
+  },
+
   computed: {
     granularities() {
       return [
@@ -63,6 +70,20 @@ export default {
         { 'id': 'all', 'text': this.$t('midiFilePerformer.granularities.all') }
       ]
     }
+  },
+
+  methods: {
+
+    updateIsMeasurePlayDisabled(isIt) {
+      if(isIt) this.disabledGranularities.add('measure')
+      else this.disabledGranularities.delete('measure')
+    },
+
+    updateIsBeatPlayDisabled(isIt) {
+      if(isIt) this.disabledGranularities.add('beat')
+      else this.disabledGranularities.delete('beat')
+    }
+
   }
 }
 </script>

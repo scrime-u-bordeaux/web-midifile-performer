@@ -157,7 +157,8 @@
       </div>
 
       <PerformGranularity
-        v-if="!mfpMidiFile.isMidi"
+        v-show="!mfpMidiFile.isMidi"
+        ref="performGranularity"
         class="perform-granularity"
         :modelValue="musicXmlGranularity"
         @update:modelValue="changeMusicXmlGranularity"
@@ -471,6 +472,8 @@ export default {
     this.performer.addListener('userChangedIndex', this.onIndexJump)
 
     this.performer.addListener('enablePerformChoice', this.reenablePerformChoice)
+    this.performer.addListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
+    this.performer.addListener('disableBeatPlay', this.onIsBeatPlayDisabled)
 
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
@@ -507,6 +510,8 @@ export default {
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
 
     this.performer.removeListener('enablePerformChoice', this.reenablePerformChoice)
+    this.performer.removeListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
+    this.performer.removeListener('disableBeatPlay', this.onIsBeatPlayDisabled)
   },
   methods: {
     ...mapMutations([
@@ -748,6 +753,20 @@ export default {
     reenablePerformChoice() {
       this.musicXmlGranularity = 'all'
       this.$refs.channelManager.enablePerformChoice()
+    },
+
+    onIsMeasurePlayDisabled(isIt) {
+      this.$refs.performGranularity.updateIsMeasurePlayDisabled(isIt)
+    },
+
+    onIsBeatPlayDisabled(isIt) {
+      this.$refs.performGranularity.updateIsBeatPlayDisabled(isIt)
+      
+      // Tell OSMD not to draw time signatures if the file has none,
+      // Because it would give it a 4/4 time signature by default :
+      // See OSMD issue 1574 :
+      // https://github.com/opensheetmusicdisplay/opensheetmusicdisplay/issues/1574
+      this.$refs.sheetMusic.updateHideTimeSignatures(isIt)
     },
 
     getFileExtension(fileName) {
