@@ -77,6 +77,8 @@ export default class PartTrack {
   // when dealing with notes in a chord.
   lastIncrement = 0
 
+  #lastMeasureEnd = 0
+
   // Consists of the base increment in time units for each beat,
   // And the delta at which this criteria begins, as an additive offset
   // To the increment multiplication
@@ -396,6 +398,24 @@ export default class PartTrack {
       this.currentDelta = measureEnd
     }
 
+    const measureTotal = measureEnd - this.#lastMeasureEnd
+
+    if(
+      !!this.#beatCriteria &&
+      measureTotal < this.#beatCriteria.measureTotal
+    ) {
+      this.#beatCriteria.baseDelta = measureEnd
+
+      if(!this.isMeasureImplicit) { // Pickup ("incomplete") measures should always be implicit.
+        // Otherwise, we're probably looking at file corruption.
+        // Still, pursue parsing, as this is not a fatal error, especially not for MFP purposes.
+        console.warn('WARNING : encountered incomplete explicit measure')
+        console.warn('This file may be invalid')
+      }
+    }
+
+    this.#lastMeasureEnd = measureEnd
+
     this.#maxArpOffsetForMeasure = Math.max(this.#arpOffsetSinceLastBackup, this.#maxArpOffsetForMeasure)
     this.#maxFermataOffsetForMeasure = Math.max(this.#fermataOffsetSinceLastBackup, this.#maxFermataOffsetForMeasure)
 
@@ -428,15 +448,23 @@ export default class PartTrack {
 
     const numerator = parseInt(timeSignatureEvent.beats[0], 10)
 
+    const isMeterCompound = numerator % 3 === 0 && numerator !== 3
+
     const beatIncrement =
-      numerator % 3 === 0 && numerator !== 3 ?
+      isMeterCompound ?
         3 * baseUnit : // Compound meter
         baseUnit // Simple or complex meter
+
+    const measureTotal =
+      isMeterCompound ?
+        (numerator / 3) * baseUnit :
+        numerator * baseUnit
 
     const baseDelta = this.currentDelta
 
     this.#beatCriteria = {
       increment: beatIncrement,
+      measureTotal: measureTotal,
       baseDelta: baseDelta
     }
   }

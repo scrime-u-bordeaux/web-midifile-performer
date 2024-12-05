@@ -87,6 +87,8 @@ export default function parseMusicXml(buffer) {
     for(const partID in measure.parts) {
       const partTrack = trackMap.get(partID)
 
+      partTrack.isMeasureImplicit = measure.implicit
+
       const partArray = measure.parts[partID]
 
       // console.log(`Part ${partID} :`, partArray)
