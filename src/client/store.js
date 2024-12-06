@@ -43,7 +43,7 @@ const highlightPalette = new Map([
   ["baseBlue", "#02a7f0"], // "Bleu université" / var(--button-blue)
   ["baseGreen", "#58e28e"], // Keyboard active color / var(--play-perform-green)
   ["autoplayDarkYellow", "#cba034"], // Notes of silent unselected channels, etc. / var(--autoplay-dark-yellow)
-  ["autoplayLightYellow", "#ead9ae"], // Notes of audible unselected channels, etc. / var(--autoplay-light-yellow)
+  ["autoplayLightYellow", "#ffc73b"], // Notes of audible unselected channels, etc. / var(--autoplay-light-yellow)
 
   // OSMD cursor uses <img> with a base64 RGBa PNG src, so we store that
 
@@ -101,6 +101,7 @@ const store = createStore({
       minKeyboardNote,
       maxKeyboardNote,
       keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),
+      keyboardAutoplay: Array(maxKeyboardNote - minKeyboardNote).fill(false),
 
       sequenceLength: 0,
       sequenceStart: 0,
@@ -111,7 +112,7 @@ const store = createStore({
 
       // Whether "auto-playback" is active.
       autoplay: false,
-      
+
       // All set indices where perform mode gives way to "auto-playback",
       // Whether because they only contain events from deselected channels,
       // Are off-beat, or off-measure.
@@ -285,6 +286,9 @@ const store = createStore({
           note.velocity > 0 ?
             currentPlayingMask | channelMask :
             currentPlayingMask & ~channelMask
+
+        state.keyboardAutoplay[note.pitch - state.minKeyboardNote] =
+          state.currentMode !== "silent" && state.playbackTriggers.has(state.sequenceIndex)
       }
     },
     animateNoteOff(state, note) {

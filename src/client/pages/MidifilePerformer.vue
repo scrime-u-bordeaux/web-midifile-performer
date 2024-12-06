@@ -90,9 +90,6 @@
         <Keyboard
           ref="keyboard"
           class="keyboard"
-          :minNote="minKeyboardNote"
-          :maxNote="maxKeyboardNote"
-          :state="keyboardState"
           :whiteNoteWidth="15"/>
 
         <scroll-bar
@@ -364,9 +361,6 @@ export default {
       'mfpMidiFile',
       'currentChannelControls',
       'performerConstructorOptions',
-      'minKeyboardNote',
-      'maxKeyboardNote',
-      'keyboardState',
       'looping',
       'sequenceStart',
       'sequenceEnd',

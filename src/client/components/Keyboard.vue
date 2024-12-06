@@ -9,6 +9,7 @@
           isModeSilent ? 'silent' : 'playOrPerform',
           {
             activeNote: state[n.note - minNote] > 0,
+            autoplay: autoplay[n.note - minNote]
           }]"
           :x="n.x"
           :y="0"
@@ -30,6 +31,7 @@
         <rect class="black-note"
           :class="{
             activeNote: state[n.note - minNote] > 0,
+            autoplay: autoplay[n.note - minNote],
             silent: isModeSilent,
             playOrPerform: !isModeSilent
           }"
@@ -72,6 +74,9 @@
 .activeNote.playOrPerform {
   fill: #58e28e !important;
 }
+.activeNote.playOrPerform.autoplay {
+  fill: var(--autoplay-light-yellow) !important;
+}
 .octave-text {
   fill: grey;
   vertical-align: bottom;
@@ -81,7 +86,7 @@
 </style>
 
 <script>
-import { mapGetters } from 'vuex';
+import { mapState, mapGetters } from 'vuex';
 
 const whiteNoteWidthHeightRatio = 5;
 const blackNoteWidthRatio = 0.65;
@@ -108,13 +113,14 @@ const whites = [ 0,2,4,5,7,9,11 ];
 const blacks = [  1,3,  6,8,10  ];
 
 export default {
-  props: [ 'minNote', 'maxNote', 'whiteNoteWidth', 'state' ],
-  data() {
-    return {
-      noteStates: [],
-    };
-  },
+  props: [ 'whiteNoteWidth' ],
   computed: {
+    ...mapState({
+      state: 'keyboardState',
+      autoplay: 'keyboardAutoplay',
+      minNote: 'minKeyboardNote',
+      maxNote: 'maxKeyboardNote'
+    }),
     ...mapGetters(['isModeSilent']),
 
     noteDims() {
@@ -168,22 +174,6 @@ export default {
         blackNotes,
       };
     },
-  },
-  created() {
-    this.noteStates = [];
-    for (let i = 0; i <= this.maxNote - this.minNote; ++i) {
-      this.noteStates.push(false);
-    }
-  },
-  /*
-  methods: {
-    noteOn(note) {
-      this.noteStates[note.noteNumber - this.minNote] = true;
-    },
-    noteOff(note) {
-      this.noteStates[note.noteNumber - this.minNote] = false;
-    },
-  },
-  //*/
+  }
 };
 </script>
