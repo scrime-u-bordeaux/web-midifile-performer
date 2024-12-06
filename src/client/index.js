@@ -5,8 +5,8 @@ import ioctl, { defaultInputs, DEFAULT_IO_ID } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth, { NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }  from './utilities/Synth';
 
-import parseMusicXml from './utilities/MusicXMLParser'
-import getRootFileFromMxl from './utilities/MXLParser'
+import parseMusicXml from './utilities//musicxml/MusicXMLParser'
+import getRootFileFromMxl from './utilities/musicxml/MXLParser'
 
 import store              from './store';
 import router             from './router';

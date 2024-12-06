@@ -890,6 +890,10 @@ export default {
       this.arpeggioInfo = arpeggioInfo
     },
 
+    updateHideTimeSignatures(shouldHide) {
+      this.osmd.EngravingRules.RenderTimeSignatures = !shouldHide
+    },
+
     getNearestTempoEvent(timeStampInWholeNotes) {
       return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes)
     },

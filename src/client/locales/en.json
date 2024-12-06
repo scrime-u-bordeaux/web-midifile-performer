@@ -69,6 +69,7 @@
     "granularities": {
       "context": "Play...",
       "measure": "Every bar",
+      "beat": "Every beat",
       "all": "Every event"
     },
     "help": "? Help",

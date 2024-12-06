@@ -267,6 +267,7 @@ class MidifilePerformer extends EventEmitter {
 
   #isFileMusicXml = false;
   #measureStartingSetIndices = null;
+  #beatSetIndices = null;
 
   #playbackTriggerDescription = null;
   #playbackTriggers = new Set();
@@ -515,13 +516,31 @@ class MidifilePerformer extends EventEmitter {
     if(
       this.#playbackTriggerDescription?.triggerType === 'channels' ||
       (
-        !this.#isFileMusicXml &&
-        this.#playbackTriggerDescription?.triggerType === 'tempo'
+        (
+          !this.#isFileMusicXml &&
+          this.#playbackTriggerDescription?.triggerType === 'tempo'
+        )
+        ||
+        // Additionally, deactivate tempo-based play when a file is uplodaded
+        // Where it is not possible, because it has no measures or beats to play by
+        // (This is known as free meter)
+        (
+          this.#isFileMusicXml &&
+          (
+            !jsonOrBuffer.hasMeasures &&
+            this.#playbackTriggerDescription?.triggerCriteria === "measure"
+          )
+          ||
+          (
+            !jsonOrBuffer.hasBeats &&
+            this.#playbackTriggerDescription?.triggerCriteria === "beat"
+          )
+        )
       )
     ) {
       this.#playbackTriggerDescription = null
       this.emit('enablePerformChoice') // Re-enable channel perform selection,
-      // In case this is a MIDI and we had it disabled in the previously loaded MusicXML
+      // In case we had it disabled in the previously loaded MusicXML
     }
 
     // ... in-between calculations ... /////////////////////////////////////////
@@ -529,7 +548,7 @@ class MidifilePerformer extends EventEmitter {
     const noteSequenceInfo = convertChronologyToNoteSequence(this.#chronology)
 
     if(this.#isFileMusicXml) {
-      this.#measureStartingSetIndices = new Set(
+      this.#measureStartingSetIndices = jsonOrBuffer.hasMeasures ? new Set(
         // We could also use map() on the chronology ;
         // The result is exactly the same, by virtue of what setStarts *is*.
         noteSequenceInfo.setStarts.map((_, index) => {
@@ -545,11 +564,33 @@ class MidifilePerformer extends EventEmitter {
         }).filter(
           indexOrNull => indexOrNull !== null
         )
-      )
-    } else this.#measureStartingSetIndices = null
+      ) : new Set()
+
+      this.#beatSetIndices = jsonOrBuffer.hasBeats ? new Set(
+        noteSequenceInfo.setStarts.map((_, index) => {
+          const set = getSetUtil(
+            index,
+            noteSequenceInfo.noteSequence,
+            noteSequenceInfo.setStarts,
+            noteSequenceInfo.setEnds
+          )
+
+          return set.some(note => jsonOrBuffer.beatIndices.has(note.index)) ?
+            index : null
+        }).filter(
+          indexOrNull => indexOrNull !== null
+        )
+      ) : new Set()
+
+      this.emit('disableMeasurePlay', !jsonOrBuffer.hasMeasures)
+      this.emit('disableBeatPlay', !jsonOrBuffer.hasBeats)
+    } else {
+      this.#measureStartingSetIndices = null
+      this.#beatSetIndices = null
+    }
 
     if(this.#playbackTriggerDescription?.triggerType === "tempo")
-      this.#setPlaybackTriggersFromMeasures()
+      this.#setPlaybackTriggersFromTempo()
 
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////
 
@@ -851,8 +892,7 @@ class MidifilePerformer extends EventEmitter {
         return
       }
 
-      if(triggerCriteria === 'measure') this.#setPlaybackTriggersFromMeasures()
-      // else if(triggerCriteria === 'beat') ...
+      this.#setPlaybackTriggersFromTempo()
     }
 
     else if(triggerType === 'channels') {
@@ -885,9 +925,21 @@ class MidifilePerformer extends EventEmitter {
     // console.log("Playback set indices : ", this.#playbackTriggers)
   }
 
-  #setPlaybackTriggersFromMeasures() {
-    if(!this.#measureStartingSetIndices) {
-      console.warn("Trying to get measure-based playback triggers from nonexistent measure info")
+  #setPlaybackTriggersFromTempo() {
+
+    if(this.#playbackTriggerDescription.triggerCriteria === 'all')
+      return
+
+    const relevantIndices =
+      this.#playbackTriggerDescription.triggerCriteria === 'measure' ?
+        this.#measureStartingSetIndices :
+        this.#beatSetIndices
+
+    if(!relevantIndices) {
+      console.warn(
+        `Trying to get ${this.#playbackTriggerDescription.triggerCriteria}-based \
+        playback triggers from nonexistent ${this.#playbackTriggerDescription.triggerCriteria} info`
+      )
       console.warn("This should not happen !")
       console.warn("Ignoring request and resetting playback triggers.")
       return new Set()
@@ -897,7 +949,7 @@ class MidifilePerformer extends EventEmitter {
       this.#chronology.filter(
         set => set.type === "start"
       ).map(
-        (_, index) => this.#measureStartingSetIndices.has(index) ? null : index
+        (_, index) => relevantIndices.has(index) ? null : index
       ).filter(
         indexOrNull => indexOrNull !== null
       )

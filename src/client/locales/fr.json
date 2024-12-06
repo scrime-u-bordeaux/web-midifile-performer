@@ -69,6 +69,7 @@
     "granularities": {
       "context": "Jouer...",
       "measure": "À la mesure",
+      "beat": "Au battement",
       "all": "À la note"
     },
     "help": "? Aide",
