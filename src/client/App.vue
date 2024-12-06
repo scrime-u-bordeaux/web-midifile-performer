@@ -50,6 +50,7 @@ export default {
       // 'setKeyboardState',
       'animateNoteOn',
       'animateNoteOff',
+      'channelOff',
       'allNotesOff',
       'setSequenceLength',
       'setSequenceStart',
@@ -83,8 +84,11 @@ export default {
     onNoteOff(note) {
       this.animateNoteOff(note)
     },
+    onChannelOff(channel) {
+      this.channelOff(channel) // update keyboard state
+    },
     onAllNotesOff() {
-      this.allNotesOff(); // update keyboard state
+      this.allNotesOff(); // ditto
     },
     onSequenceChanged(sequenceData) {
       const { length, start, end } = sequenceData;
@@ -145,6 +149,7 @@ export default {
     this.ioctl.addListener('command', this.onCommand);
     this.ioctl.addListener('noteOn', this.onNoteOn);
     this.ioctl.addListener('noteOff', this.onNoteOff);
+    this.ioctl.addListener('channelOff', this.onChannelOff);
     this.ioctl.addListener('allnotesoff', this.allNotesOff);
 
     // We can only load the audio context after MIDI access has been requested.

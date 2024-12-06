@@ -716,7 +716,7 @@ export default {
       // FIXME : this won't work when a longer note is being held...
       // Is there a better way ?
       if(
-        !this.isModeSilent &&
+        this.isModePerform &&
         this.activeNotes.size === 0 &&
         !this.isMouseOverCurrentSet()) this.paintCurrentSet()
     }

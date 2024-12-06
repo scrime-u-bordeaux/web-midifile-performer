@@ -301,6 +301,9 @@ const store = createStore({
           currentPlayingMask & ~channelMask
       }
     },
+    channelOff(state, channel) {
+      state.keyboardState.forEach((_, index) => state.keyboardState[index] &= ~(1 << channel))
+    },
     allNotesOff(state) {
       for (let n = 0; n < state.maxKeyboardNote - state.minKeyboardNote; ++n) {
         state.keyboardState[n] = 0x0;
