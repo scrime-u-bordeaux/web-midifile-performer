@@ -222,6 +222,8 @@ class IOController extends EventEmitter {
         this.outputs[id].send(msg);
       }
     } else this.sampler?.silenceChannel(channel+1)
+
+    this.emit('channelOff', channel+1)
   }
 
   allNotesOff() {

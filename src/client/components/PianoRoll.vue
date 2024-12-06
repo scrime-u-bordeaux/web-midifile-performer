@@ -16,6 +16,16 @@ svg {
   width: inherit;
   height: inherit;
 }
+
+svg :deep(.note) {
+  stroke-width: 1px;
+}
+
+svg :deep(.note.muted) {
+  fill: white;
+  stroke: #666;
+  opacity: 0.7;
+}
 </style>
 
 <script>
@@ -35,7 +45,8 @@ export default {
   props: {
     initialNoteHeight: { default: 4 },
     noteSpacing: { default: 5 },
-    pixelsPerTimeStep: { default: 60 },
+    pixelsPerTimeStep: { default: 90 },
+    minimalNoteWidth: { default: 5}
 
     // remove min and max pitch props from Magenta and always determine from ambitus
   },
@@ -48,7 +59,6 @@ export default {
       height: 0,
       width: 0,
 
-      noteRGB: '#666666',
       noteHeight: this.initialNoteHeight,
 
       sequenceBoundaryWidth: 3, // should we rather make it noteSpacing ?
@@ -90,9 +100,11 @@ export default {
 
   computed: {
     ...mapState([
-      'currentMode', // used only for watcher
+      'currentMode', // used only for watcher,
+      'currentChannelControls', // ditto
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'noteSequence', 'setStarts', 'setEnds',
+      'playbackTriggers',
       'minKeyboardNote', 'keyboardState',
       'highlightPalette',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
@@ -102,18 +114,6 @@ export default {
       'isModeSilent', 'isModePerform',
       'getSet', 'getSetIndex'
     ]),
-
-    activeNoteRGB() {
-      return this.highlightPalette.get(
-        this.isModeSilent ? "baseBlue" : "baseGreen"
-      )
-    },
-
-    currentSetRGB() {
-      return this.highlightPalette.get(
-        this.isModeSilent ? "darkBlue" : "darkGreen"
-      )
-    },
 
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
@@ -147,10 +147,29 @@ export default {
     },
 
     currentMode(newMode, oldMode) {
+      this.updateBaseRectColor()
+
       if(newMode === 'silent') {
         this.stop()
         this.paintCurrentSet()
       }
+    },
+
+    currentChannelControls(newControls, oldControls) {
+      newControls.channelActive.forEach((active, index) => {
+        const channel = index + 1
+
+        this.$refs.svg.querySelectorAll(
+          `rect[data-channel="${channel}"]`
+        ).forEach(rect => {
+          if(active) rect.classList.remove("muted")
+          else rect.classList.add("muted")
+        })
+      })
+    },
+
+    playbackTriggers(newTriggers, oldTriggers) {
+      this.updateBaseRectColor()
     },
 
     noteHeight(newHeight, oldHeight) {
@@ -368,7 +387,7 @@ export default {
         const pos = this.getNotePosition(note)
         if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
 
-        const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
+        const fill = this.getNoteFillColor(note, "disable") // when first drawing, nothing is active
         const fillOpacity = this.getNoteFillOpacity(note)
 
         // Magenta, being written in TS, used custom types here ;
@@ -401,6 +420,7 @@ export default {
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
 
       rect.classList.add('note')
+
       rect.setAttribute('fill', fill)
       rect.setAttribute('fill-opacity', fillOpacity)
 
@@ -475,20 +495,20 @@ export default {
       this.paintNoteSet(this.sequenceIndex, "current")
     },
 
-    getNoteFillColor(type = "refresh") {
+    getNoteFillColor(nsNote, type = "refresh") {
       switch(type) {
         case "current":
-          return this.currentSetRGB
+          return this.currentSetRGB(nsNote)
           break
 
         case "refresh":
         case "mouse":
-          return this.activeNoteRGB
+          return this.activeNoteRGB(nsNote)
           break
 
         case "disable":
         default:
-          return this.noteRGB
+          return this.noteRGB(nsNote)
           break
       }
     },
@@ -510,7 +530,7 @@ export default {
 
         rect.classList.add(type)
 
-        rect.setAttribute('fill', this.getNoteFillColor(type))
+        rect.setAttribute('fill', this.getNoteFillColor(note, type))
       })
     },
 
@@ -528,10 +548,44 @@ export default {
         rect.classList.remove(type)
 
         const fill = this.getNoteFillColor(
+          this.noteSequence[this.getNoteIndexFromRect(rect)],
           rect.classList.contains("current") ? "current" : "disable"
         )
         rect.setAttribute('fill', fill)
       })
+    },
+
+    updateBaseRectColor() {
+      const allRects = this.$refs.svg.querySelectorAll(
+        `rect.note`
+      )
+
+      allRects.forEach(rect => rect.setAttribute('fill',
+        this.getNoteFillColor(
+          this.noteSequence[this.getNoteIndexFromRect(rect)],
+          rect.classList.contains("current") ? "current" :
+            rect.classList.contains("refresh") || rect.classList.contains("mouse") ? "refresh" : "disable"
+        )
+      ))
+    },
+
+    activeNoteRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayLightYellow")
+      return this.highlightPalette.get(
+        this.isModeSilent ? "baseBlue" : "baseGreen"
+      )
+    },
+
+    currentSetRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
+      return this.highlightPalette.get(
+        this.isModeSilent ? "darkBlue" : "darkGreen"
+      )
+    },
+
+    noteRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
+      else return "#666666"
     },
 
     // -------------------------------------------------------------------------
@@ -550,9 +604,11 @@ export default {
         tentativeX
 
       const w = Math.max(
-        1, // make notes at least one pixel wide
+        this.minimalNoteWidth, // make notes at least one pixel wide
         this.pixelsPerTimeStep * duration - this.noteSpacing + 1
       )
+
+      // console.log(`Drawing note at x = ${x} with width ${w}`)
 
       // Here too, premature rounding is necessary.
       // Note that Math.round() is not distributive.
@@ -688,7 +744,7 @@ export default {
       // FIXME : this won't work when a longer note is being held...
       // Is there a better way ?
       if(
-        !this.isModeSilent &&
+        this.isModePerform &&
         this.activeNotes.size === 0 &&
         !this.isMouseOverCurrentSet()) this.paintCurrentSet()
     }

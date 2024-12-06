@@ -37,18 +37,21 @@ const midifiles = [
 const highlightPalette = new Map([
 
   // These will be used for the play/pause button (not yet), keyboard,
-  // And for highlight in the piano roll (not yet).
+  // And for highlight in the piano roll.
   // Note that they sadly have to be duplicated from CSS definitions
 
   ["baseBlue", "#02a7f0"], // "Bleu université" / var(--button-blue)
   ["baseGreen", "#58e28e"], // Keyboard active color / var(--play-perform-green)
+  ["autoplayDarkYellow", "#cba034"], // Notes of silent unselected channels, etc. / var(--autoplay-dark-yellow)
+  ["autoplayLightYellow", "#ffc73b"], // Notes of audible unselected channels, etc. / var(--autoplay-light-yellow)
 
   // OSMD cursor uses <img> with a base64 RGBa PNG src, so we store that
 
   // baseBlue with 0.4 alpha
   ["cursorBlue", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2O8+uFv2uqnvxnWPvrNcO3jXwZCQIufmSFYjpUhVJqVAQBQYAwqiJrEUwAAAABJRU5ErkJggg=="],
-  // baseBlue with 0.5 alpha
+  // baseGreen with 0.5 alpha
   ["cursorGreen", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2N8/PN1w4kfdxhOfrvF8OTXGwZCQIZNhMGcS43BgkOFAQBeUQxJfg+WeAAAAABJRU5ErkJggg=="],
+  ["cursorAutoplay", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAABmJLR0QAAwA7AJaPsf2vAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH6AwGBh8fkof+SwAAACZJREFUCNdj/P//fxoDww4Ghl97GBg+PWQgCPjkGRjYXBkYGNgZAJ1mCCX79T5PAAAAAElFTkSuQmCC"],
 
   // SheetMusic will use a darker variant to highlight notes on click/hover.
   // (To contrast with its cursors)
@@ -98,6 +101,7 @@ const store = createStore({
       minKeyboardNote,
       maxKeyboardNote,
       keyboardState: Array(maxKeyboardNote - minKeyboardNote).fill(0x0),
+      keyboardAutoplay: Array(maxKeyboardNote - minKeyboardNote).fill(false),
 
       sequenceLength: 0,
       sequenceStart: 0,
@@ -105,6 +109,14 @@ const store = createStore({
       sequenceIndex: 0,
       playbackSpeed: 1,
       currentMode: 'silent',
+
+      // Whether "auto-playback" is active.
+      autoplay: false,
+
+      // All set indices where perform mode gives way to "auto-playback",
+      // Whether because they only contain events from deselected channels,
+      // Are off-beat, or off-measure.
+      playbackTriggers: new Set(),
 
       midiAccessRequested: false,
       userClickOccurred: false,
@@ -211,6 +223,21 @@ const store = createStore({
     setSetEnds(state, ends) {
       state.setEnds = ends;
     },
+
+    setAutoplay(state, autoplay) {
+      state.autoplay = autoplay
+    },
+    setPlaybackTriggers(state, playbackTriggers) {
+      state.playbackTriggers = structuredClone(playbackTriggers)
+
+      state.noteSequence.forEach(note => note.isPlaybackNote = false)
+
+      state.playbackTriggers.forEach(setIndex => {
+        const set = getSetUtil(setIndex, state.noteSequence, state.setStarts, state.setEnds)
+        set.forEach(note => note.isPlaybackNote = true)
+      })
+    },
+
     setActiveNotes(state, notes) {
       state.activeNotes = notes;
     },
@@ -259,6 +286,9 @@ const store = createStore({
           note.velocity > 0 ?
             currentPlayingMask | channelMask :
             currentPlayingMask & ~channelMask
+
+        state.keyboardAutoplay[note.pitch - state.minKeyboardNote] =
+          state.currentMode !== "silent" && state.playbackTriggers.has(state.sequenceIndex)
       }
     },
     animateNoteOff(state, note) {
@@ -270,6 +300,9 @@ const store = createStore({
         state.keyboardState[note.pitch - state.minKeyboardNote] =
           currentPlayingMask & ~channelMask
       }
+    },
+    channelOff(state, channel) {
+      state.keyboardState.forEach((_, index) => state.keyboardState[index] &= ~(1 << channel))
     },
     allNotesOff(state) {
       for (let n = 0; n < state.maxKeyboardNote - state.minKeyboardNote; ++n) {
