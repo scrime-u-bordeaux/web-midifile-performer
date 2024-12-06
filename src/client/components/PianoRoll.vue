@@ -16,6 +16,16 @@ svg {
   width: inherit;
   height: inherit;
 }
+
+svg :deep(.note) {
+  stroke-width: 1px;
+}
+
+svg :deep(.note.muted) {
+  fill: white;
+  stroke: #666;
+  opacity: 0.7;
+}
 </style>
 
 <script>
@@ -90,7 +100,8 @@ export default {
 
   computed: {
     ...mapState([
-      'currentMode', // used only for watcher
+      'currentMode', // used only for watcher,
+      'currentChannelControls',
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'noteSequence', 'setStarts', 'setEnds',
       'playbackTriggers',
@@ -142,6 +153,19 @@ export default {
         this.stop()
         this.paintCurrentSet()
       }
+    },
+
+    currentChannelControls(newControls, oldControls) {
+      newControls.channelActive.forEach((active, index) => {
+        const channel = index + 1
+
+        this.$refs.svg.querySelectorAll(
+          `rect[data-channel="${channel}"]`
+        ).forEach(rect => {
+          if(active) rect.classList.remove("muted")
+          else rect.classList.add("muted")
+        })
+      })
     },
 
     playbackTriggers(newTriggers, oldTriggers) {
@@ -396,6 +420,7 @@ export default {
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
 
       rect.classList.add('note')
+
       rect.setAttribute('fill', fill)
       rect.setAttribute('fill-opacity', fillOpacity)
 
