@@ -397,8 +397,14 @@ class MidifilePerformer extends EventEmitter {
     this.performer.setNoteEventsCallback(notes => {
       // console.log("Rendering")
       const receivedNotes = noteEventsFromNoteDataVector(notes)
-
       const notesToEmit = this.mode === 'perform' ? [...this.pendingEndSet, ...receivedNotes] : receivedNotes
+
+      const isStartingSet = notesToEmit.filter(note => note.on).length > 0
+
+      // This was lifted from #playNextSet(), where it was called immediately after render,
+      // Thereby transmitting the wrong index immediately rather than waiting.
+      if (isStartingSet) this.emit('index', this.#getCurrentIndex());
+
       // console.log("Emitting", notesToEmit)
       this.emit('notes', notesToEmit)
 
@@ -411,8 +417,6 @@ class MidifilePerformer extends EventEmitter {
         // console.log("Emptying pending end set (was ", this.pendingEndSet, ")")
         this.pendingEndSet = []
       }
-
-      const isStartingSet = notesToEmit.filter(note => note.on).length > 0
 
       if(notesToEmit.length > 0 && this.mode === 'perform' || isStartingSet) {
         // in passive playback, only redraw on note on's
@@ -589,9 +593,6 @@ class MidifilePerformer extends EventEmitter {
       this.#beatSetIndices = null
     }
 
-    if(this.#playbackTriggerDescription?.triggerType === "tempo")
-      this.#setPlaybackTriggersFromTempo()
-
     // NOTIFY CHANGES TO CONSUMERS /////////////////////////////////////////////
 
     this.emit('sequence', {
@@ -604,6 +605,9 @@ class MidifilePerformer extends EventEmitter {
       'noteSequenceInfo',
       noteSequenceInfo
     )
+
+    if(this.#playbackTriggerDescription?.triggerType === "tempo")
+      this.updatePlaybackTriggers(this.#playbackTriggerDescription)
   }
 
   clear() {
@@ -731,6 +735,7 @@ class MidifilePerformer extends EventEmitter {
     }
 
     this.emit('mode', this.mode)
+    this.emit('autoplay', this.#noInterruptFlag)
   }
 
   command(cmd, noUpdateSemaphore = false) {
@@ -791,7 +796,7 @@ class MidifilePerformer extends EventEmitter {
       // Releasing the key does not change the index
       // So this flag only becomes false on key press
       this.repeatIndexFromPretendTrigger = false;
-      this.emit('index', this.#getCurrentIndex());
+      this.emit('index', this.#getCurrentIndex()); // TODO : is this still needed now that this emit is present in the render callback ?
 
       if(!this.performVelocitySaved) this.performVelocitySaved = true;
       this.#refreshMaxVelocities(cmd.velocity)
@@ -892,7 +897,35 @@ class MidifilePerformer extends EventEmitter {
         return
       }
 
-      this.#setPlaybackTriggersFromTempo()
+      if(this.#playbackTriggerDescription.triggerCriteria === 'all') {
+        this.emit('playbackTriggers', this.#playbackTriggers)
+        return
+      }
+
+      const relevantIndices =
+        this.#playbackTriggerDescription.triggerCriteria === 'measure' ?
+          this.#measureStartingSetIndices :
+          this.#beatSetIndices
+
+      if(!relevantIndices) {
+        console.warn(
+          `Trying to get ${this.#playbackTriggerDescription.triggerCriteria}-based \
+          playback triggers from nonexistent ${this.#playbackTriggerDescription.triggerCriteria} info`
+        )
+        console.warn("This should not happen !")
+        console.warn("Ignoring request and resetting playback triggers.")
+        return new Set()
+      }
+
+      this.#playbackTriggers = new Set(
+        this.#chronology.filter(
+          set => set.type === "start"
+        ).map(
+          (_, index) => relevantIndices.has(index) ? null : index
+        ).filter(
+          indexOrNull => indexOrNull !== null
+        )
+      )
     }
 
     else if(triggerType === 'channels') {
@@ -922,38 +955,9 @@ class MidifilePerformer extends EventEmitter {
       )
     }
 
+    this.emit('playbackTriggers', this.#playbackTriggers)
+
     // console.log("Playback set indices : ", this.#playbackTriggers)
-  }
-
-  #setPlaybackTriggersFromTempo() {
-
-    if(this.#playbackTriggerDescription.triggerCriteria === 'all')
-      return
-
-    const relevantIndices =
-      this.#playbackTriggerDescription.triggerCriteria === 'measure' ?
-        this.#measureStartingSetIndices :
-        this.#beatSetIndices
-
-    if(!relevantIndices) {
-      console.warn(
-        `Trying to get ${this.#playbackTriggerDescription.triggerCriteria}-based \
-        playback triggers from nonexistent ${this.#playbackTriggerDescription.triggerCriteria} info`
-      )
-      console.warn("This should not happen !")
-      console.warn("Ignoring request and resetting playback triggers.")
-      return new Set()
-    }
-
-    this.#playbackTriggers = new Set(
-      this.#chronology.filter(
-        set => set.type === "start"
-      ).map(
-        (_, index) => relevantIndices.has(index) ? null : index
-      ).filter(
-        indexOrNull => indexOrNull !== null
-      )
-    )
   }
 
   /**
@@ -1031,8 +1035,6 @@ class MidifilePerformer extends EventEmitter {
 
       // console.log("Set new timeout", this.timeout)
 
-      if (start) this.emit('index', this.#getCurrentIndex());
-
       // Ensure perform won't cut off a note too soon, nor move to the next one too early.
       // Ending sets can be interrupted just fine (right ?)
       this.interruptionGuard = new InterruptionGuard(start ? (dt + pair.end.dt) / this.playbackSpeed : 0)
@@ -1109,7 +1111,10 @@ class MidifilePerformer extends EventEmitter {
 
     this.#playNextSet(pair, true, true);
 
-    if(emit) this.emit('mode', this.mode)
+    if(emit) {
+      this.emit('mode', this.mode)
+      this.emit('autoplay', this.#noInterruptFlag)
+    }
   }
 
   // TODO : compare performance to lodash.isEqual.

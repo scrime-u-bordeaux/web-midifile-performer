@@ -471,6 +471,8 @@ export default {
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.addListener('userChangedIndex', this.onIndexJump)
 
+    this.performer.addListener('autoplay', this.setAutoplay)
+    this.performer.addListener('playbackTriggers', this.setPlaybackTriggers)
     this.performer.addListener('enablePerformChoice', this.reenablePerformChoice)
     this.performer.addListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
     this.performer.addListener('disableBeatPlay', this.onIsBeatPlayDisabled)
@@ -509,6 +511,8 @@ export default {
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
     this.performer.removeListener('userChangedIndex', this.onIndexJump)
 
+    this.performer.removeListener('autoplay', this.setAutoplay)
+    this.performer.removeListener('playbackTriggers', this.setPlaybackTriggers)
     this.performer.removeListener('enablePerformChoice', this.reenablePerformChoice)
     this.performer.removeListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
     this.performer.removeListener('disableBeatPlay', this.onIsBeatPlayDisabled)
@@ -520,6 +524,9 @@ export default {
       'setNoteSequence',
       'setSetStarts',
       'setSetEnds',
+
+      'setAutoplay',
+      'setPlaybackTriggers',
 
       'resetChannelControls'
     ]),
@@ -708,6 +715,20 @@ export default {
       this.$emit("canPerform", true)
     },
 
+    onIsMeasurePlayDisabled(isIt) {
+      this.$refs.performGranularity.updateIsMeasurePlayDisabled(isIt)
+    },
+
+    onIsBeatPlayDisabled(isIt) {
+      this.$refs.performGranularity.updateIsBeatPlayDisabled(isIt)
+
+      // Tell OSMD not to draw time signatures if the file has none,
+      // Because it would give it a 4/4 time signature by default :
+      // See OSMD issue 1574 :
+      // https://github.com/opensheetmusicdisplay/opensheetmusicdisplay/issues/1574
+      this.$refs.sheetMusic.updateHideTimeSignatures(isIt)
+    },
+
     // -------------------------------------------------------------------------
     // -------------------------------MISC--------------------------------------
     // -------------------------------------------------------------------------
@@ -753,20 +774,6 @@ export default {
     reenablePerformChoice() {
       this.musicXmlGranularity = 'all'
       this.$refs.channelManager.enablePerformChoice()
-    },
-
-    onIsMeasurePlayDisabled(isIt) {
-      this.$refs.performGranularity.updateIsMeasurePlayDisabled(isIt)
-    },
-
-    onIsBeatPlayDisabled(isIt) {
-      this.$refs.performGranularity.updateIsBeatPlayDisabled(isIt)
-      
-      // Tell OSMD not to draw time signatures if the file has none,
-      // Because it would give it a 4/4 time signature by default :
-      // See OSMD issue 1574 :
-      // https://github.com/opensheetmusicdisplay/opensheetmusicdisplay/issues/1574
-      this.$refs.sheetMusic.updateHideTimeSignatures(isIt)
     },
 
     getFileExtension(fileName) {

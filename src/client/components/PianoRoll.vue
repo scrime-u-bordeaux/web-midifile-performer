@@ -48,7 +48,6 @@ export default {
       height: 0,
       width: 0,
 
-      noteRGB: '#666666',
       noteHeight: this.initialNoteHeight,
 
       sequenceBoundaryWidth: 3, // should we rather make it noteSpacing ?
@@ -93,6 +92,7 @@ export default {
       'currentMode', // used only for watcher
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'noteSequence', 'setStarts', 'setEnds',
+      'playbackTriggers',
       'minKeyboardNote', 'keyboardState',
       'highlightPalette',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
@@ -102,18 +102,6 @@ export default {
       'isModeSilent', 'isModePerform',
       'getSet', 'getSetIndex'
     ]),
-
-    activeNoteRGB() {
-      return this.highlightPalette.get(
-        this.isModeSilent ? "baseBlue" : "baseGreen"
-      )
-    },
-
-    currentSetRGB() {
-      return this.highlightPalette.get(
-        this.isModeSilent ? "darkBlue" : "darkGreen"
-      )
-    },
 
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
@@ -147,10 +135,16 @@ export default {
     },
 
     currentMode(newMode, oldMode) {
+      this.updateBaseRectColor()
+
       if(newMode === 'silent') {
         this.stop()
         this.paintCurrentSet()
       }
+    },
+
+    playbackTriggers(newTriggers, oldTriggers) {
+      this.updateBaseRectColor()
     },
 
     noteHeight(newHeight, oldHeight) {
@@ -368,7 +362,7 @@ export default {
         const pos = this.getNotePosition(note)
         if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
 
-        const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
+        const fill = this.getNoteFillColor(note, "disable") // when first drawing, nothing is active
         const fillOpacity = this.getNoteFillOpacity(note)
 
         // Magenta, being written in TS, used custom types here ;
@@ -475,20 +469,20 @@ export default {
       this.paintNoteSet(this.sequenceIndex, "current")
     },
 
-    getNoteFillColor(type = "refresh") {
+    getNoteFillColor(nsNote, type = "refresh") {
       switch(type) {
         case "current":
-          return this.currentSetRGB
+          return this.currentSetRGB(nsNote)
           break
 
         case "refresh":
         case "mouse":
-          return this.activeNoteRGB
+          return this.activeNoteRGB(nsNote)
           break
 
         case "disable":
         default:
-          return this.noteRGB
+          return this.noteRGB(nsNote)
           break
       }
     },
@@ -510,7 +504,7 @@ export default {
 
         rect.classList.add(type)
 
-        rect.setAttribute('fill', this.getNoteFillColor(type))
+        rect.setAttribute('fill', this.getNoteFillColor(note, type))
       })
     },
 
@@ -528,10 +522,44 @@ export default {
         rect.classList.remove(type)
 
         const fill = this.getNoteFillColor(
+          this.noteSequence[this.getNoteIndexFromRect(rect)],
           rect.classList.contains("current") ? "current" : "disable"
         )
         rect.setAttribute('fill', fill)
       })
+    },
+
+    updateBaseRectColor() {
+      const allRects = this.$refs.svg.querySelectorAll(
+        `rect.note`
+      )
+
+      allRects.forEach(rect => rect.setAttribute('fill',
+        this.getNoteFillColor(
+          this.noteSequence[this.getNoteIndexFromRect(rect)],
+          rect.classList.contains("current") ? "current" :
+            rect.classList.contains("refresh") || rect.classList.contains("mouse") ? "refresh" : "disable"
+        )
+      ))
+    },
+
+    activeNoteRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayLightYellow")
+      return this.highlightPalette.get(
+        this.isModeSilent ? "baseBlue" : "baseGreen"
+      )
+    },
+
+    currentSetRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
+      return this.highlightPalette.get(
+        this.isModeSilent ? "darkBlue" : "darkGreen"
+      )
+    },
+
+    noteRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
+      else return "#666666"
     },
 
     // -------------------------------------------------------------------------

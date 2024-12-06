@@ -28,6 +28,7 @@ export default {
       'currentMode', // used for watcher only
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
+      'autoplay', 'playbackTriggers',
       'noteSequence', 'setStarts', 'setEnds', 'activeNotes', 'highlightPalette',
       'osmdCursorAnchors', 'osmdSetCoordinates',
       'playOnClickInSilentMode', 'playOnClickInPerformMode'
@@ -37,10 +38,6 @@ export default {
       'isModeSilent', 'isModePerform',
       'getSet', 'getSetIndex'
     ]),
-
-    activeNoteRGB() {
-      return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
-    },
 
     start() {
       return this.osmd.cursors[0]
@@ -110,8 +107,6 @@ export default {
 
       drawn: false,
 
-      noteRGB: '#000000',
-
       zoom: 0.5,
 
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
@@ -177,6 +172,8 @@ export default {
 
     currentMode(newMode, oldMode) {
       if(!this.drawn || this.shouldNotAct) return
+
+      this.unpaint('all', 'refresh')
       this.updateCursorColor()
 
       if(newMode === 'silent') this.stop()
@@ -208,6 +205,12 @@ export default {
           note => note.isArpeggiatedChordNote = true
         )
       })
+    },
+
+    playbackTriggers(newTriggers, oldTriggers) {
+      if(!this.drawn || this.shouldNotAct) return
+      this.unpaint('all', 'refresh')
+      this.updateCursorColor()
     },
 
     // TODO : implement zoom on wheel like the piano roll.
@@ -1166,7 +1169,10 @@ export default {
     // -------------------------------------------------------------------------
 
     updateCursorColor() {
-      this.cursor.cursorElement.src = this.highlightPalette.get(
+      if(this.autoplay || this.playbackTriggers.has(this.sequenceIndex))
+        this.cursor.cursorElement.src = this.highlightPalette.get("cursorAutoplay")
+
+      else this.cursor.cursorElement.src = this.highlightPalette.get(
         this.isModeSilent ? "cursorBlue" : "cursorGreen"
       )
     },
@@ -1372,33 +1378,66 @@ export default {
         this.noteHeadsHighlightedByRefresh :
         this.noteHeadsHighlightedByMouse
 
-      nsNotes.map(
-        nsNote => this.nsNotesToGNoteHeads.get(nsNote)
-      ).forEach((gNoteHead, index) => {
+      nsNotes.forEach((nsNote, index) => {
+        const gNoteHead = this.nsNotesToGNoteHeads.get(nsNote)
+
         if(!gNoteHead) {
           console.error("Could not find matching notehead for noteSequence note",
             nsNotes[index]
           )
           return
         }
-        gNoteHead.setAttribute('fill', this.activeNoteRGB)
+
+        gNoteHead.setAttribute('fill', this.activeNoteRGB(nsNote))
         highlightGroup.push(gNoteHead)
       })
     },
 
-    unpaint(paintType = "mouse") {
+    unpaint(paintType = "mouse", except = null) {
 
-      const notesToUnpaint =
-        paintType === "mouse" ?
-        this.noteHeadsHighlightedByMouse :
-        this.noteHeadsHighlightedByRefresh
+      const targetedNotes = this.resolvePaintGroup(paintType)
+      const untouchedNotes = this.resolvePaintGroup(except)
+      const notesToUnpaint = new Set(new Set(targetedNotes).difference(new Set(untouchedNotes)))
 
       notesToUnpaint.forEach(gNoteHead =>
-        gNoteHead.setAttribute('fill', this.noteRGB)
+        gNoteHead.setAttribute('fill', this.noteRGB(this.gNoteHeadsToNsNotes.get(gNoteHead)))
       )
 
       if(paintType === "mouse") this.noteHeadsHighlightedByMouse = []
-      else this.noteHeadsHighlightedByRefresh = []
+      else if(paintType === "refresh") this.noteHeadsHighlightedByRefresh = []
+    },
+
+    activeNoteRGB(nsNote) {
+      // TODO : yes, the light and dark shades are swapped for autoplay.
+      // That is because unlike other notes, the user can see the transition between their two shades,
+      // And going from light to dark on hover feels wrong.
+      // We do lose on visibility when the curser passes autoplay sets,
+      // But it's just one or the other.
+      // (Or finding a better autoplay color...)
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayLightYellow")
+      else return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
+    },
+
+    noteRGB(nsNote) {
+      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
+      else return "#000000"
+    },
+
+    resolvePaintGroup(paintType) {
+      let paintGroup = []
+
+      switch(paintType) {
+        case "mouse":
+          paintGroup = this.noteHeadsHighlightedByMouse
+          break
+        case "refresh":
+          paintGroup = this.noteHeadsHighlightedByRefresh
+          break
+        case 'all':
+          paintGroup = Array.from(this.gNoteHeadsToNsNotes.keys())
+      }
+
+      return paintGroup
     }
   }
 }
