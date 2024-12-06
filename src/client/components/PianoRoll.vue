@@ -101,7 +101,7 @@ export default {
   computed: {
     ...mapState([
       'currentMode', // used only for watcher,
-      'currentChannelControls',
+      'currentChannelControls', // ditto
       'sequenceStart', 'sequenceEnd', 'sequenceIndex',
       'noteSequence', 'setStarts', 'setEnds',
       'playbackTriggers',

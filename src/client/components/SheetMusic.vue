@@ -11,6 +11,10 @@
   overflow: auto;
   scroll-behavior: smooth;
 }
+
+.osmd-container :deep(path.muted) {
+  opacity: 0.2;
+}
 </style>
 
 <script>
@@ -26,6 +30,7 @@ export default {
   computed: {
     ...mapState([
       'currentMode', // used for watcher only
+      'currentChannelControls', // ditto
       'mfpMidiFile',
       'sequenceStart', 'sequenceIndex', 'sequenceEnd',
       'autoplay', 'playbackTriggers',
@@ -177,6 +182,23 @@ export default {
       this.updateCursorColor()
 
       if(newMode === 'silent') this.stop()
+    },
+
+    currentChannelControls(newControls, oldControls) {
+      if(!this.drawn || this.shouldNotAct) return
+
+      const svg = this.$refs.osmdContainer.querySelector("#osmdSvgPage1")
+
+      newControls.channelActive.forEach((active, index) => {
+        const channel = index + 1
+
+        svg.querySelectorAll(
+          `path[data-channel="${channel}"]`
+        ).forEach(gNoteHead => {
+          if(active) gNoteHead.classList.remove("muted")
+          else gNoteHead.classList.add("muted")
+        })
+      })
     },
 
     sequenceStart(newStart, oldStart) {
@@ -850,6 +872,8 @@ export default {
       }
 
       if(!!usedNotesOfSet) usedNotesOfSet.add(nsNote)
+
+      gNoteHead.dataset['channel'] = nsNote.channel
 
       this.gNoteHeadsToNsNotes.set(gNoteHead, nsNote)
       this.nsNotesToGNoteHeads.set(nsNote, gNoteHead)
