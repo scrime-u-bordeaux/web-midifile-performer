@@ -35,7 +35,8 @@ export default {
   props: {
     initialNoteHeight: { default: 4 },
     noteSpacing: { default: 5 },
-    pixelsPerTimeStep: { default: 60 },
+    pixelsPerTimeStep: { default: 90 },
+    minimalNoteWidth: { default: 5}
 
     // remove min and max pitch props from Magenta and always determine from ambitus
   },
@@ -578,9 +579,11 @@ export default {
         tentativeX
 
       const w = Math.max(
-        1, // make notes at least one pixel wide
+        this.minimalNoteWidth, // make notes at least one pixel wide
         this.pixelsPerTimeStep * duration - this.noteSpacing + 1
       )
+
+      // console.log(`Drawing note at x = ${x} with width ${w}`)
 
       // Here too, premature rounding is necessary.
       // Note that Math.round() is not distributive.
