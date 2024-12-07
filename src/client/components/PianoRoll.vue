@@ -162,7 +162,10 @@ export default {
         this.$refs.svg.querySelectorAll(
           `rect[data-channel="${channel}"]`
         ).forEach(rect => {
-          if(active) rect.classList.remove("muted")
+          if(active) {
+            rect.classList.remove("muted")
+            this.$refs.svg.insertBefore(rect, null) // make sure unmuted notes are on top of muted ones
+          }
           else rect.classList.add("muted")
         })
       })
