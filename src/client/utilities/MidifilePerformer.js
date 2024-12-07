@@ -3,7 +3,6 @@ import { parseArrayBuffer } from 'midi-json-parser';
 import { encode }           from 'json-midi-encoder';
 import MidiPlayer           from 'midi-player-js';
 import Performer            from 'midifile-performer';
-import AllNoteEventsAnalyzer from './AllNoteEventsAnalyzer';
 
 import { convertChronologyToNoteSequence, getSetUtil } from './NoteSequenceUtils'
 
@@ -146,8 +145,6 @@ function mergeTracks({ division, format, tracks }) {
   });
 
   const allNoteEvents = [];
-  const allVisualizerNotes = []
-  const visualizerNoteMap = new Map()
 
   // in case there is no tempo definition in the file
   let tickDuration = defaultTickDuration;
@@ -282,7 +279,6 @@ class MidifilePerformer extends EventEmitter {
   constructor() {
     super();
     this.performer = null;
-    this.analyzer = new AllNoteEventsAnalyzer();
 
     this.index = 0;
     this.playbackSpeed = 1;
@@ -357,7 +353,6 @@ class MidifilePerformer extends EventEmitter {
     }
 
     const allNoteEvents = mergeTracks(midiJson);
-    this.analyzer.analyze(allNoteEvents);
 
     // FEED THE PERFORMER //////////////////////////////////////////////////////
 
