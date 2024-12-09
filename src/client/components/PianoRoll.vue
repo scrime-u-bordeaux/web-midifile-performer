@@ -19,12 +19,14 @@ svg {
 
 svg :deep(.note) {
   stroke-width: 1px;
+  filter: drop-shadow(3px 3px 1px #ccc)
 }
 
 svg :deep(.note.muted) {
   fill: white;
   stroke: #666;
   opacity: 0.7;
+  filter: none;
 }
 </style>
 
