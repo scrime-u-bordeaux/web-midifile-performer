@@ -1,4 +1,6 @@
 import {
+  MICROSECONDS_PER_MINUTE,
+
   DYN_SFZ,
 
   DEFAULT_DELTA,
@@ -30,7 +32,6 @@ import {
 
 import {
   getChannelChangePseudoEvent,
-  getTempoEvent,
   isArpeggiatedChordNote
 } from '../util'
 
@@ -196,8 +197,15 @@ export default class PartTrack {
     this.#events.push(midiNoteOffEvent)
   }
 
-  addTempoEvent(tempoEvent) {
-    this.#events.push(getTempoEvent(tempoEvent, this.currentDelta))
+  addTempoEvent(xmlSound) {
+    this.#events.push({
+      delta: this.currentDelta,
+      setTempo : {
+        // MusicXML tempo is defined in quarter notes per minute,
+        // We want it in microseconds per quarter note.
+        microsecondsPerQuarter: MICROSECONDS_PER_MINUTE / parseInt(xmlSound.tempo, 10)
+      }
+    })
   }
 
   backup(event) {
@@ -800,14 +808,12 @@ export default class PartTrack {
   convertEventsToRelative() {
     this.#events.sort((eventA, eventB) => eventA.delta - eventB.delta)
 
-    let refDelta = 0
-    this.#events.forEach((event, index) => {
-      if(index === 0) event.delta = 0
-      else {
-        const absDelta = event.delta
-        event.delta = event.delta - refDelta
-        if(absDelta != refDelta) refDelta = absDelta
-      }
+    let refDelta = this.#events[0].delta
+
+    this.#events.forEach(event => {
+      const absDelta = event.delta
+      event.delta = event.delta - refDelta
+      if(absDelta != refDelta) refDelta = absDelta
     })
   }
 }
