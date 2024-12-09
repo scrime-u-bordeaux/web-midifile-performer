@@ -1,5 +1,3 @@
-export const DEFAULT_TEMPO = 500000 // 500000 us/quarter note = 0.5 seconds/quarter note = 120 BPM if the beat is X/4
-
 // Our underlying parsing library tasked with converting MusicXML to JSON always provides a dynamics value for notes.
 // This means we cannot distinguish between notes that carry it or not to apply local override of dynamics from the notated value.
 // Until this is fixed (an issue has been opened at https://github.com/jocelyn-stericker/musicxml-interfaces/issues/17),

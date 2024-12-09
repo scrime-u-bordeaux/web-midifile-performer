@@ -26,6 +26,15 @@ import { noteMapKey } from '../utilities/NoteSequenceUtils'
 
 const TAB_CLEF = 4 // Internal OSMD enum not accessible here
 
+const DEFAULT_TEMPO_EVENT = {
+  usDate: 0,
+  delta: 0,
+  setTempo: {
+    // 500000 us/quarter note = 0.5 seconds/quarter note = 120 BPM if the beat is X/4
+    microsecondsPerQuarter: 500000
+  }
+}
+
 export default {
   computed: {
     ...mapState([
@@ -922,7 +931,7 @@ export default {
     },
 
     getNearestTempoEvent(timeStampInWholeNotes) {
-      return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes)
+      return this.tempoEvents.findLast(event => event.delta <= timeStampInWholeNotes) || DEFAULT_TEMPO_EVENT
     },
 
     getNearestChannel(partId, timeStampInWholeNotes) {

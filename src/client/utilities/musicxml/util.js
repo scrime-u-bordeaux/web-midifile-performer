@@ -5,15 +5,6 @@ import {
   MICROSECONDS_PER_MINUTE
 } from './constants'
 
-export function getDefaultTempoEvent() {
-  return {
-    delta: DEFAULT_DELTA,
-    setTempo: {
-      microsecondsPerQuarter: DEFAULT_TEMPO
-    }
-  }
-}
-
 export function getTempoEvent(xmlSound, currentDelta) {
   return {
     delta: currentDelta,

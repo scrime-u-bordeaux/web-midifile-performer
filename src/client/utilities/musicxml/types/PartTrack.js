@@ -30,7 +30,6 @@ import {
 
 import {
   getChannelChangePseudoEvent,
-  getDefaultTempoEvent,
   getTempoEvent,
   isArpeggiatedChordNote
 } from '../util'
@@ -96,10 +95,11 @@ export default class PartTrack {
   #lastArpeggiatedChordDelta = null
   lastArpeggiatedChord = null
 
-  // Some files may not provide a default tempo event.
-  // The MFP.js parser assumes the default tempo anyway,
-  // But just to be safe, we provide an event for it to start.
-  #events = [getDefaultTempoEvent()]
+  // do NOT add a default tempo event ;
+  // In multi-track files, this causes the tempo to revert to 120 BPM,
+  // Due to the default event on the second track onwards.
+  // MFP.js assumes 120 BPM by default anyway, so it's unneeded.
+  #events = []
 
   // Although I cannot make this getter readonly,
   // It hopefully will be enough to convey to future contributors
@@ -726,7 +726,9 @@ export default class PartTrack {
         ) : 0
 
       // Slashed grace notes, or acciaccature, are of very short duration.
-      // Four times as short as appoggiature seems like a good rule of thumb.
+      // TODO : rather than this system, which changes their duration based on the principal
+      // (Like ordinary grace notes)
+      // They should always last 0.25 * divisions (= a sixteenth note)
       steal[index] *= graceNoteSequence[index].grace.slash ?
         0.25 : 1
     }
