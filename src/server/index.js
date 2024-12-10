@@ -23,11 +23,7 @@ app.get('*', (req, res) => {
 
 const serverPort = process.env.PORT || 8000;
 
-// guido()
-// .then((res) => {
-  // console.log(res);
-  app.listen(serverPort, () => {
-    console.log(`.Env port : ${process.env.PORT}`)
-    console.log(`Express listening on port ${serverPort}`);
-  });
-// });
+app.listen(serverPort, () => {
+  console.log(`.Env port : ${process.env.PORT}`)
+  console.log(`Express listening on port ${serverPort}`);
+});

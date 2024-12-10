@@ -227,7 +227,7 @@ class IOController extends EventEmitter {
   }
 
   allNotesOff() {
-    this.emit('allnotesoff');
+    this.emit('ioctlallnotesoff');
     console.log("calling all sound off");
 
     for (let channel = 0; channel < 16; ++channel)

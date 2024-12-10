@@ -180,8 +180,6 @@ export default {
   async created() {
     await this.ioctl.updateInputsAndOutputs();
 
-    this.ioctl.addListener('command', this.onCommand);
-
     // Writers don't trigger on store create
     // So we refresh every property we control when the component is first initiated
     // (Velocities, inputs, output, and channel controls)
@@ -214,10 +212,6 @@ export default {
     this.onOutputChanged(this.currentOutputId);
   },
 
-  beforeUnmount() {
-    this.ioctl.removeListener('command', this.onCommand);
-  },
-
   methods: {
     // With the manager gated behind the sample loading screen, this should never happen again.
     // Let's still keep it here just in case.
@@ -247,11 +241,6 @@ export default {
 
     refreshInputsAndOutputs(e) {
       this.ioctl.updateInputsAndOutputs();
-    },
-
-    onCommand(cmd) {
-      const { pressed, id, velocity, channel } = cmd;
-      //console.log(`received command ${pressed} ${id} ${velocity} ${channel}`);
     },
 
     onInputsChanged(ids) {
