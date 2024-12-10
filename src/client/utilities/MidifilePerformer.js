@@ -479,7 +479,7 @@ class MidifilePerformer extends EventEmitter {
     // SET FLAGS ///////////////////////////////////////////////////////////////
 
     this.performer.setLoopIndices(0, this.performer.size() - 1);
-    this.setSequenceIndex(0);
+    this.setSequenceIndex(0); // TODO : replace with #innerSetSequenceIndex ?
     this.startAlreadyPlayed = false;
     this.endAlreadyPlayed = false;
     this.performVelocitySaved = false;
@@ -590,8 +590,7 @@ class MidifilePerformer extends EventEmitter {
   }
 
   setSequenceIndex(sequenceIndex, killSound = true) {
-    this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
-    this.emit('index', this.index);
+    this.#innerSetSequenceIndex(sequenceIndex, killSound)
     this.emit('userChangedIndex', this.index)
   }
 
@@ -875,6 +874,11 @@ class MidifilePerformer extends EventEmitter {
     this.performer.setChordVelocityMappingStrategy(this.mfp.chordStrategy[this.currentVelocityStrategy])
   }
 
+  #innerSetSequenceIndex(sequenceIndex, killSound) {
+    this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
+    this.emit('index', this.index);
+  }
+
   /**
    * Determine triggers for automatic playback in partial perform mode.
   **/
@@ -1051,7 +1055,7 @@ class MidifilePerformer extends EventEmitter {
   #updateIndexOnModeShift() {
     if(this.mode==="silent") {
       if (this.#getCurrentIndex() < this.#getLoopEndIndex()) {
-        this.setSequenceIndex(this.#getCurrentIndex());
+        this.#innerSetSequenceIndex(this.#getCurrentIndex());
       }
     } else {
       const index = this.#getCurrentIndex()
@@ -1062,7 +1066,7 @@ class MidifilePerformer extends EventEmitter {
         || (index === this.#getLoopEndIndex() && !this.endAlreadyPlayed)) {
 
           // ...then we must play that, first
-          this.setSequenceIndex(this.#getCurrentIndex(), false);
+          this.#innerSetSequenceIndex(this.#getCurrentIndex(), false);
 
           // and remember that it's done
           index === this.#getLoopStartIndex() ?
@@ -1086,11 +1090,11 @@ class MidifilePerformer extends EventEmitter {
 
         if(this.repeatIndexFromJump) this.repeatIndexFromJump = false;
 
-        this.setSequenceIndex(this.#getCurrentIndex(), false);
+        this.#innerSetSequenceIndex(this.#getCurrentIndex(), false);
       }
 
       else { // we need to play the next set (move forward, do not repeat the last one)
-        this.setSequenceIndex(this.#getNextIndex(), false);
+        this.#innerSetSequenceIndex(this.#getNextIndex(), false);
         // the boundaries have been exceeded
         this.startAlreadyPlayed = false;
         this.endAlreadyPlayed = false;
