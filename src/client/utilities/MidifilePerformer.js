@@ -518,8 +518,16 @@ class MidifilePerformer extends EventEmitter {
       )
     ) {
       this.#playbackTriggerDescription = null
-      this.emit('enablePerformChoice') // Re-enable channel perform selection,
+      // Ensure that when switching to a file where tempo triggers are forcibly reset,
+      // They are updated on the app side.
+      // Otherwise, visualizers will wrongly paint notes in the autoplay colors.
+      // This is not necessary for channel-based trigger reset, 
+      // Because these are initiated *by* the app (@MFP.vue).
+      this.emit('playbackTriggers', this.#playbackTriggers)
+
+      // Re-enable channel perform selection,
       // In case we had it disabled in the previously loaded MusicXML
+      this.emit('enablePerformChoice')
     }
 
     // ... in-between calculations ... /////////////////////////////////////////
