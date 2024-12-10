@@ -102,7 +102,7 @@
           :index="sequenceIndex"
           :speed="playbackSpeed"
           :size="sequenceLength"
-          @modeChange="onModeChange"
+          @toggleListen="onToggleListen"
           @index="onIndexChange"
           @start="onStartChange"
           @end="onEndChange"
@@ -607,8 +607,8 @@ export default {
     // --------------------------EVENT HANDLERS---------------------------------
     // -------------------------------------------------------------------------
 
-    onModeChange(mode) {
-      this.performer.setMode(mode);
+    onToggleListen() {
+      this.performer.toggleListen()
     },
 
     onNoteSequenceInfo({noteSequence, setStarts, setEnds}) {

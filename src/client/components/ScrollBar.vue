@@ -430,8 +430,7 @@ export default {
       this.dragging = null;
     },
     toggleListen(e) {
-      const newMode = this.isModeListen ? 'silent' : 'listen';
-      this.$emit('modeChange', newMode);
+      this.$emit('toggleListen');
     },
     onPlaybackSpeedChanged(e) {
       this.$emit('speed', e.target.value)
