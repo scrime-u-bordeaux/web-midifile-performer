@@ -212,15 +212,9 @@ class InterruptionGuard {
 }
 
 class AutoPlaybackSemaphore {
-  #referredMFP = null
   #semaphore = 0
-  #waitingFlag = false
 
-  constructor(mfp) {
-    this.#referredMFP = mfp
-  }
-
-  isClear(offset = 0) {
+  isClear(offset = 1) {
     // console.log("Semaphore is", this.#semaphore)
     return this.#semaphore <= (0 + offset)
   }
@@ -228,26 +222,11 @@ class AutoPlaybackSemaphore {
   update(command) {
     this.#semaphore += command.pressed ? 1 : -1
     // console.log("Semaphore is", this.#semaphore)
-    this.#stopWaitIfWaiting()
   }
 
   reset() {
     // console.log("Reset semaphore")
     this.#semaphore = 0
-  }
-
-  initiateWait() {
-    // console.log("Initiate wait")
-    this.#waitingFlag = true
-    if(this.isClear()) this.#stopWaitIfWaiting()
-  }
-
-  #stopWaitIfWaiting() {
-    if(this.#waitingFlag) {
-      // console.log("End wait")
-      this.#waitingFlag = false
-      this.#referredMFP.effectiveSetModeListen(true)
-    }
   }
 }
 
@@ -269,7 +248,6 @@ class MidifilePerformer extends EventEmitter {
   #playbackTriggerDescription = null;
   #playbackTriggers = new Set();
   #noInterruptFlag = false;
-  #onlyAcceptPressed = false;
   #noRenderFlag = false;
   #autoPlaybackSemaphore = null;
 
@@ -294,7 +272,7 @@ class MidifilePerformer extends EventEmitter {
     this.maxVelocities = [];
     this.velocityProfile = [];
 
-    this.#autoPlaybackSemaphore = new AutoPlaybackSemaphore(this)
+    this.#autoPlaybackSemaphore = new AutoPlaybackSemaphore()
   }
 
   async initialize() {
@@ -460,7 +438,9 @@ class MidifilePerformer extends EventEmitter {
         // Evaluate conditions that could lead to mode switch.
         // See methods in question for their formulation.
 
-        if(!isStartingSet && this.#shouldTriggerAutoListen()) {
+        // Auto-listen scheduling happens on keydown,
+        // Not release as was previously programmed.
+        if(isStartingSet && this.#shouldTriggerAutoListen()) {
           // console.log(true)
           // console.log("Auto switch to listen")
 
@@ -470,7 +450,7 @@ class MidifilePerformer extends EventEmitter {
           // Otherwise it would happen after updateIndex = too late
           if(this.repeatIndexFromJump) this.repeatIndexFromJump = false
 
-          this.setMode('listen', true)
+          this.#scheduleAutoListen()
         } else if(this.#shouldEndAutoListen()) {
           if(isStartingSet) {
             // console.log("Activating command store")
@@ -696,19 +676,23 @@ class MidifilePerformer extends EventEmitter {
 
       if(toggleNoInterrupt) {
         this.#noInterruptFlag = true
-        this.#autoPlaybackSemaphore.initiateWait()
-        return
+        this.#noRenderFlag = false
       }
 
-      this.effectiveSetModeListen()
+      this.#setChordVelocityMappingStrategy(
+        this.conserveVelocity && this.performVelocitySaved ?
+          this.preferredVelocityStrategy :
+          "none"
+      );
+
+      let pair; // carry the pair information between calls ; otherwise delays are shifted
+
+      this.#playNextSet(pair, true, true);
     }
 
     if (this.mode === 'perform') {
 
-      if(toggleNoInterrupt) {
-        this.#noInterruptFlag = false
-        this.#onlyAcceptPressed = true
-      }
+      if(toggleNoInterrupt) this.#noInterruptFlag = false
 
       if(!toggleNoInterrupt && this.interruptionGuard.playbackInterruptionStatus() === PRETEND_TRIGGER)
         this.pretendTriggerFlag = true
@@ -743,17 +727,22 @@ class MidifilePerformer extends EventEmitter {
 
     if(!cmd) return
 
-    if(this.mode !== 'perform' && cmd.pressed) { // key releases can never trigger perform mode
-      if(this.#noInterruptFlag) {
-        if(this.#storeCommandFlag) {
-          // console.log("Store command for later trigger")
-          this.#storedUntriggeredCommand = cmd
-        }
-        // console.log("Interrupt attempt ignored")
-        return
+    if(this.#noInterruptFlag) {
+      // console.log("Interrupt attempt ignored")
+
+      if(this.#storeCommandFlag && cmd.pressed) {
+        // console.log("Store command for later trigger")
+        this.#storedUntriggeredCommand = cmd
       }
-      this.setMode('perform')
+
+      return
     }
+
+    // key releases can never trigger perform mode
+    if(this.mode !== 'perform' && cmd.pressed)
+      this.setMode('perform')
+
+    // From this point onwards, #noInterruptFlag is guaranteed to be false.
 
     if(!noUpdateSemaphore) {
       // console.log("Updating semaphore")
@@ -761,7 +750,7 @@ class MidifilePerformer extends EventEmitter {
     }
 
     const res = [];
-    if (this.mode !== 'perform' || this.pretendTriggerFlag) {
+    if ((this.mode !== 'perform' && cmd.pressed) || this.pretendTriggerFlag) {
       // Ensure we do not do this more than once
       this.pretendTriggerFlag = false;
       // Indicate to listen mode that pretendTrigger was performed,
@@ -774,15 +763,13 @@ class MidifilePerformer extends EventEmitter {
     // this.emit('index', this.index);
 
     if(
-      (!cmd.pressed &&
-        !this.#noInterruptFlag && !this.#onlyAcceptPressed
-      )
+      !cmd.pressed
       ||
       (cmd.pressed &&
-        (!this.#playbackTriggerReached() || this.#autoPlaybackSemaphore.isClear(1))
+        // Ensure the last perform keydown will not overstep the index into autoplay set
+        (!this.#playbackTriggerReached() || this.#autoPlaybackSemaphore.isClear())
       )
     ) {
-      if(this.#onlyAcceptPressed) this.#onlyAcceptPressed = false
       // console.log("Begin render")
       this.performer.render(cmd);
     }
@@ -990,6 +977,8 @@ class MidifilePerformer extends EventEmitter {
   // Passive playback (listen) algorithm
 
   #playNextSet(pair, start, first) {
+    if (this.performer.stopped()) return;
+
     if(this.#noRenderFlag) {
       // console.log("No render flag is true, not playing next set")
       this.#noRenderFlag = false
@@ -1010,8 +999,6 @@ class MidifilePerformer extends EventEmitter {
     }
 
     dt = first ? 0 : dt;
-
-    if (this.performer.stopped()) return;
 
     // Fix "unstoppable playback" bug : no two timeouts at a time
     if(this.timeout) clearTimeout(this.timeout)
@@ -1094,24 +1081,6 @@ class MidifilePerformer extends EventEmitter {
     }
   }
 
-  effectiveSetModeListen(emit = false) {
-    // console.log("*Actually* setting mode to listen")
-    this.#setChordVelocityMappingStrategy(
-      this.conserveVelocity && this.performVelocitySaved ?
-        this.preferredVelocityStrategy :
-        "none"
-    );
-
-    let pair; // carry the pair information between calls ; otherwise delays are shifted
-
-    this.#playNextSet(pair, true, true);
-
-    if(emit) {
-      this.emit('mode', this.mode)
-      this.emit('autoplay', this.#noInterruptFlag)
-    }
-  }
-
   // TODO : compare performance to lodash.isEqual.
 
   #areSameEventSets(setA, setB, ignoreVelocity = false) {
@@ -1135,15 +1104,35 @@ class MidifilePerformer extends EventEmitter {
   }
 
   #shouldTriggerAutoListen() {
-    return this.#playbackTriggerReached() &&
-    this.#autoPlaybackSemaphore.isClear() // ALL pressed keys have been released
-    // (otherwise legato playing could note steal on trigger sets !)
+    return this.#playbackTriggerReached()
   }
 
   #shouldEndAutoListen() {
     return this.mode === 'listen' && // TODO : I think this is superfluous...
     this.#noInterruptFlag && // ...because this flag is here, and only ever set to true in auto-listen
     !this.#playbackTriggers.has(this.#getNextIndex()) // Of course, only hand back to perform if we are not on a playback trigger !
+  }
+
+  #scheduleAutoListen() {
+    // dt for the ending set of the current pair
+    const endDt = this.#getCurrentSetPair().end.dt
+    // dt for the starting set of the next pair
+    const startDt = endDt + this.performer.peekNextSetPair().start.dt
+
+    // When the current pair's ending set should come,
+    // Trigger *all* ending sets matching keys currently held
+
+    setTimeout(() => {
+      // getAllNoteOffs() brings all playing notes,
+      // we want a new method that only ends notes which should end at this index
+      this.emit('notes', noteEventsFromNoteDataVector(this.performer.getAllPendingNoteOffs()))
+    }, endDt)
+
+    // Then, begin auto-listen on the next starting set
+
+    setTimeout(() => {
+      this.setMode('listen', true)
+    }, startDt /*/ this.playbackSpeed*/)
   }
 }
 
