@@ -301,6 +301,8 @@ export default {
 
       this.cursor.show()
 
+      this.unpaint('all') // Give autoplay notes from carried-over tempo based triggers their color
+
       this.drawn = true
 
       this.$emit('drawn') // Necessary because mfpMidiFile watcher is not awaited in file load
