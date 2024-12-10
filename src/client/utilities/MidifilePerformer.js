@@ -640,7 +640,14 @@ class MidifilePerformer extends EventEmitter {
 
   setMode(mode, toggleNoInterrupt = false) {
     // console.log("Setting mode to", mode)
-    if (mode === this.mode) return;
+    if (mode === this.mode) {
+      // Edge case : toggleListen() called while in auto-playback
+      // The intuitive response is to then *stay* in listen mode,
+      // But the ordinary type.
+      if(this.#noInterruptFlag && toggleNoInterrupt) this.#noInterruptFlag = false
+      return;
+    }
+
     const previousMode = this.mode
     this.mode = mode;
 
@@ -715,6 +722,16 @@ class MidifilePerformer extends EventEmitter {
 
     this.emit('mode', this.mode)
     this.emit('autoplay', this.#noInterruptFlag)
+  }
+
+  toggleListen() {
+    this.setMode(
+      // When in auto playback, the user still feels like they're in perform mode.
+      // Hence, toggling must bring them to listen, as it would on a non-playback set,
+      // Not silent.
+      this.mode === 'listen' && !this.#noInterruptFlag ? 'silent' : 'listen',
+      this.#noInterruptFlag
+    )
   }
 
   command(cmd, noUpdateSemaphore = false) {
