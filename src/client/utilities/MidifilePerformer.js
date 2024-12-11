@@ -1143,6 +1143,12 @@ class MidifilePerformer extends EventEmitter {
   }
 
   #scheduleAutoListen() {
+    // Preemptively set this flag here.
+    // Otherwise, there is a chance that the user will slip in before the setTimeouts,
+    // Disturbing the process.
+    // The flag will be set to true again in setMode, to no effect.
+    this.#noInterruptFlag = true
+
     // dt for the ending set of the current pair
     const endDt = this.#getCurrentSetPair().end.dt
     // dt for the starting set of the next pair
