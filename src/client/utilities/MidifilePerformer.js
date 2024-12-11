@@ -659,15 +659,9 @@ class MidifilePerformer extends EventEmitter {
     const previousMode = this.mode
     this.mode = mode;
 
-    // Historically the performer was stopped on mode shift
-    // This doesn't seem necessary anymore
-
-    // if (!this.performer.stopped()) {
-    //   this.performer.stop();
-    // }
-
     // Handle transition from listen mode
-    //
+    // This avoids the "unstoppable listen" otherwise created by timeouts being set
+    // And unable to be cancelled.
 
     if(this.timeout && previousMode === "listen") {
       // console.log("Clearing timeout", this.timeout)
@@ -683,9 +677,32 @@ class MidifilePerformer extends EventEmitter {
       if(this.mode === 'perform' && this.#noInterruptFlag) this.#noRenderFlag = true
     }
 
+    // This is done here to avoid repeating it in perform and silent mode sections.
+
     if(this.mode !== 'listen' || !toggleNoInterrupt) this.#autoPlaybackSemaphore.reset()
 
+    // On every switch to listen mode, trigger every note off from a key previously held.
+    // This is valid whether this is autoplay or not ;
+    // Otherwise perform notes remain held and cannot be released,
+    // Because the lib's combine3 map is cleared by updateIndexOnModeShift().
+
+    // This is done here, not in playNextSet(),
+    // Because since the combine3 map will be cleared,
+    // The operation would have no effect after this point.
+
+    if(this.mode === 'listen')
+      this.emit(
+        'notes',
+        noteEventsFromNoteDataVector(
+          this.performer.getAllPendingNoteOffs()
+        )
+      )
+
+    // With this taken care of, the index update can actually happen.
+
     this.#updateIndexOnModeShift()
+
+    // And then, the individual consequences of each mode are triggered.
 
     if (this.mode === 'listen') {
 
@@ -1155,16 +1172,7 @@ class MidifilePerformer extends EventEmitter {
     // dt for the starting set of the next pair
     const startDt = endDt + this.performer.peekNextSetPair().start.dt
 
-    // When the current pair's ending set should come,
-    // Trigger *all* ending sets matching keys currently held
-
-    setTimeout(() => {
-      // getAllNoteOffs() brings all playing notes,
-      // we want a new method that only ends notes which should end at this index
-      this.emit('notes', noteEventsFromNoteDataVector(this.performer.getAllPendingNoteOffs()))
-    }, endDt)
-
-    // Then, begin auto-listen on the next starting set
+    // Begin auto-listen on the next starting set
 
     setTimeout(() => {
       this.setMode('listen', true)
