@@ -728,9 +728,11 @@ export default {
     // -------------------------------MISC--------------------------------------
     // -------------------------------------------------------------------------
 
-    // FIXME : this does not work on Firefox with a local dev env,
-    // Because it is served as HTTP, and Firefox blocks the insecure requests.
-    // It *should* work in prod, however.
+    // FIXME : this has been confirmed not to work in prod.
+    // Although tested browsers do report the resources as cached,
+    // They fetch them again when it's time to display them.
+    // We need another solution.
+    
     preloadAllImages() {
       const keys = require.context('../assets/pics/', false, /\.png$/).keys()
 
