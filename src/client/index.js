@@ -8,15 +8,23 @@ import synth, { NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }  from './utilities/Synth'
 import parseMusicXml from './utilities//musicxml/MusicXMLParser'
 import getRootFileFromMxl from './utilities/musicxml/MXLParser'
 
+import * as polyfills from './polyfills'
+
 import store              from './store';
 import router             from './router';
 import App                from './App.vue';
+
+function preparePolyfills() {
+  if(!Set.prototype.difference) Set.prototype.difference = polyfills.setDifferencePolyfill
+}
 
 Promise.all([
   performer.initialize(), // WARNING : this is only the "vanilla" performer and will be overwritten by the MFP page as soon as it's constructed
   // synth.loadSounds(), // not here, we need a user interaction before
 ])
 .then(() => {
+  preparePolyfills()
+
   const app = createApp(App);
 
   // Exterior dependencies
