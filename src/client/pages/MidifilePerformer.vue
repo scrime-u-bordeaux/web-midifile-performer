@@ -464,7 +464,7 @@ export default {
     this.performer.addListener('musicXmlArpeggioInfo', this.onMusicXmlArpeggioInfo)
 
     this.performer.addListener('visualizerRefresh', this.onVisualizerRefresh)
-    this.performer.addListener('userChangedIndex', this.onIndexJump)
+    this.performer.addListener('updateVisualizerIndex', this.onIndexJump)
 
     this.performer.addListener('autoplay', this.setAutoplay)
     this.performer.addListener('playbackTriggers', this.setPlaybackTriggers)
@@ -504,7 +504,7 @@ export default {
     this.performer.removeListener('musicXmlArpeggioInfo', this.onMusicXmlArpeggioInfo)
 
     this.performer.removeListener('visualizerRefresh', this.onVisualizerRefresh)
-    this.performer.removeListener('userChangedIndex', this.onIndexJump)
+    this.performer.removeListener('updateVisualizerIndex', this.onIndexJump)
 
     this.performer.removeListener('autoplay', this.setAutoplay)
     this.performer.removeListener('playbackTriggers', this.setPlaybackTriggers)
@@ -639,14 +639,14 @@ export default {
       // do something with it like display a cursor at the right position
       console.log('new index : ' + i);
       this.performer.markIndexJump()
-      this.performer.setSequenceIndex(i);
+      this.performer.setSequenceIndex(i, true, true);
 
       this.$refs.pianoRoll.stop()
       this.$refs.sheetMusic.stop()
     },
-    onIndexJump(i) { // let piano roll react when index is moved using setSequenceIndex
-      this.$refs.pianoRoll.onIndexJump(i)
-      if(!this.mfpMidiFile.isMidi) this.$refs.sheetMusic.onIndexJump(i)
+    onIndexJump({index, fromUser}) { // let piano roll react when index is moved using setSequenceIndex
+      this.$refs.pianoRoll.onIndexJump({index, fromUser})
+      if(!this.mfpMidiFile.isMidi) this.$refs.sheetMusic.onIndexJump({index, fromUser})
     },
     onEndChange(i) {
       this.performer.setSequenceBounds(this.sequenceStart, i);
@@ -759,7 +759,7 @@ export default {
     preparePerformerForLoad() {
       this.performer.setMode('silent');
       this.performer.setPlaybackSpeed(1)
-      this.performer.setSequenceIndex(0);
+      this.performer.setSequenceIndex(0, true, true);
     },
 
     updatePlaybackTriggers() {

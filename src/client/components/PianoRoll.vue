@@ -365,8 +365,9 @@ export default {
       this.dragging = null
     },
 
-    onIndexJump(index) { // don't forget, this is also called on file reset.
-      this.clearActiveNotes()
+    onIndexJump({index, fromUser}) { // don't forget, this is also called on file reset.
+      if(fromUser) this.clearActiveNotes()
+      else this.paintCurrentSet()
 
       const referenceNoteIndex = this.setStarts[index]
       const rect = this.getRectFromNoteIndex(referenceNoteIndex)

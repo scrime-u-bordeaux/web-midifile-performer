@@ -368,7 +368,8 @@ export default {
 
     // TODO : is this wrapper really necessary ?
 
-    onIndexJump(index) {
+    onIndexJump({index, fromUser}) {
+      // In SheetMusic, fromUser goes unused.
       this.refresh(index, true)
     },
 

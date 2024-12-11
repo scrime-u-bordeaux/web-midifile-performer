@@ -479,7 +479,7 @@ class MidifilePerformer extends EventEmitter {
     // SET FLAGS ///////////////////////////////////////////////////////////////
 
     this.performer.setLoopIndices(0, this.performer.size() - 1);
-    this.setSequenceIndex(0); // TODO : replace with #innerSetSequenceIndex ?
+    this.setSequenceIndex(0);
     this.startAlreadyPlayed = false;
     this.endAlreadyPlayed = false;
     this.performVelocitySaved = false;
@@ -521,7 +521,7 @@ class MidifilePerformer extends EventEmitter {
       // Ensure that when switching to a file where tempo triggers are forcibly reset,
       // They are updated on the app side.
       // Otherwise, visualizers will wrongly paint notes in the autoplay colors.
-      // This is not necessary for channel-based trigger reset, 
+      // This is not necessary for channel-based trigger reset,
       // Because these are initiated *by* the app (@MFP.vue).
       this.emit('playbackTriggers', this.#playbackTriggers)
 
@@ -597,9 +597,10 @@ class MidifilePerformer extends EventEmitter {
     this.performer.clear();
   }
 
-  setSequenceIndex(sequenceIndex, killSound = true) {
-    this.#innerSetSequenceIndex(sequenceIndex, killSound)
-    this.emit('userChangedIndex', this.index)
+  setSequenceIndex(sequenceIndex, killSound = true, fromUser = false) {
+    this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
+    this.emit('index', this.index);
+    this.emit('updateVisualizerIndex', {index: this.index, fromUser: fromUser})
   }
 
   markIndexJump() {
@@ -619,7 +620,7 @@ class MidifilePerformer extends EventEmitter {
     });
 
     this.emit('index', this.index);
-    if(this.index !== previousIndex) this.emit('userChangedIndex', this.index)
+    if(this.index !== previousIndex) this.emit('updateVisualizerIndex', {index: this.index, fromUser: false})
   }
 
   setLooping(l) {
@@ -716,10 +717,6 @@ class MidifilePerformer extends EventEmitter {
       }
 
       this.#setChordVelocityMappingStrategy(this.preferredVelocityStrategy);
-
-      // if(!!this.#storedUntriggeredCommand) console.log("Triggering stored command")
-      this.command(this.#storedUntriggeredCommand, true)
-      this.#storedUntriggeredCommand = null
     }
 
     if (this.mode === 'silent') {
@@ -729,6 +726,17 @@ class MidifilePerformer extends EventEmitter {
 
     this.emit('mode', this.mode)
     this.emit('autoplay', this.#noInterruptFlag)
+
+    // This is done here in order for the autoplay boolean to have the right value
+    // Once the app processes this command
+    // (Most notably : for the cursor color of the SheetMusic visualizer,
+    // which would otherwise remain at the autoplay color)
+
+    if(!!this.#storedUntriggeredCommand) {
+      // console.log("Triggering stored command")
+      this.command(this.#storedUntriggeredCommand, true)
+      this.#storedUntriggeredCommand = null
+    }
   }
 
   toggleListen() {
@@ -745,11 +753,9 @@ class MidifilePerformer extends EventEmitter {
     // command : { pressed, id, velocity, channel }
     // note : { on, pitch, velocity, channel }
 
-    // console.log("MFP command, pressed = ", cmd?.pressed)
+    // console.log("MFP command, pressed = ", cmd.pressed)
 
     // console.log("Repeat index flag", this.repeatIndexFromPretendTrigger)
-
-    if(!cmd) return
 
     if(this.#noInterruptFlag) {
       // console.log("Interrupt attempt ignored")
@@ -880,11 +886,6 @@ class MidifilePerformer extends EventEmitter {
   #setChordVelocityMappingStrategy(strategyName) {
     this.currentVelocityStrategy = strategyName
     this.performer.setChordVelocityMappingStrategy(this.mfp.chordStrategy[this.currentVelocityStrategy])
-  }
-
-  #innerSetSequenceIndex(sequenceIndex, killSound) {
-    this.index = this.performer.setCurrentIndex(sequenceIndex, killSound);
-    this.emit('index', this.index);
   }
 
   /**
@@ -1063,7 +1064,7 @@ class MidifilePerformer extends EventEmitter {
   #updateIndexOnModeShift() {
     if(this.mode==="silent") {
       if (this.#getCurrentIndex() < this.#getLoopEndIndex()) {
-        this.#innerSetSequenceIndex(this.#getCurrentIndex());
+        this.setSequenceIndex(this.#getCurrentIndex());
       }
     } else {
       const index = this.#getCurrentIndex()
@@ -1074,7 +1075,7 @@ class MidifilePerformer extends EventEmitter {
         || (index === this.#getLoopEndIndex() && !this.endAlreadyPlayed)) {
 
           // ...then we must play that, first
-          this.#innerSetSequenceIndex(this.#getCurrentIndex(), false);
+          this.setSequenceIndex(this.#getCurrentIndex(), false);
 
           // and remember that it's done
           index === this.#getLoopStartIndex() ?
@@ -1098,11 +1099,11 @@ class MidifilePerformer extends EventEmitter {
 
         if(this.repeatIndexFromJump) this.repeatIndexFromJump = false;
 
-        this.#innerSetSequenceIndex(this.#getCurrentIndex(), false);
+        this.setSequenceIndex(this.#getCurrentIndex(), false);
       }
 
       else { // we need to play the next set (move forward, do not repeat the last one)
-        this.#innerSetSequenceIndex(this.#getNextIndex(), false);
+        this.setSequenceIndex(this.#getNextIndex(), false);
         // the boundaries have been exceeded
         this.startAlreadyPlayed = false;
         this.endAlreadyPlayed = false;
