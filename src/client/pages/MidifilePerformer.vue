@@ -441,6 +441,7 @@ export default {
     }
   },
   created() {
+    this.preloadAllImages()
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
 
@@ -726,6 +727,29 @@ export default {
     // -------------------------------------------------------------------------
     // -------------------------------MISC--------------------------------------
     // -------------------------------------------------------------------------
+
+    // FIXME : this does not work on Firefox with a local dev env,
+    // Because it is served as HTTP, and Firefox blocks the insecure requests.
+    // It *should* work in prod, however.
+    preloadAllImages() {
+      const keys = require.context('../assets/pics/', false, /\.png$/).keys()
+
+      // Separate each request by a delay
+      // so we minimize changes of them being denied.
+      function preloadImageRecursive(imageIndex) {
+        if(imageIndex > keys.length - 1) return
+
+        const img = new Image()
+        img.src = keys[imageIndex]
+
+        setTimeout(
+          () => preloadImageRecursive(imageIndex+1),
+          200
+        )
+      }
+
+      preloadImageRecursive(0)
+    },
 
     setDesiredVisualizer() {
       if(this.mfpMidiFile.isMidi) this.selectedVisualizer = "piano"

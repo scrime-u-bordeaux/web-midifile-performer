@@ -49,6 +49,13 @@ module.exports = (env) => { return {
       {
         test: /\.css$/,
         use: [ 'vue-style-loader', 'css-loader' ]
+      },
+      {
+        test: /\.png$/,
+        type: 'asset/resource',
+        generator: {
+          filename: '[name][ext]'
+        }
       }
     ]
   },
