@@ -89,7 +89,9 @@
       "icons": "Icônes",
       "piano": "Piano",
       "volume": "Volume",
-      "sliders": "Sliders"
+      "sliders": "Sliders",
+      "start": "Début",
+      "ff": "Avance rapide"
     }
   },
   "guide": {

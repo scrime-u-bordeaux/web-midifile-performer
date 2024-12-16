@@ -93,11 +93,41 @@
     </div>
 
     <div class="indices" v-if="hasBounds">
+      <div class="svg-button-container">
+        <img class="first-button"
+          src="svg/start.svg"
+          @click="$emit('index', start)"
+        />
+      </div>
+
+      <div class="svg-button-container">
+        <img class="prev-button"
+          src="svg/ff.svg"
+          @mousedown="() => beginIncrement('previous')"
+          @mouseup="() => stopIncrement()"
+        />
+      </div>
+
       <div class="play-button-container">
         <div class="play-button"
          :class="isModeListen ? 'pause-icon' : 'play-icon'"
          @click="toggleListen">
         </div>
+      </div>
+
+      <div class="svg-button-container">
+        <img class="next-button"
+          src="svg/ff.svg"
+          @mousedown="() => beginIncrement('next')"
+          @mouseup="() => stopIncrement()"
+        />
+      </div>
+
+      <div class="svg-button-container">
+        <img class="last-button"
+          src="svg/start.svg"
+          @click="$emit('index', end)"
+        />
       </div>
 
       <div class="speed-input">
@@ -227,14 +257,24 @@ rect, circle {
   display: flex;
   justify-content: start;
 }
+.indices:not(:has(.no-bounds-indice)) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: var(--score-width);
+}
+
 .indices > div {
   display: inline-block;
   padding: 10px;
 }
-.play-button-container {
+
+.indices > .play-button-container {
   width: 1.875rem;
   height: 1.875rem;
+  padding-left: 14.7px; /*Compensate for right ff button seeming closer. ugly*/
 }
+
 .play-button {
   cursor: pointer;
   width: 0;
@@ -246,18 +286,45 @@ rect, circle {
 .play-button.play-icon {
   height: 0;
   border-style: solid;
-  border-width: 1rem 0px 1rem 1.875rem;
+  border-width: 0.938rem 0px 0.938rem 1.875rem;
 }
 .play-button.pause-icon {
   height: 1.875rem;
   border-style: double;
   border-width: 0 0 0 1.875rem;
 }
+
 .stop-button {
   cursor: pointer;
   width: 1.875rem;
   height: 1.875rem;
   background-color: red;
+}
+
+.svg-button-container {
+  /* Not width, because the ff button has a non-square aspect ratio */
+  height: 30px;
+}
+.svg-button-container img {
+  /* Not width, because the ff button has a non-square aspect ratio */
+  height: 30px;
+  cursor: pointer;
+}
+
+/* These two are larger, so they need smaller padding for a unified sense of space */
+.indices .svg-button-container:has(.prev-button) {
+  padding-left: 5px;
+}
+.indices .svg-button-container:has(.next-button)  {
+  padding-right: 5px;
+}
+
+.prev-button, .next-button {
+  width: 43.73px; /* = aspect ratio of the original icon so that the height is 30px*/
+}
+
+.last-button, .prev-button {
+  transform: rotate(180deg);
 }
 .indices .no-bounds-indice {
   padding-right: 0;
@@ -418,11 +485,10 @@ export default {
                      (width - 2 * this.cursorRadius);
 
       let newIndex = Math.round(position * (this.size - 1));
-      newIndex = this.clamp(newIndex);
       // console.log(`new index : ${newIndex}`);
 
       // if (newIndex !== this.index) {
-        this.$emit('index', newIndex);
+        this.emitClampedIndex(newIndex)
       // }
     },
     endDrag(e) {
@@ -437,12 +503,40 @@ export default {
     },
     onKeyDown(e) {
       if(this.hasBounds) { // I don't think most users will want to use the arrow keys for velocities or playback speed, so this avoids having to manage focus
-        if(e.code==="ArrowLeft") this.$emit("index", this.clamp(this.index - 1))
-        if(e.code==="ArrowRight") this.$emit("index", this.clamp(this.index + 1))
+        if(e.code==="ArrowLeft") this.emitClampedIndex(this.index - 1)
+        if(e.code==="ArrowRight") this.emitClampedIndex(this.index + 1)
       }
     },
-    clamp(newIndex) {
-      return Math.min(this.end, Math.max(this.start, newIndex))
+    beginIncrement(which) {
+      const increment = which === 'previous' ? -1 : 1
+
+      // Begin by taking into account the single click and moving the index by one.
+      this.emitClampedIndex(this.index + increment)
+
+      // Then, after the mouse is held for long enough...
+      this.incrementTimeout = setTimeout(
+        () => {
+          // ... apply the increment again as long as it's held.
+          this.incrementInterval = setInterval(
+            () => this.emitClampedIndex(this.index + increment),
+            50
+          )
+        },
+        100
+      )
+
+      // No, JS does not have a native event for this.
+    },
+    stopIncrement() {
+      clearTimeout(this.incrementTimeout)
+      clearInterval(this.incrementInterval)
+
+      this.incrementTimeout = null
+      this.incrementInterval = null
+    },
+
+    emitClampedIndex(newIndex) {
+      this.$emit('index', Math.min(this.end, Math.max(this.start, newIndex)))
     },
     silence() {
       this.$emit('silence')
