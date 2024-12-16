@@ -50,6 +50,20 @@
           {{ $t('credits.icons.sliders') }}
         </a> :
         <strong>DailyPM Studio, Flaticon</strong>
+
+        <br/>
+
+        <a href="https://www.svgrepo.com/svg/509259/start" title="begin icon">
+          {{ $t('credits.icons.start') }}
+        </a> :
+        <strong>Orchid, SvgRepo</strong>
+
+        <br/>
+        
+        <a href="https://www.svgrepo.com/svg/439779/fast-forward-fill" title="fast-forward icon">
+          {{ $t('credits.icons.ff') }}
+        </a> :
+        <strong>emblemicons, SvgRepo</strong>
       </p>
     </div>
 
