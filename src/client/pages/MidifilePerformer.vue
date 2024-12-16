@@ -255,8 +255,9 @@
 }
 
 .file-and-control {
+  margin-top: 8px;
   display: flex;
-  align-items: center;
+  /*align-items: center;*/ /*For some reason, adding this here actually uncenters the children...?*/
 }
 .file-input-wrapper {
   width: fit-content;
@@ -746,7 +747,7 @@ export default {
     // Although tested browsers do report the resources as cached,
     // They fetch them again when it's time to display them.
     // We need another solution.
-    
+
     preloadAllImages() {
       const keys = require.context('../assets/pics/', false, /\.png$/).keys()
 
