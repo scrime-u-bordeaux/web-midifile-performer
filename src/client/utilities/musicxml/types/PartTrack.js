@@ -810,9 +810,9 @@ export default class PartTrack {
 
     let refDelta = this.#events[0].delta
 
-    this.#events.forEach(event => {
+    this.#events.forEach((event, index) => {
       const absDelta = event.delta
-      event.delta = event.delta - refDelta
+      event.delta = index === 0 ? event.delta : event.delta - refDelta
       if(absDelta != refDelta) refDelta = absDelta
     })
   }
