@@ -42,8 +42,6 @@ const highlightPalette = new Map([
 
   ["baseBlue", "#02a7f0"], // "Bleu université" / var(--button-blue)
   ["baseGreen", "#58e28e"], // Keyboard active color / var(--play-perform-green)
-  ["autoplayDarkYellow", "#cba034"], // Notes of silent unselected channels, etc. / var(--autoplay-dark-yellow)
-  ["autoplayLightYellow", "#ffc73b"], // Notes of audible unselected channels, etc. / var(--autoplay-light-yellow)
 
   // OSMD cursor uses <img> with a base64 RGBa PNG src, so we store that
 
@@ -51,7 +49,10 @@ const highlightPalette = new Map([
   ["cursorBlue", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2O8+uFv2uqnvxnWPvrNcO3jXwZCQIufmSFYjpUhVJqVAQBQYAwqiJrEUwAAAABJRU5ErkJggg=="],
   // baseGreen with 0.5 alpha
   ["cursorGreen", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAAKElEQVQIW2N8/PN1w4kfdxhOfrvF8OTXGwZCQIZNhMGcS43BgkOFAQBeUQxJfg+WeAAAAABJRU5ErkJggg=="],
-  ["cursorAutoplay", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAABmJLR0QAAwA7AJaPsf2vAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH6AwGBh8fkof+SwAAACZJREFUCNdj/P//fxoDww4Ghl97GBg+PWQgCPjkGRjYXBkYGNgZAJ1mCCX79T5PAAAAAElFTkSuQmCC"],
+
+  // Same colors but even more faint, for autoplay
+  ["cursorAutoplayBlue", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAABmJLR0QAAwA7AJaPsf2vAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH6AwQBx8RAY+xOAAAAChJREFUCNdjfPrhW9qpx28Yzjx+y/Dg8x8GQkCBl4XBVE6EwVRGmAEAWhIMM1LbDvsAAAAASUVORK5CYII="],
+  ["cursorAutoplayGreen", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAABCAYAAAAB3PQ6AAAABmJLR0QAAwA7AJaPsf2vAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH6AwQBx8all1osAAAAChJREFUCNdjfP39fcPNj08Ybn18xPDmxwcGQkCEQ4BBjV+OQZ1fhgEAaSMMU+1iQDoAAAAASUVORK5CYII="],
 
   // SheetMusic will use a darker variant to highlight notes on click/hover.
   // (To contrast with its cursors)

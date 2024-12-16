@@ -13,6 +13,16 @@
 }
 
 .osmd-container :deep(path.muted) {
+  opacity: 0.3;
+}
+
+.osmd-container :deep(path.playback) {
+  opacity: 0.9;
+  fill-opacity: 0.5;
+  filter: contrast(3);
+}
+
+.osmd-container :deep(path.playback.muted) {
   opacity: 0.2;
 }
 </style>
@@ -69,6 +79,10 @@ export default {
       return this.$refs.container.getBoundingClientRect().height
     },
 
+    activeNoteRGB() {
+      return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
+    },
+
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
              (this.isModePerform && this.playOnClickInPerformMode)
@@ -122,6 +136,8 @@ export default {
       drawn: false,
 
       zoom: 0.5,
+
+      noteRGB: "#000000",
 
       // To be updated by MFP.vue on emit by MFP.js after MusicXML parse
       tempoEvents: [],
@@ -187,7 +203,7 @@ export default {
     currentMode(newMode, oldMode) {
       if(!this.drawn || this.shouldNotAct) return
 
-      this.unpaint('all', 'refresh')
+      this.updatePlaybackNoteheads()
       this.updateCursorColor()
 
       if(newMode === 'silent') this.stop()
@@ -240,7 +256,7 @@ export default {
 
     playbackTriggers(newTriggers, oldTriggers) {
       if(!this.drawn || this.shouldNotAct) return
-      this.unpaint('all', 'refresh')
+      this.updatePlaybackNoteheads()
       this.updateCursorColor()
     },
 
@@ -301,7 +317,7 @@ export default {
 
       this.cursor.show()
 
-      this.unpaint('all') // Give autoplay notes from carried-over tempo based triggers their color
+      this.updatePlaybackNoteheads() // Give autoplay notes from carried-over tempo based triggers their color
 
       this.drawn = true
 
@@ -1205,11 +1221,14 @@ export default {
     // -------------------------------------------------------------------------
 
     updateCursorColor() {
-      if(this.autoplay || this.playbackTriggers.has(this.sequenceIndex))
-        this.cursor.cursorElement.src = this.highlightPalette.get("cursorAutoplay")
-
-      else this.cursor.cursorElement.src = this.highlightPalette.get(
-        this.isModeSilent ? "cursorBlue" : "cursorGreen"
+      this.cursor.cursorElement.src = this.highlightPalette.get(
+        `cursor${
+          this.autoplay || this.playbackTriggers.has(this.sequenceIndex) ?
+          'Autoplay' : ''
+        }${
+          this.isModeSilent ?
+          'Blue' : 'Green'
+        }`
       )
     },
 
@@ -1424,57 +1443,36 @@ export default {
           return
         }
 
-        gNoteHead.setAttribute('fill', this.activeNoteRGB(nsNote))
+        gNoteHead.setAttribute('fill', this.activeNoteRGB)
         highlightGroup.push(gNoteHead)
       })
     },
 
-    unpaint(paintType = "mouse", except = null) {
+    updatePlaybackNoteheads() {
+      const allNoteHeads = Array.from(this.gNoteHeadsToNsNotes.keys())
 
-      const targetedNotes = this.resolvePaintGroup(paintType)
-      const untouchedNotes = this.resolvePaintGroup(except)
-      const notesToUnpaint = new Set(new Set(targetedNotes).difference(new Set(untouchedNotes)))
+      allNoteHeads.forEach(gNoteHead => {
+        const nsNote = this.gNoteHeadsToNsNotes.get(gNoteHead)
+
+        if(nsNote.isPlaybackNote) gNoteHead.classList.add("playback")
+        else gNoteHead.classList.remove("playback")
+      })
+    },
+
+    unpaint(paintType = "mouse") {
+
+      const notesToUnpaint =
+        paintType === "mouse" ?
+          this.noteHeadsHighlightedByMouse :
+          this.noteHeadsHighlightedByRefresh
 
       notesToUnpaint.forEach(gNoteHead =>
-        gNoteHead.setAttribute('fill', this.noteRGB(this.gNoteHeadsToNsNotes.get(gNoteHead)))
+        gNoteHead.setAttribute('fill', this.noteRGB)
       )
 
       if(paintType === "mouse") this.noteHeadsHighlightedByMouse = []
       else if(paintType === "refresh") this.noteHeadsHighlightedByRefresh = []
     },
-
-    activeNoteRGB(nsNote) {
-      // TODO : yes, the light and dark shades are swapped for autoplay.
-      // That is because unlike other notes, the user can see the transition between their two shades,
-      // And going from light to dark on hover feels wrong.
-      // We do lose on visibility when the curser passes autoplay sets,
-      // But it's just one or the other.
-      // (Or finding a better autoplay color...)
-      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayLightYellow")
-      else return this.highlightPalette.get(this.isModeSilent ? "darkBlue" : "darkGreen")
-    },
-
-    noteRGB(nsNote) {
-      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
-      else return "#000000"
-    },
-
-    resolvePaintGroup(paintType) {
-      let paintGroup = []
-
-      switch(paintType) {
-        case "mouse":
-          paintGroup = this.noteHeadsHighlightedByMouse
-          break
-        case "refresh":
-          paintGroup = this.noteHeadsHighlightedByRefresh
-          break
-        case 'all':
-          paintGroup = Array.from(this.gNoteHeadsToNsNotes.keys())
-      }
-
-      return paintGroup
-    }
   }
 }
 </script>

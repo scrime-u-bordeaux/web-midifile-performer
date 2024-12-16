@@ -75,7 +75,8 @@
   fill: #58e28e !important;
 }
 .activeNote.playOrPerform.autoplay {
-  fill: var(--autoplay-light-yellow) !important;
+  fill-opacity: 0.4;
+  filter: contrast(3);
 }
 .octave-text {
   fill: grey;

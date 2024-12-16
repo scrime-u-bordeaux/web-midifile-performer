@@ -28,6 +28,11 @@ svg :deep(.note.muted) {
   opacity: 0.7;
   filter: none;
 }
+
+svg :deep(.note.playback) {
+  fill-opacity: 0.4;
+  filter: contrast(3) drop-shadow(3px 3px 1px #999) ;
+}
 </style>
 
 <script>
@@ -74,6 +79,8 @@ export default {
       minPitch: 17,
       maxPitch: 112,
 
+      noteRGB: "#666666",
+
       // Keep track of notes for dynamic highlight,
       // When the user triggers a note off out of sync with the original file.
       activeNotes: new Map(),
@@ -117,6 +124,18 @@ export default {
       'getSet', 'getSetIndex'
     ]),
 
+    activeNoteRGB() {
+      return this.highlightPalette.get(
+        this.isModeSilent ? "baseBlue" : "baseGreen"
+      )
+    },
+
+    currentSetRGB() {
+      return this.highlightPalette.get(
+        this.isModeSilent ? "darkBlue" : "darkGreen"
+      )
+    },
+
     playOnClick() {
       return (this.isModeSilent && this.playOnClickInSilentMode) ||
              (this.isModePerform && this.playOnClickInPerformMode)
@@ -149,7 +168,7 @@ export default {
     },
 
     currentMode(newMode, oldMode) {
-      this.updateBaseRectColor()
+      this.updateAutoplayRects()
 
       if(newMode === 'silent') {
         this.stop()
@@ -174,7 +193,7 @@ export default {
     },
 
     playbackTriggers(newTriggers, oldTriggers) {
-      this.updateBaseRectColor()
+      this.updateAutoplayRects()
     },
 
     noteHeight(newHeight, oldHeight) {
@@ -393,8 +412,7 @@ export default {
         const pos = this.getNotePosition(note)
         if(this.setStarts.includes(index)) this.setX.push(Math.round(pos.x))
 
-        const fill = this.getNoteFillColor(note, "disable") // when first drawing, nothing is active
-        const fillOpacity = this.getNoteFillOpacity(note)
+        const fill = this.getNoteFillColor("disable") // when first drawing, nothing is active
 
         // Magenta, being written in TS, used custom types here ;
         // We use anonymous objects instead.
@@ -412,7 +430,7 @@ export default {
         ]
 
         this.drawNote(
-          pos.x, pos.y, pos.w, pos.h, fill, fillOpacity,
+          pos.x, pos.y, pos.w, pos.h, fill,
           dataAttributes, cssProperties
         )
       })
@@ -422,13 +440,14 @@ export default {
       this.drawn = true
     },
 
-    drawNote(x, y, w, h, fill, fillOpacity, dataAttributes, cssProperties) {
+    drawNote(x, y, w, h, fill, dataAttributes, cssProperties) {
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
 
       rect.classList.add('note')
 
       rect.setAttribute('fill', fill)
-      rect.setAttribute('fill-opacity', fillOpacity)
+      // Remove Magenta's velocity-based opacity,
+      // Instead only changing opacity for autoplay notes.
 
       rect.setAttribute('x', `${Math.round(x)}`);
       rect.setAttribute('y', `${Math.round(y)}`);
@@ -501,34 +520,22 @@ export default {
       this.paintNoteSet(this.sequenceIndex, "current")
     },
 
-    getNoteFillColor(nsNote, type = "refresh") {
-      // Failsafe for invalid calls inbetween file loads
-      // (By playbackTriggers watcher => updateBaseRectColor)
-      // These black notes will be overwritten on the actual file load
-      // (By currentIndex watcher => updateBaseRectColor),
-      // This just avoids a crash.
-      if(!nsNote) return "#000000"
-
+    getNoteFillColor(type = "refresh") {
       switch(type) {
         case "current":
-          return this.currentSetRGB(nsNote)
+          return this.currentSetRGB
           break
 
         case "refresh":
         case "mouse":
-          return this.activeNoteRGB(nsNote)
+          return this.activeNoteRGB
           break
 
         case "disable":
         default:
-          return this.noteRGB(nsNote)
+          return this.noteRGB
           break
       }
-    },
-
-    getNoteFillOpacity(note) {
-      const opacityBaseline = 0.2  // Original comment : "Shift all the opacities up a little."
-      return note.velocity ? note.velocity / 100 + opacityBaseline : 1;
     },
 
     // This one isn't from Magenta, it just doesn't make sense for it
@@ -543,7 +550,7 @@ export default {
 
         rect.classList.add(type)
 
-        rect.setAttribute('fill', this.getNoteFillColor(note, type))
+        rect.setAttribute('fill', this.getNoteFillColor(type))
       })
     },
 
@@ -561,44 +568,26 @@ export default {
         rect.classList.remove(type)
 
         const fill = this.getNoteFillColor(
-          this.noteSequence[this.getNoteIndexFromRect(rect)],
           rect.classList.contains("current") ? "current" : "disable"
         )
         rect.setAttribute('fill', fill)
       })
     },
 
-    updateBaseRectColor() {
+    updateAutoplayRects() {
       const allRects = this.$refs.svg.querySelectorAll(
         `rect.note`
       )
 
-      allRects.forEach(rect => rect.setAttribute('fill',
-        this.getNoteFillColor(
-          this.noteSequence[this.getNoteIndexFromRect(rect)],
-          rect.classList.contains("current") ? "current" :
-            rect.classList.contains("refresh") || rect.classList.contains("mouse") ? "refresh" : "disable"
-        )
-      ))
-    },
+      allRects.forEach(rect => {
+        const nsNote = this.noteSequence[this.getNoteIndexFromRect(rect)]
 
-    activeNoteRGB(nsNote) {
-      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayLightYellow")
-      return this.highlightPalette.get(
-        this.isModeSilent ? "baseBlue" : "baseGreen"
-      )
-    },
-
-    currentSetRGB(nsNote) {
-      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
-      return this.highlightPalette.get(
-        this.isModeSilent ? "darkBlue" : "darkGreen"
-      )
-    },
-
-    noteRGB(nsNote) {
-      if(nsNote.isPlaybackNote) return this.highlightPalette.get("autoplayDarkYellow")
-      else return "#666666"
+        // The safe call here is necessary due to an extra call of this method,
+        // Which happens on MFP.js's emission of null playback triggers, on file load.
+        // This call is immediately overriden with the call from currentMode.
+        if(nsNote?.isPlaybackNote && !rect.classList.contains("muted")) rect.classList.add("playback")
+        else rect.classList.remove("playback")
+      })
     },
 
     // -------------------------------------------------------------------------
