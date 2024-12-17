@@ -502,6 +502,13 @@ export default {
     },
 
     getNoteFillColor(nsNote, type = "refresh") {
+      // Failsafe for invalid calls inbetween file loads
+      // (By playbackTriggers watcher => updateBaseRectColor)
+      // These black notes will be overwritten on the actual file load
+      // (By currentIndex watcher => updateBaseRectColor),
+      // This just avoids a crash.
+      if(!nsNote) return "#000000"
+
       switch(type) {
         case "current":
           return this.currentSetRGB(nsNote)
