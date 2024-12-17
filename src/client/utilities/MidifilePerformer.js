@@ -250,8 +250,9 @@ class MidifilePerformer extends EventEmitter {
   #noInterruptFlag = false;
   #noRenderFlag = false;
   #autoPlaybackSemaphore = null;
+  #scheduledAutoplayEndTime = 0;
 
-  #storeCommandFlag = false;
+  #commandStoreThreshold = 100;
   #storedUntriggeredCommand = null;
 
   constructor() {
@@ -451,17 +452,9 @@ class MidifilePerformer extends EventEmitter {
           if(this.repeatIndexFromJump) this.repeatIndexFromJump = false
 
           this.#scheduleAutoListen()
-        } else if(this.#shouldEndAutoListen()) {
-          if(isStartingSet) {
-            // console.log("Activating command store")
-            this.#storeCommandFlag = true
-          }
-
-          else {
-             // console.log("Auto switch to perform")
-             this.#storeCommandFlag = false
-             this.setMode('perform', true)
-          }
+        } else if(!isStartingSet && this.#shouldEndAutoListen()) {
+           // console.log("Auto switch to perform")
+           this.setMode('perform', true)
         }
       }
 
@@ -777,7 +770,9 @@ class MidifilePerformer extends EventEmitter {
     if(this.#noInterruptFlag) {
       // console.log("Interrupt attempt ignored")
 
-      if(this.#storeCommandFlag && cmd.pressed) {
+      if(cmd.pressed) console.log(this.#scheduledAutoplayEndTime - Date.now())
+
+      if(cmd.pressed && this.#shouldStoreCommand()) {
         // console.log("Store command for later trigger")
         this.#storedUntriggeredCommand = cmd
       }
@@ -1175,8 +1170,66 @@ class MidifilePerformer extends EventEmitter {
     // Begin auto-listen on the next starting set
 
     setTimeout(() => {
+      // Because we're next to a trigger, autoplay starts on the next index, always.
+      const autoplayStartIndex = this.#getNextIndex()
+
+      // But now, we must also find where it ends ;
+      // So we take the array of future playback triggers,
+      // Starting at our start index.
+
+      const sortedPlaybackTriggers = Array.from(
+        this.#playbackTriggers.values()
+      ).sort((a, b) => a - b) // Reminder : if left unchecked, JS sorts even numbers by string order.
+
+      // Reminder : autoplayStartIndex and loopEndIndex are indices in the *paired chronology*,
+      // So we do have to go through a findIndex step to slice the playbackTriggers.
+
+      const futureAutoplaySetIndices = sortedPlaybackTriggers.slice(
+        sortedPlaybackTriggers.indexOf(autoplayStartIndex),
+        sortedPlaybackTriggers.findLastIndex(
+          index => index <= this.#getLoopEndIndex()
+        ) + 1
+      )
+
+      // Then, the end index is found by searching for the last index of a playback trigger
+      // Which is more than one set away from its preceding trigger —
+      // In other words, separated by performed sets.
+
+      const autoplayEndIndex = futureAutoplaySetIndices[
+
+        futureAutoplaySetIndices.findIndex(
+          (setIndex, i) => setIndex - futureAutoplaySetIndices[i - 1] > 1
+        ) - 1 // The index *before* that one is the last in this playback sequence.
+
+      ] || futureAutoplaySetIndices[futureAutoplaySetIndices.length - 1]
+      // In case the sequence extends to the end of the loop,
+      // we will not find a terminating index, hence we use the last index of the slice.
+
+      // Now, we can finally total how long autoplay is supposed to last in milliseconds.
+
+      let totalAutoplayDuration = 0
+
+      // We do this by accumulating the durations of all sets in the autoplay sequence.
+
+      for(let i = autoplayStartIndex ; i <= autoplayEndIndex ; i++) {
+        // Reminder : this.#chronology has pairs *dissociated*,
+        // Such that the starting sets are at 2*pairIndex,
+        // and the ending sets at 2*pairIndex + 1.
+
+        const startSet = this.#chronology[2*i]
+        const endSet = this.#chronology[2*i + 1]
+
+        totalAutoplayDuration += startSet.dt + endSet.dt
+      }
+
+      this.#scheduledAutoplayEndTime = Date.now() + totalAutoplayDuration
+
       this.setMode('listen', true)
     }, startDt /*/ this.playbackSpeed*/)
+  }
+
+  #shouldStoreCommand() {
+    return this.#scheduledAutoplayEndTime - Date.now() < this.#commandStoreThreshold
   }
 }
 
