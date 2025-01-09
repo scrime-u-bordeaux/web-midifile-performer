@@ -1,14 +1,14 @@
 import { createApp }      from 'vue';
-import { i18n } from './utilities/I18n'
+import { i18n } from './utilities/I18n';
 
 import ioctl, { defaultInputs, DEFAULT_IO_ID } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth, { NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }  from './utilities/Synth';
 
-import parseMusicXml from './utilities//musicxml/MusicXMLParser'
-import getRootFileFromMxl from './utilities/musicxml/MXLParser'
+import parseMusicXml from './utilities//musicxml/MusicXMLParser';
+import getRootFileFromMxl from './utilities/musicxml/MXLParser';
 
-import * as polyfills from './polyfills'
+import * as polyfills from './polyfills';
 
 import store              from './store';
 import router             from './router';
