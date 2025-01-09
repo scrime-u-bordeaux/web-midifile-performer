@@ -21,13 +21,8 @@
     </div>
   </div>
 
-  <div class="locale-picker">
-    <select @change="onLocaleChange" v-model="$i18n.locale">
-      <option v-for="lang in langs" :value="lang">
-        {{ $t('locales.'+lang) }}
-      </option>
-    </select>
-  </div>
+  <!-- the language selector has the side effect -->
+  <LanguageSelector @change="onLocaleChange"/>
 </div>
 </template>
 
@@ -73,26 +68,6 @@
     cursor: pointer;
     flex: 0 1 auto;
   }
-
-  .locale-picker {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  select {
-    text-align: center;
-    font-size: 0.9rem;
-    min-height: 2.2rem;
-    background-color: #fff;
-    border: 1px solid #caced1;
-    border-radius: 0.25rem;
-    color: #000;
-    cursor: pointer;
-  }
-  option {
-    text-align: center;
-  }
 </style>
 
 <script>
@@ -100,10 +75,11 @@
 import { mapMutations } from 'vuex'
 
 import OptionTabs from './OptionTabs.vue'
+import LanguageSelector from './LanguageSelector.vue';
 
 export default {
   props: [ 'items' ],
-  components: { OptionTabs },
+  components: { OptionTabs, LanguageSelector },
   data() {
     return {
       langs: ["fr", "en"] // Sadly it doesn't seem possible to directly iterate using the i18n object
@@ -117,7 +93,8 @@ export default {
 
     ...mapMutations(['setLocale']),
 
-    onLocaleChange(e) {
+    onLocaleChange() {
+      console.log(e);
       // Through watching this, the app can update anything that vue-i18n doesn't automatically update itself
       this.setLocale(this.$i18n.locale)
     }
