@@ -206,10 +206,11 @@
 
 <style scoped>
   .pseudo-title {
-    width: var(--content-width);
+    max-width: var(--content-width);
     font-size: 2.5em;
     text-align: center;
     font-weight: bold;
+    margin: 0 auto;
   }
 
   .wrapper {
