@@ -18,8 +18,9 @@
   /*--menu-width: 700px;*/
   --score-width: 650px;
 
-  --global-font: "DejaVu Serif";
-  /*--global-font: sans-serif;*/
+  /* --global-font: "DejaVu Serif"; */
+  /* --global-font: sans-serif; */
+  --global-font: 'Roboto';
 
   --youtube-video-h-w-ratio: calc(calc(315 / 560) * 100%);
 }
