@@ -29,17 +29,6 @@ module.exports = (env) => { return {
         test: /\.vue$/,
         use: {
           loader: 'vue-loader',
-          // options: {
-          //   compilerOptions: {
-          //     isCustomElement: (tag) => {
-          //       //console.log(`${tag} is a custom element`);
-          //       // 'font',
-          //       // 'font-face',
-          //       // 'glyph',
-          //       // 'missing-glyph',
-          //     },
-          //   },
-          // },
         }
       },
       {
@@ -56,7 +45,7 @@ module.exports = (env) => { return {
         generator: {
           filename: '[name][ext]'
         }
-      }
+      },
     ]
   },
   devServer: {
