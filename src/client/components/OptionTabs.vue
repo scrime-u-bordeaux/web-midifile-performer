@@ -71,6 +71,7 @@
   line-height: 1em;
   border: 0;
   border-radius: 0.4em 0.4em 0 0;
+  /* border: 1px var(--button-blue) solid; */
 }
 .tab.enabled > * {
   cursor: pointer;
