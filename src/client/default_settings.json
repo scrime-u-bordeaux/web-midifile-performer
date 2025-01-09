@@ -11,7 +11,7 @@
   },
 
   "visualizer": {
-    "preferredVisualizer": "piano",
+    "preferredVisualizer": "sheet",
     "clickPlay": {
       "silent": true,
       "perform": false
