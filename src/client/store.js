@@ -32,6 +32,14 @@ const midifiles = [
   },
 ];
 
+const mxlfiles = [
+  {
+    id: 'bach-c-prelude-the-well-tempered-clavier',
+    title: 'Bach prélude C - Le Clavier Bien Tempéré',
+    url: 'mxl/Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl',
+  }
+]
+
 // Palette for visualization
 
 const highlightPalette = new Map([
