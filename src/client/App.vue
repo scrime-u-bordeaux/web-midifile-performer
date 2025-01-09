@@ -3,11 +3,14 @@
   <le-menu
     id="app-menu"
     :items="[
-      { text: $t('menu.home'),            page: 'Home' },
-      { text: $t('menu.firstSteps'),       page: 'FirstSteps' },
-      { text: $t('menu.mfp'), page: 'MidifilePerformer' },
-      { text: $t('menu.help'), page: 'Guide' },
-      { text: $t('menu.credits'),            page: 'Credits'}
+      // { text: $t('menu.home'), page: 'Home' },
+      // { text: $t('menu.firstSteps'), page: 'FirstSteps' },
+      // { text: $t('menu.mfp'), page: 'MidifilePerformer' },
+      // { text: $t('menu.help'), page: 'Guide' },
+      // { text: $t('menu.credits'), page: 'Credits'}
+      { text: $t('menu.app'), page: 'MidifilePerformer' },
+      { text: $t('menu.doc'), page: 'Guide' },
+      { text: $t('menu.about'), page: 'About' },
     ]"
   />
 
@@ -119,11 +122,11 @@ export default {
     ]),
 
     onInputsChanged(inputs) {
-      this.setMidiAccessRequested()
+      this.setMidiAccessRequested();
       this.setInputs(inputs);
     },
     onOutputsChanged(outputs) {
-      this.setMidiAccessRequested()
+      this.setMidiAccessRequested();
       this.setOutputs(outputs);
     },
 
@@ -133,20 +136,20 @@ export default {
     },
 
     onNotes(notes) {
-      this.ioctl.playNoteEvents(notes)
+      this.ioctl.playNoteEvents(notes);
     },
     onNoteOn(note) {
-      this.animateNoteOn(note)
+      this.animateNoteOn(note);
     },
     onNoteOff(note) {
-      this.animateNoteOff(note)
+      this.animateNoteOff(note);
     },
 
     onChannelOff(channel) {
-      this.animateChannelOff(channel) // update keyboard state
+      this.animateChannelOff(channel); // update keyboard state
     },
     onPerformerAllNotesOff() {
-      this.ioctl.allNotesOff()
+      this.ioctl.allNotesOff();
     },
     onIoctlAllNotesOff() {
       this.animateAllNotesOff(); // ditto
@@ -168,10 +171,10 @@ export default {
     },
 
     onNotesFetched(e) {
-      this.setSynthNotesFetched(e)
+      this.setSynthNotesFetched(e);
     },
     onNotesDecoded(e) {
-      this.setSynthNotesDecoded(e)
+      this.setSynthNotesDecoded(e);
     },
 
     async onUserClick(e) {
@@ -189,7 +192,7 @@ export default {
     },
 
     updateCanPerform(e) {
-      this.canPerform = e
+      this.canPerform = e;
     }
   }
 };

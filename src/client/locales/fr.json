@@ -4,6 +4,9 @@
     "en": "Anglais"
   },
   "menu": {
+    "app": "App",
+    "doc": "Doc",
+    "about": "À propos",
     "home": "Accueil",
     "firstSteps": "Premiers Pas",
     "mfp": "Midifile Performer",

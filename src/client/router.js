@@ -15,29 +15,44 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'Home',
-      component: pages.Home,
-    },
-    {
-      path: '/first-steps',
-      name: 'FirstSteps',
-      component: pages.FirstSteps,
-    },
-    {
-      path: '/midifile-performer',
       name: 'MidifilePerformer',
       component: pages.MidifilePerformer,
     },
     {
-      path: '/credits',
-      name: 'Credits',
-      component: pages.Credits
-    },
-    {
-      path: '/guide',
+      path: '/doc',
       name: 'Guide',
       component: pages.Guide,
     },
+    {
+      path: '/about',
+      name: 'About',
+      component: pages.About,
+    },
+    // {
+    //   path: '/',
+    //   name: 'Home',
+    //   component: pages.Home,
+    // },
+    // {
+    //   path: '/first-steps',
+    //   name: 'FirstSteps',
+    //   component: pages.FirstSteps,
+    // },
+    // {
+    //   path: '/midifile-performer',
+    //   name: 'MidifilePerformer',
+    //   component: pages.MidifilePerformer,
+    // },
+    // {
+    //   path: '/credits',
+    //   name: 'Credits',
+    //   component: pages.Credits
+    // },
+    // {
+    //   path: '/guide',
+    //   name: 'Guide',
+    //   component: pages.Guide,
+    // },
     {
       path: '/look-for-scores',
       name: 'LookForScores',
