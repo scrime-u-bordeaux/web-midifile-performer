@@ -32,7 +32,7 @@
         @dragover="onDragOver"
         @drop="onDrop">
 
-        <span class="contextualization" v-if="!mfpMidiFile.buffer">
+        <span class="contextualization" v-if="true || !mfpMidiFile.buffer">
           <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
           <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
           <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
@@ -210,7 +210,8 @@
 }
 .contextualization {
   color: #777;
-  margin-bottom: 12px;
+  margin-top: 1em;
+  margin-bottom: 2em;
 }
 .contextualization p {
   margin-top: 4px;
@@ -445,6 +446,7 @@ export default {
     document.addEventListener('keydown',this.onKeyDown)
     document.addEventListener('keyup',this.onKeyUp)
 
+
     this.performer.setLooping(this.looping)
     // This will override the performer created by index.js.
     this.performer.constructInnerPerformer(this.performerConstructorOptions)
@@ -472,6 +474,8 @@ export default {
     this.performer.addListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
     this.performer.addListener('disableBeatPlay', this.onIsBeatPlayDisabled)
 
+    //*
+    // Is this code still useful ?
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
       this.loadingFlag = true;
@@ -480,11 +484,19 @@ export default {
     } else {
       console.log('no buffer yet');
     }
+    //*/
+
+    // load mxl prelude in C : new integrated first steps    
+    const res = await fetch('mxl/Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl');
+    // const res = await fetch('mid/bach-c-prelude-the-well-tempered-clavier.mid');
+    const blob = await res.blob();
+    blob.name = 'Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl';
+    await this.loadFile(blob);
 
     // Watchers are not called on mount
     // And we can't do this on create, because otherwise, remounting the page never sets this again
     // (and so no visualizer is displayed)
-    this.setDesiredVisualizer()
+    this.setAppropriateVisualizer();
 
     this.$emit("canPerform", true)
   },
@@ -535,7 +547,9 @@ export default {
       // if e.target.files is defined, the user uploaded through the button
       // otherwise it's a drop event and we use the dataTransfer property
       const file = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
-
+      await this.loadFile(file);
+    },
+    async loadFile(file) {
       // test based on initial characters "MThd" rather than file extension or MIME
       const testForMidiSignature = async (file) => {
         const matchesMidiSignature = (buffer) => {
@@ -751,6 +765,10 @@ export default {
       }
 
       preloadImageRecursive(0)
+    },
+
+    setAppropriateVisualizer() {
+      this.selectedVisualizer = this.mfpMidiFile.isMidi ? 'piano' : 'sheet';
     },
 
     setDesiredVisualizer() {
