@@ -342,7 +342,7 @@
   opacity: 0;
 }
 .keyboard {
-  max-width: var(--score-width);
+  max-width: var(--controls-width);
 }
 .pseudo-link {
   font-style: italic;

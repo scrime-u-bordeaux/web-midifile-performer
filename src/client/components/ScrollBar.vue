@@ -199,7 +199,7 @@
   align-items: center;
 }
 .scroll-bar-container.vertical-layout .full-width{
-  width: var(--score-width)
+  width: var(--controls-width)
 }
 .horizontal-layout {
   display: grid;
@@ -261,7 +261,7 @@ rect, circle {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: var(--score-width);
+  width: var(--controls-width);
 }
 
 .indices > div {

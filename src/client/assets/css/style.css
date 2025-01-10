@@ -16,7 +16,8 @@
   --menubar-height: 50px;
   --content-width: 800px;
   /*--menu-width: 700px;*/
-  --score-width: 700px;
+  --score-width: 650px;
+  --controls-width: 650px;
 
   /* --global-font: "DejaVu Serif"; */
   /* --global-font: sans-serif; */
