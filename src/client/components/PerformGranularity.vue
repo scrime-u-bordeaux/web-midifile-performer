@@ -29,7 +29,8 @@
 .granularities-container {
   position: absolute;
   right: 0;
-  padding: 15px;
+  padding: 0;
+  padding-right: 15px;
 }
 
 img {

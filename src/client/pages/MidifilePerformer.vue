@@ -338,7 +338,7 @@
 }
 
 .perform-granularity {
-  width: 26vw;
+  /* width: 26vw; */
 }
 </style>
 
