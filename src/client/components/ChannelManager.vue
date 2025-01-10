@@ -107,14 +107,16 @@
 
 .channel-manager-container {
   position: absolute;
-  display: inline-block;  
+  /* display: flex;   */
   left: 0;
+  bottom: 0;
+  top: 0;
   background-color: rgba(255,255,255,0.87);
-  height: 100%;
+  /* height: 60vh; */
   z-index: 100;
   margin: 0;
   padding: 15px;
-  margin-top: -15px;
+  padding-bottom: 0;
   border-right: 1px solid var(--button-blue);
 }
 

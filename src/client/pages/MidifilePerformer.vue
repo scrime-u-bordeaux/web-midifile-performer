@@ -83,8 +83,11 @@
           @stop="onVisualizerStop"
           @index="onIndexChange"
           @start="onStartChange"
-          @end="onEndChange"/>
+          @end="onEndChange"
+        />
+      </div>
 
+      <div class="mfp-bottom-controls">
         <Keyboard
           ref="keyboard"
           class="keyboard"
@@ -150,8 +153,8 @@
           {{ $t('midiFilePerformer.noScores.standalone') }}
         </div>
       </div>
-
     </div>
+    
     <PerformGranularity
         v-show="!mfpMidiFile.isMidi"
         ref="performGranularity"
@@ -167,20 +170,27 @@
   position: absolute;
   width: 100%;
 }
+
 .mfp-and-loading-container {
-  position: absolute;
-  left: 0;
-  right: 0;
+  /* position: absolute; */
+  /* left: 0; */
+  /* right: 0; */
+  position: relative;
   display: flex;
   justify-content: center;
-  align-content: center;
+  /* align-content: center; */
   text-align: center;
+  align-items: stretch;
+  flex-grow: 1;
+  overflow: hidden;
+  margin-top: -15px;
 }
 
 .mfp-and-controls {
   width: 100%;
   display: flex;
   justify-content: center;
+  flex-direction: column;
 }
 
 /*
@@ -204,17 +214,25 @@
 */
 
 .mfp-container {
-  position: relative;
-  left: 0;
-  right: 0;
+  /* position: relative; */
+  /* left: 0; */
+  /* right: 0; */
   /* top: 0;
-  bottom: 0; */
+  /* bottom: 0; */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 500px;
+  /* min-height: 500px; */
+  /* max-height: 60vh; */
+  overflow: auto;
+  flex-grow: 1;
 }
+
+.mfp-bottom-controls {
+  margin: 0 auto;
+}
+
 .mfp-and-controls.hide {
   z-index: -100;
   opacity: 0;
@@ -336,10 +354,11 @@
   padding-bottom: 12px;
   display: flex;
 }
-
+/*
 .perform-granularity {
-  /* width: 26vw; */
+  width: 26vw;
 }
+*/
 </style>
 
 <script>
