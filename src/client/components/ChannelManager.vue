@@ -105,6 +105,19 @@
 
 <style lang="css" scoped>
 
+.channel-manager-container {
+  position: absolute;
+  display: inline-block;  
+  left: 0;
+  background-color: rgba(255,255,255,0.87);
+  height: 100%;
+  z-index: 100;
+  margin: 0;
+  padding: 15px;
+  margin-top: -15px;
+  border-right: 1px solid var(--button-blue);
+}
+
 .channel-list {
   height: 75vh;
   overflow: scroll;

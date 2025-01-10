@@ -12,14 +12,7 @@
     Using v-show won't work because it would make the width 0
     (and sheet music needs an actual width to render)-->
 
-    <div
-      class="mfp-and-controls"
-      :class="[
-        displayLoadingScreen ? 'hide' : 'show',
-        mfpMidiFile.buffer ? 'with-channels' : '',
-        !!$refs.channelManager && $refs.channelManager.velocitiesDisplayed ? 'side-view' : 'normal-view'
-      ]">
-      <ChannelManager
+    <ChannelManager
         ref="channelManager"
         class="channel-manager"
         v-if="!!mfpMidiFile.buffer"
@@ -27,6 +20,13 @@
         @noUpdateTriggers='noUpdateTriggers = true'
         @updateTriggers='noUpdateTriggers = false'
       />
+    <div
+      class="mfp-and-controls"
+      :class="[
+        displayLoadingScreen ? 'hide' : 'show',
+        mfpMidiFile.buffer ? 'with-channels' : '',
+        !!$refs.channelManager && $refs.channelManager.velocitiesDisplayed ? 'side-view' : 'normal-view'
+      ]">
 
       <div class="mfp-container" :class="mfpMidiFile.isMidi ? 'midi' : 'musicxml'"
         @dragover="onDragOver"
@@ -46,22 +46,20 @@
         </div>
 
         <div class="visualizer-selector" v-if="!mfpMidiFile.isMidi && !!mfpMidiFile.buffer">
-          <img
+          <PianoRollBtn
             class="icon piano-roll"
-            :class="[
-              isModeSilent ? 'silent' : 'play-perform',
-              pianoRollSelected ? 'enabled' : 'disabled'
-            ]"
+            style="width: 25px; height: auto; cursor: pointer;"
+            :silent="isModeSilent"
+            :enabled="pianoRollSelected"
             @click="selectedVisualizer = 'piano'"/>
 
           <div class="file-name" :title="mfpMidiFile.title">{{ trimmedTitle }}</div>
 
-          <img
+          <SheetMusicBtn
             class="icon sheet-music"
-            :class="[
-              isModeSilent ? 'silent' : 'play-perform',
-              sheetMusicSelected ? 'enabled' : 'disabled'
-            ]"
+            style="width: 40px; height: auto; cursor: pointer;"
+            :silent="isModeSilent"
+            :enabled="sheetMusicSelected"
             @click="selectedVisualizer = 'sheet'"/>
         </div>
 
@@ -153,14 +151,14 @@
         </div>
       </div>
 
-      <PerformGranularity
+    </div>
+    <PerformGranularity
         v-show="!mfpMidiFile.isMidi"
         ref="performGranularity"
         class="perform-granularity"
         :modelValue="musicXmlGranularity"
         @update:modelValue="changeMusicXmlGranularity"
       />
-    </div>
   </div>
 </template>
 
@@ -170,20 +168,31 @@
   width: 100%;
 }
 .mfp-and-loading-container {
+  position: absolute;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: center;
   align-content: center;
   text-align: center;
 }
 
+.mfp-and-controls {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/*
 .mfp-and-controls.with-channels.side-view {
   display: grid;
   grid-template-columns: 47% 53%;
+  
 }
 .mfp-and-controls.with-channels.normal-view {
   width: 100%;
   display: flex;
-  justify-content: start;
+  justify-content: center;
 }
 .mfp-and-controls.with-channels.normal-view .channel-manager {
   margin-left: 3em;
@@ -192,8 +201,14 @@
 .mfp-and-controls.with-channels.normal-view .mfp-container {
   margin-left: 2.5em;
 }
+*/
 
 .mfp-container {
+  position: relative;
+  left: 0;
+  right: 0;
+  /* top: 0;
+  bottom: 0; */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -333,19 +348,42 @@ import { mapMutations, mapGetters, mapState } from 'vuex';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
 import ChannelManager from '../components/ChannelManager.vue';
-import PerformGranularity from '../components/PerformGranularity.vue'
-import LoadingScreen from '../components/LoadingScreen.vue'
-import PianoRoll from '../components/PianoRoll.vue'
-import SheetMusic from '../components/SheetMusic.vue'
-import Settings from '../components/Settings.vue'
+import PerformGranularity from '../components/PerformGranularity.vue';
+import LoadingScreen from '../components/LoadingScreen.vue';
+import SheetMusicBtn from '../components/SheetMusicBtn.vue';
+import SheetMusic from '../components/SheetMusic.vue';
+import PianoRollBtn from '../components/PianoRollBtn.vue';
+import PianoRoll from '../components/PianoRoll.vue';
+import Settings from '../components/Settings.vue';
 
-const isEqual = require('lodash.isequal')
+const isEqual = require('lodash.isequal');
 
 const MIDI_FILE_SIGNATURE = [..."MThd"].map(c => c.charCodeAt())
 
 export default {
-  inject: [ 'ioctl', 'performer', 'parseMusicXml', 'getRootFileFromMxl', 'defaultMidiInput', 'defaultKeyboardVelocities', 'DEFAULT_IO_ID', 'NUMBER_OF_KEYS', 'NUMBER_OF_SOUNDFILES' ],
-  components: { Keyboard, ScrollBar, ChannelManager, PerformGranularity, LoadingScreen, PianoRoll, SheetMusic, Settings },
+  inject: [
+    'ioctl',
+    'performer',
+    'parseMusicXml',
+    'getRootFileFromMxl',
+    'defaultMidiInput',
+    'defaultKeyboardVelocities',
+    'DEFAULT_IO_ID',
+    'NUMBER_OF_KEYS',
+    'NUMBER_OF_SOUNDFILES'
+  ],
+  components: {
+    Keyboard,
+    ScrollBar,
+    ChannelManager,
+    PerformGranularity,
+    LoadingScreen,
+    SheetMusicBtn,
+    SheetMusic,
+    PianoRollBtn,
+    PianoRoll,
+    Settings
+  },
   data() {
     return {
       selectedVisualizer: null, // computed properties cannot be accessed in data
@@ -475,29 +513,24 @@ export default {
     this.performer.addListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
     this.performer.addListener('disableBeatPlay', this.onIsBeatPlayDisabled)
 
-    //*
-    // Is this code still useful ?
+    // this code loads latest
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
       this.loadingFlag = true;
       await this.performer.loadMidifile(this.mfpMidiFile.buffer, this.mfpMidiFile.isMidi);
+      this.setDesiredVisualizer();
       this.loadingFlag = false;
     } else {
       console.log('no buffer yet');
+      this.loadingFlag = true;
+      // load default mxl prelude in C : new integrated first steps    
+      const res = await fetch('mxl/Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl');
+      const blob = await res.blob();
+      blob.name = 'Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl';
+      await this.loadFile(blob);
+      this.setAppropriateVisualizer();
+      this.loadingFlag = false;
     }
-    //*/
-
-    // load mxl prelude in C : new integrated first steps    
-    const res = await fetch('mxl/Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl');
-    // const res = await fetch('mid/bach-c-prelude-the-well-tempered-clavier.mid');
-    const blob = await res.blob();
-    blob.name = 'Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl';
-    await this.loadFile(blob);
-
-    // Watchers are not called on mount
-    // And we can't do this on create, because otherwise, remounting the page never sets this again
-    // (and so no visualizer is displayed)
-    this.setAppropriateVisualizer();
 
     this.$emit("canPerform", true)
   },

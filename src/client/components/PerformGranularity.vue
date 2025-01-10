@@ -1,10 +1,17 @@
 <template lang="html">
   <div class="granularities-container">
+    <GranMeasureIcon
+      style="width: 200px; height: auto; margin-bottom: 0.5em;"
+      :modelValue="modelValue"
+    />
+    <!--
     <img class="example" :class="{
       all: modelValue === 'all',
       beat: modelValue === 'beat',
       measure: modelValue === 'measure'
     }"/>
+    -->
+    
     <div class="context">{{ $t('midiFilePerformer.granularities.context') }}</div>
     <OptionTabs
       class="tabs"
@@ -19,6 +26,11 @@
 </template>
 
 <style lang="css" scoped>
+.granularities-container {
+  position: absolute;
+  right: 0;
+  padding: 15px;
+}
 
 img {
   width: 80%;
@@ -49,9 +61,10 @@ img {
 </style>
 
 <script>
-import OptionTabs from './OptionTabs.vue'
+import GranMeasureIcon from './GranMeasureIcon.vue';
+import OptionTabs from './OptionTabs.vue';
 export default {
-  components: { OptionTabs },
+  components: { GranMeasureIcon, OptionTabs },
 
   props: ['modelValue'],
   emits: ['update:modelValue'],
