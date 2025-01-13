@@ -198,8 +198,9 @@
   flex-direction: column;
   align-items: center;
 }
-.scroll-bar-container.vertical-layout .full-width{
-  width: var(--controls-width)
+.scroll-bar-container.vertical-layout .full-width {
+  width: 100%;
+  max-width: var(--controls-width);
 }
 .horizontal-layout {
   display: grid;
@@ -376,9 +377,12 @@ export default {
       console.log(this.size);
       return this.size;
     },
+    // this is executed only once : it seems that this.$refs should never be
+    // accessed from computed properties
     boundingRect() {
       return this.$refs['scroll-bar'].getBoundingClientRect();
     },
+    // see above : this will always return 0
     cursorRadius() {
       if (!this.boundingRect) { return 0; }
       // return this.boundingRect.height * 0.5;
@@ -470,7 +474,11 @@ export default {
     drag(e) {
       if (this.dragging === null) return;
 
-      const { x, width } = this.boundingRect;
+      // const { x, width } = this.boundingRect;
+      // computed properties should never access this.$refs, so we access the
+      // $refs directly from this method
+      // this saves us an "onResize" listener to always get the coordinates right :
+      const { x, width } = this.$refs['scroll-bar'].getBoundingClientRect();
 
       if (this.dragging === 'start' || this.dragging === 'end') {
         let position = (e.clientX - this.draggingOffset - x) / (width - 2 * this.cursorRadius);
