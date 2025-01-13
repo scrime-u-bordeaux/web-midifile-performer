@@ -22,14 +22,12 @@ input {
   user-select: none;
   width: 100%;
 }
-
 input::selection {
   caret-color: transparent;
   color: white;
   background: rgba(0,0,0,0.5);
   /* background: transparent; */
 }
-
 .input-label {
   margin-bottom: 8px;
   text-align: center;
@@ -47,14 +45,16 @@ export default {
   emits: ['input'],
   computed: {
     isDecimal() {
-      return !Number.isInteger(this.step)
+      return !Number.isInteger(this.step);
     },
     validInputKeys() {
+      // it would be nice to be able to specify negative numbers :
+      // const allValidKeys = ['0','1','2','3','4','5','6','7','8','9','Backspace','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','-','.'];
       const allValidKeys = ['0','1','2','3','4','5','6','7','8','9','Backspace','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','.'];
-      return this.isDecimal ? allValidKeys : allValidKeys.slice(0,-1)
+      return this.isDecimal ? allValidKeys : allValidKeys.slice(0,-1);
     },
     numberKeys() {
-      return validInputKeys.slice(0,10)
+      return validInputKeys.slice(0,10);
     }
   },
   methods: {
@@ -65,6 +65,10 @@ export default {
     // 3. Ensure that at most one decimal point is ever present in the input.
 
     onKeyDown(e) {
+      var isNumber = function isNumber(value) {
+        return typeof value === 'number' && isFinite(value);
+      };
+
       if (e.key == 'Tab') return;
 
       // on Enter, let the event bubble and force blur on the input
@@ -95,8 +99,8 @@ export default {
       const initialInputString = e.target.value
 
       // User is deleting a digit, **or** the decimal point in the case of decimal input.
-      if(e.key === "Backspace") {
-        if(this.isDecimal && this.decimalFlag && initialInputString.length === 1) { // We are erasing the decimal point
+      if (e.key === "Backspace") {
+        if (this.isDecimal && this.decimalFlag && initialInputString.length === 1) { // We are erasing the decimal point
           // The length condition is 1 and not 2 because erasing from x.y directly produces x and not x.
           this.decimalFlag = false;
         }
@@ -104,7 +108,7 @@ export default {
           // We do not always delete the last character ;
           // but if we delete anything else, trailing decimal points are not an issue.
           const inputStringAfterBackspace = initialInputString.slice(0,-1)
-          if(inputStringAfterBackspace.endsWith('.')) this.decimalFlag = true; // Contrary to the Number conversion, this *can* end with "."
+          if (inputStringAfterBackspace.endsWith('.')) this.decimalFlag = true; // Contrary to the Number conversion, this *can* end with "."
         }
       }
 
@@ -112,8 +116,18 @@ export default {
       // The value doesn't actually change until they enter a decimal,
       // Which means that trailing decimal points (like 1., 2.) can exist.
       else if(e.key === "." && this.isDecimal) {
-        if(initialInputString.length === 1 && !this.decimalFlag) this.decimalFlag = true; // This means : a solitary integer without a trailing decimal (e.g. excluding 2.)
+        if (initialInputString.length === 1 && !this.decimalFlag) this.decimalFlag = true; // This means : a solitary integer without a trailing decimal (e.g. excluding 2.)
         else e.preventDefault() // Cut the event line immediately if there would be multiple decimal points.
+      }
+
+      // todo : can we check if we're typing a minus sign that is not at the beginning of the input string ?
+      else if (e.key === '-') {
+        /* do smth */
+        // const inputStringAfterMinus = initialInputString;
+        if (!isNumber(parseFloat(initialInputString + '-'))) {
+          // e.preventDefault();
+          // console.log('not a nuber !!!!!')
+        }
       }
 
       // One edge case is still not covered, however, and to examinate it, these two variables must be persisted.
