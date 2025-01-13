@@ -220,7 +220,8 @@
   border-bottom: 2px solid var(--button-blue);
   font-weight: bold;
 }
-.tabs.major::v-deep .first-tab {
+/* .tabs.major::v-deep .first-tab { */
+:deep(.tabs.major) .first-tab {
   margin-left: -1.9em;
 }
 
@@ -254,13 +255,16 @@ h4 {
   padding-bottom: 0.75em;
 }
 
-.velocity-scroll::v-deep.horizontal-layout {
+/* .velocity-scroll::v-deep.horizontal-layout { */
+:deep(.velocity-scroll).horizontal-layout {
   grid-template-columns: 30% 70%
 }
-.velocity-scroll::v-deep .slider-container {
+/* .velocity-scroll::v-deep .slider-container { */
+:deep(.velocity-scroll) .slider-container {
   grid-template-columns: 80% 20%;
 }
-.velocity-scroll::v-deep .pseudo-link {
+/* .velocity-scroll::v-deep .pseudo-link { */
+:deep(.velocity-scroll) .pseudo-link {
   margin-top: 2.25em;
 }
 
@@ -280,7 +284,8 @@ h4 {
 .performer-constructor-options > * {
   padding: 0.5em 1.25em;
 }
-.performer-constructor-options > *::v-deep {
+/* .performer-constructor-options > *::v-deep { */
+.performer-constructor-options > :deep(*) {
   color: #888;
 }
 
