@@ -32,11 +32,14 @@
         @dragover="onDragOver"
         @drop="onDrop">
 
-        <span class="contextualization" v-if="true || !mfpMidiFile.buffer">
+        <div class="contextualization tooltip" v-if="true || !mfpMidiFile.buffer">
+          <span>
           <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
           <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
           <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
-        </span>
+          </span>
+          <span class="tooltiptext">Tooltip text !</span>
+        </div>
 
         <div v-if="!!mfpMidiFile.buffer && mfpMidiFile.isMidi"
           class="file-name"
