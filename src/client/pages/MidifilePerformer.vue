@@ -43,7 +43,7 @@
 
         <div class="corpora-navigation">
           <div class="corpora-selectors">
-            <select ref="corpus-selector" @change="onCorpusChanged">
+            <select id="corpus-selector" ref="corpus-selector" @change="onCorpusChanged">
               <option v-for="corpus in Object.keys(corpora)" :value="corpus">
                 {{ corpus }}
               </option>
@@ -263,6 +263,10 @@
 .corpora-selectors {
   display: flex;
   flex-direction: column;
+}
+
+#corpus-selector {
+  margin-bottom: .25em;
 }
 
 .corpora-buttons {
