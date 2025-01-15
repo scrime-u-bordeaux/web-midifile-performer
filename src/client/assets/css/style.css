@@ -54,7 +54,7 @@ html, body {
 
 #app-menu {
   margin-bottom: 15px;
-  position: sticky;
+  /* position: sticky; */
   top: 0;
   background-color: white;
   z-index: 1000;
@@ -77,10 +77,11 @@ html, body {
 button, .file-input label {
   display: inline-block;
   font-family: var(--global-font);
-  font-size: 1.2em;
+  /* font-size: 1.2em; */
+  font-size: 1em;
   cursor: pointer;
-  margin: .25em;
-  padding: .5em 1em;
+  margin: .2em;
+  padding: .4em .8em;
   color: white;
   background: var(--button-blue);
   border-radius: 5px;
@@ -105,9 +106,11 @@ select, option {
 /* tooltip for quick start on main page */
 
 .tooltip {
+  /* z-index: 2000; */
   position: relative;
   display: inline-block;
   border-bottom: 1px dotted black;
+  cursor: help;
 }
 
 .tooltip .tooltiptext {
@@ -127,6 +130,7 @@ select, option {
 }
 
 .tooltip .tooltiptext::after {
+  z-index:3000;
   content: "";
   position: absolute;
   top: 100%;

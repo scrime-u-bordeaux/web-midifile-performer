@@ -1,5 +1,5 @@
 <template>
-  <div class="channel-manager-container">
+  <div class="channel-manager-container" :class="{collapsed}">
     <div class="expander-container" v-show="collapsed">
       <div
         class="img-and-touch-feedback"
@@ -111,13 +111,19 @@
   left: 0;
   bottom: 0;
   top: 0;
-  background-color: rgba(255,255,255,0.87);
+  background-color: rgba(255,255,255,0.88);
   /* height: 60vh; */
   z-index: 100;
   margin: 0;
   padding: 15px;
   padding-bottom: 0;
   border-right: 1px solid var(--button-blue);
+}
+
+.channel-manager-container.collapsed {
+  background-color: transparent;
+  border-right: 0;
+  pointer-events: none;
 }
 
 .channel-list {
@@ -247,6 +253,10 @@ img.sliders.not-displayed, img.sliders.displayed:hover {
   align-items: center;
 }
 
+.channel div {
+  display: flex;
+}
+
 .channel span {
   height: fit-content;
   width: fit-content;
@@ -282,6 +292,8 @@ img.sliders.not-displayed, img.sliders.displayed:hover {
   display: flex;
   justify-content: space-evenly;
   align-items: center;
+  background-color: rgba(255, 255, 255, 0.75);
+  pointer-events: all;
 }
 
 .expander-container span {

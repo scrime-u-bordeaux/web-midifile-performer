@@ -30,6 +30,7 @@
   position: absolute;
   right: 0;
   padding: 15px 15px 0 0;
+  background-color: rgba(255,255,255,0.75);
 }
 
 img {
