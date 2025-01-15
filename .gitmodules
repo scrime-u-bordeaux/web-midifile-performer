@@ -1,0 +1,3 @@
+[submodule "src/dependencies/dcml_corpora_musicxml_exports"]
+	path = src/dependencies/dcml_corpora_musicxml_exports
+	url = https://gitub.u-bordeaux.fr/scrime/score-edition/dcml_corpora_musicxml_exports.git

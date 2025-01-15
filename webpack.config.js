@@ -58,7 +58,8 @@ module.exports = (env) => { return {
     new Dotenv(),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'src/client/assets', to: '' }
+        { from: 'src/client/assets', to: '' },
+        { from: 'src/dependencies/dcml_corpora_musicxml_exports', to: 'corpora' }
       ]
     }),
     new HtmlWebpackPlugin({

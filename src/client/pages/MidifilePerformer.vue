@@ -34,11 +34,34 @@
 
         <div class="contextualization tooltip" v-if="true || !mfpMidiFile.buffer">
           <span>
-          <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
-          <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
-          <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
+            <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
+            <p>{{ $t('midiFilePerformer.contextualization.secondLine') }}</p>
+            <p>{{ $t('midiFilePerformer.contextualization.thirdLine') }}</p>
           </span>
-          <span class="tooltiptext">Tooltip text !</span>
+          <span class="tooltiptext">utilisez les 4 rangées de touches alphanumériques de votre clavier d'ordinateur</span>
+        </div>
+
+        <div class="corpora-navigation">
+          <div class="corpora-selectors">
+            <select ref="corpus-selector" @change="onCorpusChanged">
+              <option v-for="corpus in Object.keys(corpora)" :value="corpus">
+                {{ corpus }}
+              </option>
+            </select>
+            <select ref="piece-selector">
+              <option v-for="piece in corpora[selectedCorpus]" :value="piece.name">
+                {{ piece.name }}
+              </option>
+            </select>
+          </div>
+          <div class="corpora-buttons">
+            <button
+              @click="loadSelectedPiece">
+              <!-- @click="$router.push('/guide')"> -->
+              <!-- {{ $t("midiFilePerformer.help") }} -->
+              Charger
+            </button>            
+          </div>
         </div>
 
         <div v-if="!!mfpMidiFile.buffer && mfpMidiFile.isMidi"
@@ -232,6 +255,23 @@
   flex-grow: 1;
 }
 
+.corpora-navigation {
+  display: flex;
+  flex-direction: row;
+}
+
+.corpora-selectors {
+  display: flex;
+  flex-direction: column;
+}
+
+.corpora-buttons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
 .mfp-bottom-controls {
   margin: 0 auto;
 }
@@ -293,11 +333,11 @@
 .file-and-control {
   margin-top: 8px;
   display: flex;
-  /*align-items: center;*/ /*For some reason, adding this here actually uncenters the children...?*/
+  justify-content: center;
 }
 .file-input-wrapper {
   width: fit-content;
-  margin: 0 auto;
+  /* margin: 0 auto; */
   text-align: left;
 }
 .file-input {
@@ -416,6 +456,8 @@ export default {
 
       musicXmlGranularity: 'all',
       noUpdateTriggers: false,
+      corpora: {},
+      selectedCorpus: undefined,
     };
   },
   computed: {
@@ -464,7 +506,6 @@ export default {
     }
   },
   watch: {
-
     currentChannelControls(newControls, oldControls) {
       if(isEqual(newControls, oldControls)) return // necessary because these are objects,
       // so this listener *will* fire every time settings are applied.
@@ -535,7 +576,21 @@ export default {
     this.performer.addListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
     this.performer.addListener('disableBeatPlay', this.onIsBeatPlayDisabled)
 
-    // this code loads latest
+    const res2 = await fetch('/corpora');
+    const blob2 = await res2.blob();
+    const json = await blob2.text();
+    // this.$nextTick(() => {
+      this.corpora = JSON.parse(json);
+      // const corpsel = this.$refs['corpus-selector'];
+      // corpsel.selectedIndex = 0;
+      this.$refs['corpus-selector'].selectedIndex = 0;
+      // corpsel.value = corpsel.options[0].value;
+      await nextTick();
+      this.onCorpusChanged();
+      // console.log('MOUNTING !!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    // })
+
+    // this code loads latest file on tab change
     if (this.mfpMidiFile.buffer !== null) {
       console.log('buffer already full');
       this.loadingFlag = true;
@@ -545,7 +600,7 @@ export default {
     } else {
       console.log('no buffer yet');
       this.loadingFlag = true;
-      // load default mxl prelude in C : new integrated first steps    
+      // load default mxl prelude in C (kinf of new integrated first steps page)
       const res = await fetch('mxl/Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl');
       const blob = await res.blob();
       blob.name = 'Prelude_I_in_C_major_BWV_846_-_Well_Tempered_Clavier_First_Book.mxl';
@@ -674,9 +729,30 @@ export default {
       }
     },
 
+    async loadSelectedPiece() {
+      const corpus = this.$refs['corpus-selector'].value;
+      const piece = this.$refs['piece-selector'].value;
+
+      this.loadingFlag = true;
+      const res = await fetch(`corpora/${corpus}/${piece}`);
+      const blob = await res.blob();
+      blob.name = piece;
+      await this.loadFile(blob);
+      this.setAppropriateVisualizer();
+      this.loadingFlag = false;
+    },
+
     // -------------------------------------------------------------------------
     // --------------------------EVENT HANDLERS---------------------------------
     // -------------------------------------------------------------------------
+
+    onCorpusChanged() {
+      const select = this.$refs['corpus-selector'];
+      console.log(select);
+      const corpus = select.value || select.options[select.selectedIndex].value;
+      this.$refs['piece-selector'].selectedIndex = 0;
+      this.selectedCorpus = corpus;
+    },
 
     onToggleListen() {
       this.performer.toggleListen()
