@@ -93,97 +93,102 @@
     </div>
 
     <div class="indices" v-if="hasBounds">
-      <div class="svg-button-container">
-        <img class="first-button"
-          src="svg/start.svg"
-          @click="$emit('index', start)"
-        />
-      </div>
 
-      <div class="svg-button-container">
-        <img class="prev-button"
-          src="svg/ff.svg"
-          @mousedown="() => beginIncrement('previous')"
-          @mouseup="() => stopIncrement()"
-        />
-      </div>
+      <div class="btn-controls">
+        <div class="svg-button-container">
+          <img class="first-button"
+            src="svg/start.svg"
+            @click="$emit('index', start)"
+          />
+        </div>
 
-      <div class="play-button-container">
-        <div class="play-button"
-         :class="isModeListen ? 'pause-icon' : 'play-icon'"
-         @click="toggleListen">
+        <div class="svg-button-container">
+          <img class="prev-button"
+            src="svg/ff.svg"
+            @mousedown="() => beginIncrement('previous')"
+            @mouseup="() => stopIncrement()"
+          />
+        </div>
+
+        <div class="play-button-container">
+          <div class="play-button"
+          :class="isModeListen ? 'pause-icon' : 'play-icon'"
+          @click="toggleListen">
+          </div>
+        </div>
+
+        <div class="stop-button-container">
+          <div class="stop-button" @click="silence()"></div>
+        </div>
+
+        <div class="svg-button-container">
+          <img class="next-button"
+            src="svg/ff.svg"
+            @mousedown="() => beginIncrement('next')"
+            @mouseup="() => stopIncrement()"
+          />
+        </div>
+
+        <div class="svg-button-container">
+          <img class="last-button"
+            src="svg/start.svg"
+            @click="$emit('index', end)"
+          />
         </div>
       </div>
 
-      <div class="svg-button-container">
-        <img class="next-button"
-          src="svg/ff.svg"
-          @mousedown="() => beginIncrement('next')"
-          @mouseup="() => stopIncrement()"
-        />
-      </div>
+      <div class="nb-controls">
+        <div class="speed-input">
+          <NumberInput
+            ref="speed-input"
+            :label="$t('scrollBar.speed')"
+            :min="0.1"
+            :max="10"
+            :step="0.1"
+            :value="speed"
+            :allowNaN="false"
+            @input="onPlaybackSpeedChanged"
+          />
+        </div>
 
-      <div class="svg-button-container">
-        <img class="last-button"
-          src="svg/start.svg"
-          @click="$emit('index', end)"
-        />
-      </div>
+        <div>
+          <NumberInput
+            ref="start-input"
+            :label="$t('scrollBar.start')"
+            :min="1"
+            :max="end + 1"
+            :step="1"
+            :value="start + 1"
+            :allowNaN="true"
+            @input="onStartInput"
+          />
+        </div>
 
-      <div class="speed-input">
-        <NumberInput
-          ref="speed-input"
-          :label="$t('scrollBar.speed')"
-          :min="0.1"
-          :max="10"
-          :step="0.1"
-          :value="speed"
-          :allowNaN="false"
-          @input="onPlaybackSpeedChanged"
-        />
-      </div>
+        <div>
+          <NumberInput
+            ref="index-input"
+            :label="capitalizedIndexLabel || $t('scrollBar.current')"
+            :min="hasBounds ? start + 1 : start"
+            :max="hasBounds ? end + 1 : end"
+            :step="1"
+            :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
+            :allowNaN="true"
+            @input="onIndexInput"
+          />
+        </div>
 
-      <div>
-        <NumberInput
-          ref="start-input"
-          :label="$t('scrollBar.start')"
-          :min="1"
-          :max="end + 1"
-          :step="1"
-          :value="start + 1"
-          :allowNaN="true"
-          @input="onStartInput"
-        />
-      </div>
-
-      <div>
-        <NumberInput
-          ref="index-input"
-          :label="capitalizedIndexLabel || $t('scrollBar.current')"
-          :min="hasBounds ? start + 1 : start"
-          :max="hasBounds ? end + 1 : end"
-          :step="1"
-          :value="hasBounds ? Math.max(index + 1, start + 1) : Math.max(index, start)"
-          :allowNaN="true"
-          @input="onIndexInput"
-        />
-      </div>
-
-      <div>
-        <NumberInput
-          ref="end-input"
-          :label="$t('scrollBar.end')"
-          :min="start + 1"
-          :max="Math.max(1, size)"
-          :step="1"
-          :value="end + 1"
-          :allowNaN="true"
-          @input="onEndInput"
-        />
-      </div>
-
-      <div class="stop-button-container">
-        <div class="stop-button" @click="silence()"></div>
+        <div>
+          <NumberInput
+            ref="end-input"
+            :label="$t('scrollBar.end')"
+            :min="start + 1"
+            :max="Math.max(1, size)"
+            :step="1"
+            :value="end + 1"
+            :allowNaN="true"
+            @input="onEndInput"
+          />
+        </div>
       </div>
     </div>
 
@@ -204,7 +209,7 @@
 }
 .horizontal-layout {
   display: grid;
-  grid-template-columns: 40% 60%;
+  grid-template-columns: 20% 80%;
   align-items: center;
   justify-content: space-between;
 }
@@ -257,17 +262,28 @@ rect, circle {
 .indices:has(.no-bounds-indice) {
   display: flex;
   justify-content: start;
+  /* padding: 10px; */
 }
 .indices:not(:has(.no-bounds-indice)) {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   width: var(--controls-width);
 }
 
 .indices > div {
+}
+
+.btn-controls, .nb-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 0 auto;
+}
+
+.indices > div > div {
   display: inline-block;
-  padding: 10px;
+  padding: 5px;
 }
 
 .indices > .play-button-container {
@@ -304,11 +320,12 @@ rect, circle {
 
 .svg-button-container {
   /* Not width, because the ff button has a non-square aspect ratio */
-  height: 30px;
+  height: 20px;
 }
 .svg-button-container img {
   /* Not width, because the ff button has a non-square aspect ratio */
-  height: 30px;
+  height: 20px;
+  /* width: 20px; */
   cursor: pointer;
 }
 
