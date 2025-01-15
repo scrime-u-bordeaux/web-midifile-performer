@@ -580,7 +580,7 @@ export default {
     this.performer.addListener('disableMeasurePlay', this.onIsMeasurePlayDisabled)
     this.performer.addListener('disableBeatPlay', this.onIsBeatPlayDisabled)
 
-    const res2 = await fetch('/corpora');
+    const res2 = await fetch('corpora');
     const blob2 = await res2.blob();
     const json = await blob2.text();
     // this.$nextTick(() => {
