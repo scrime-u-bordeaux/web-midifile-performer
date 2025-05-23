@@ -88,10 +88,8 @@
 .container {
   min-height: 500px;
   max-width: var(--content-width);
-  /* max-width: fit-content; */
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 .video-container {
   position: relative;

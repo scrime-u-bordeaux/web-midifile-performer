@@ -13,6 +13,7 @@
 
         <div class="main-title" @click="$router.push('/')">
           Midifile Performer
+          <!-- Métapiano -->
         </div>
       </div>
 
