@@ -1,6 +1,7 @@
 const path = require('path');
 const express = require('express');
 const history = require('connect-history-api-fallback');
+
 // mimick webpack's dev server hot reload
 // const webpack = require('webpack');
 // const middleware = require('webpack-dev-middleware'); //webpack hot reloading middleware
@@ -51,7 +52,7 @@ app.get('/corpora/:corpus/:piece', (req, res) => {
 });
 
 // '/' seems to default to the index.html in the static folder (?)
-app.get('*', (req, res) => {
+app.get('/{*any}', (req, res) => {
   // res.redirect(`${(process.env.PUBLIC_PATH + '/') || '/'}/#/404`);
   res.redirect(`${process.env.PUBLIC_PATH || '/'}/#/404`);
 });
