@@ -1,5 +1,5 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 class Corpora {
   constructor(publicPath = "/") {
@@ -50,4 +50,4 @@ class Corpora {
   }
 };
 
-module.exports = Corpora;
+export default Corpora;

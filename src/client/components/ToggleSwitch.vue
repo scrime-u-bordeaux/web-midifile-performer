@@ -1,3 +1,17 @@
+<script setup>
+const props = defineProps([
+  'label',
+  'modelValue',
+  'vertical',
+  'disabled'
+]);
+const emit = defineEmits(['update:modelValue']);
+
+function onInput(event) {
+  emit('update:modelValue', event.target.value)
+}
+</script>
+
 <template>
   <div
     class="switch-container"
@@ -18,9 +32,10 @@
         type="checkbox"
         :disabled="disabled"
         class="hidden-checkbox"
-        v-model="modelValue"
-        @input="$emit('update:modelValue', $event.target.checked)"
+        :value="modelValue"
+        @input="onInput"
       />
+      <!-- @input="$emit('update:modelValue', $event.target.checked)" -->
       <span class="background" :class="vertical ? 'vertical' : 'horizontal'"></span>
     </label>
   </div>
@@ -125,8 +140,8 @@
 </style>
 
 <script>
-export default {
-  props: ['label', 'modelValue', 'vertical', 'disabled'],
-  emits: ['update:modelValue']
-}
+// export default {
+//   props: ['label', 'modelValue', 'vertical', 'disabled'],
+//   emits: ['update:modelValue']
+// }
 </script>

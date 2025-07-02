@@ -422,7 +422,8 @@ import PianoRollBtn from '../components/PianoRollBtn.vue';
 import PianoRoll from '../components/PianoRoll.vue';
 import Settings from '../components/Settings.vue';
 
-const isEqual = require('lodash.isequal');
+// const isEqual = require('lodash.isequal');
+import isEqual from 'lodash/isEqual';
 
 const MIDI_FILE_SIGNATURE = [..."MThd"].map(c => c.charCodeAt())
 
@@ -884,6 +885,7 @@ export default {
     // We need another solution.
 
     preloadAllImages() {
+      /*
       const keys = require.context('../assets/pics/', false, /\.png$/).keys()
 
       // Separate each request by a delay
@@ -899,8 +901,9 @@ export default {
           200
         )
       }
-
+      
       preloadImageRecursive(0)
+      */
     },
 
     setAppropriateVisualizer() {

@@ -25,10 +25,11 @@
     </div>
     -->
 
+
     <div class="credits-container">
       <p>
         {{ $t('credits.metapiano') }}<br/>
-        <strong>Jean Haury</strong>
+        <strong>Jean Haury Hee Hee</strong>
       </p>
       <p>
         <a href="https://dl.acm.org/doi/10.1145/3471872.3472968">

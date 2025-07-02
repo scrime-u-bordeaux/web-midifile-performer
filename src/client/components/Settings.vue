@@ -348,8 +348,11 @@ h4 {
 
 import { toRaw } from 'vue'
 import { mapGetters, mapMutations } from 'vuex';
-const isEqual = require('lodash.isequal') // So apparently Vue supports require-style imports ??
+
+// const isEqual = require('lodash.isequal') // So apparently Vue supports require-style imports ??
 // Thank God, because this package can't be used with ES6 import syntax.
+// uh oh, not anymore, let's see ...
+import isEqual from 'lodash.isequal';
 
 import OptionTabs from './OptionTabs.vue'
 import PopUp from './PopUp.vue'

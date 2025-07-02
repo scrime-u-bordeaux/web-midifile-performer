@@ -1,0 +1,146 @@
+:root {
+  --dark-grey: #333;
+  --grey: #555;
+  --mid-grey: #ccc;
+  --light-grey: #eee;
+
+  --hint-blue: #36A9CE;
+  --button-blue: rgb(2,167,240);
+  --play-perform-green: rgb(88, 226, 142);
+  /*--button-blue: #6b93ee;*/
+  --button-blue-light-90: rgba(2, 167, 240, 0.9);
+  --button-blue-light-70: rgba(2, 167, 240, 0.7);
+  --autoplay-dark-yellow: #cba034;
+  --autoplay-light-yellow: #ffc73b;
+
+  --menubar-height: 50px;
+  --content-width: 800px;
+  /*--menu-width: 700px;*/
+  --score-width: 650px;
+  --controls-width: 650px;
+
+  /* --global-font: "DejaVu Serif"; */
+  /* --global-font: sans-serif; */
+  --global-font: 'Roboto';
+
+  --youtube-video-h-w-ratio: calc(calc(315 / 560) * 100%);
+}
+
+html, body {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  font-family: var(--global-font);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: clip;
+}
+
+#app {
+  /* position: absolute; */
+  /* left: 0; */
+  /* right: 0; */
+  /* top: 0; */
+  /* bottom: 0; */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-align: center;
+  overflow-x: hidden;
+}
+
+#app-menu {
+  margin-bottom: 15px;
+  /* position: sticky; */
+  top: 0;
+  background-color: white;
+  z-index: 1000;
+}
+
+#app-content {
+  margin: 0 auto;
+  padding: 0 15px;
+  text-align: center;
+  width: 100%;
+}
+
+/* hide the actual input element (and use label below as button) */
+.file-input input[type=file] {
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+button, .file-input label {
+  display: inline-block;
+  font-family: var(--global-font);
+  /* font-size: 1.2em; */
+  font-size: 1em;
+  cursor: pointer;
+  margin: .2em;
+  padding: .4em .8em;
+  color: white;
+  background: var(--button-blue);
+  border-radius: 5px;
+  border: 0;
+}
+
+button:active {
+  background-color: lightsteelblue;
+}
+
+button:disabled {
+  cursor: default;
+  background-color: lightskyblue;
+}
+
+/* Sadly, for option, this does nothing. */
+
+select, option {
+  font-family: var(--global-font);
+}
+
+/* tooltip for quick start on main page */
+
+.tooltip {
+  /* z-index: 2000; */
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black;
+  cursor: help;
+}
+
+.tooltip .tooltiptext {
+  z-index: 2000;
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 150%;
+  left: 50%;
+  margin-left: -60px;
+}
+
+.tooltip .tooltiptext::after {
+  z-index:3000;
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: black transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}

@@ -330,7 +330,8 @@ import ScrollBar from './ScrollBar.vue'
 import ToggleSwitch from './ToggleSwitch.vue'
 import CloseIcon from './CloseIcon.vue'
 
-const isEqual = require('lodash.isequal')
+// const isEqual = require('lodash.isequal')
+import isEqual from 'lodash/isEqual';
 
 const DRUM_CHANNEL = 9
 

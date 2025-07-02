@@ -97,14 +97,14 @@
       <div class="btn-controls">
         <div class="svg-button-container">
           <img class="first-button"
-            src="svg/start.svg"
+            :src="'svg/start.svg'"
             @click="$emit('index', start)"
           />
         </div>
 
         <div class="svg-button-container">
           <img class="prev-button"
-            src="svg/ff.svg"
+            :src="'svg/ff.svg'"
             @mousedown="() => beginIncrement('previous')"
             @mouseup="() => stopIncrement()"
           />
@@ -123,7 +123,7 @@
 
         <div class="svg-button-container">
           <img class="next-button"
-            src="svg/ff.svg"
+            :src="'svg/ff.svg'"
             @mousedown="() => beginIncrement('next')"
             @mouseup="() => stopIncrement()"
           />
@@ -131,7 +131,7 @@
 
         <div class="svg-button-container">
           <img class="last-button"
-            src="svg/start.svg"
+            :src="'svg/start.svg'"
             @click="$emit('index', end)"
           />
         </div>
@@ -360,7 +360,8 @@ rect, circle {
 import NumberInput from './NumberInput.vue';
 import { mapState, mapGetters } from 'vuex';
 
-const throttle = require('lodash.throttle');
+// const throttle = require('lodash.throttle');
+import throttle from 'lodash/throttle';
 
 export default {
   // TODO : should we keep exposing start and end as props instead of through mapState ?

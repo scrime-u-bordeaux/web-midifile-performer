@@ -105,7 +105,7 @@
 
           <p> {{ $t('guide.howToUse.interface.keyboard.describe') }} </p>
 
-          <img src="pics/guide/active_keyboard.png"/>
+          <img :src="'pics/guide/active_keyboard.png'"/>
 
         <h3> {{ $t('guide.howToUse.interface.progressBar.h3') }} </h3>
 
@@ -128,71 +128,71 @@
 
           <p v-html="$t('guide.howToUse.interface.visualizer.describe')"></p>
 
-          <img src="pics/guide/visualizer_icons.png"/>
+          <img :src="'pics/guide/visualizer_icons.png'"/>
 
           <h4> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.h4') }} </h4>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.describe') }} </p>
 
-            <img src="pics/guide/piano_roll_example.png"/>
+            <img :src="'pics/guide/piano_roll_example.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.highlight') }} </p>
 
-            <img src="pics/guide/piano_roll_example_active.png"/>
+            <img :src="'pics/guide/piano_roll_example_active.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.currentColor.green') }} </p>
 
-            <img src="pics/guide/piano_roll_example_inactive_perform.png"/>
+            <img :src="'pics/guide/piano_roll_example_inactive_perform.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.currentColor.blue') }} </p>
 
-            <img src="pics/guide/piano_roll_example_inactive_silent.png"/>
+            <img :src="'pics/guide/piano_roll_example_inactive_silent.png'"/>
 
             <p v-html="$t('guide.howToUse.interface.visualizer.pianoRoll.hoverClick')"></p>
 
-            <img src="pics/guide/piano_roll_highlight_set.png">
+            <img :src="'pics/guide/piano_roll_highlight_set.png'">
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.ctrl') }} </p>
 
-            <img src="pics/guide/piano_roll_highlight_single.png">
+            <img :src="'pics/guide/piano_roll_highlight_single.png'">
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.clickSelect') }} </p>
 
-            <img src="pics/guide/piano_roll_silent_play.png"/>
+            <img :src="'pics/guide/piano_roll_silent_play.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.pianoRoll.boundaryControl') }} </p>
 
-            <img src="pics/guide/piano_roll_boundary.png"/>
+            <img :src="'pics/guide/piano_roll_boundary.png'"/>
 
           <h4> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.h4') }} </h4>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.describe') }} </p>
 
-            <img src="pics/guide/sheet_music_example.png"/>
+            <img :src="'pics/guide/sheet_music_example.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.cursor') }} </p>
 
-            <img src="pics/guide/sheet_music_cursor.png"/>
+            <img :src="'pics/guide/sheet_music_cursor.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.highlight') }} </p>
 
-            <img src="pics/guide/sheet_music_highlight.png"/>
+            <img :src="'pics/guide/sheet_music_highlight.png'"/>
 
             <p v-html="$t('guide.howToUse.interface.visualizer.sheetMusic.hoverClick')"></p>
 
-            <img src="pics/guide/sheet_music_highlight_set.png"/>
+            <img :src="'pics/guide/sheet_music_highlight_set.png'"/>
 
             <p>{{ $t('guide.howToUse.interface.visualizer.sheetMusic.ctrl') }}</p>
 
-            <img src="pics/guide/sheet_music_highlight_single.png"/>
+            <img :src="'pics/guide/sheet_music_highlight_single.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.clickSelect') }} </p>
 
-            <img src="pics/guide/sheet_music_silent_play.png"/>
+            <img :src="'pics/guide/sheet_music_silent_play.png'"/>
 
             <p> {{ $t('guide.howToUse.interface.visualizer.sheetMusic.boundaryControl') }} </p>
 
-            <img class="final-image" src="pics/guide/sheet_music_boundary.png"/>
+            <img class="final-image" :src="'pics/guide/sheet_music_boundary.png'"/>
 
     <!-- No need to describe a feature that hasn't been implemented yet !-->
 

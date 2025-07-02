@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapActions }   from 'vuex';
+import { mapState, mapMutations, mapActions } from 'vuex';
 // import { parseArrayBuffer }         from 'midi-json-parser';
 import { encode }                   from 'json-midi-encoder';
 // import MidiPlayer                   from 'midi-player-js';
@@ -26,11 +26,12 @@ import { encode }                   from 'json-midi-encoder';
 import LeMenu                       from './components/LeMenu.vue';
 import PopUp                        from './components/PopUp.vue';
 import Guide                        from './pages/Guide.vue';
+import About                        from './pages/About.vue';
 import LookForScores                from './pages/LookForScores.vue';
 
 export default {
   inject: [ 'ioctl', 'performer', 'synth', 'defaultKeyboardVelocities' ], // get instance vars (set with provide())
-  components: { LeMenu, PopUp, Guide, LookForScores },
+  components: { LeMenu, PopUp, Guide, About, LookForScores },
 
   data() {
     return {

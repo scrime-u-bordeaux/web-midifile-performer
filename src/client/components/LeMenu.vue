@@ -3,7 +3,7 @@
 
   <div class="logo-icon">
     <a href="https://scrime.u-bordeaux.fr/" target="_blank">
-      <img src="pics/scrime-ubx.png" height="45"/>
+      <img :src="'pics/scrime-ubx.png'" height="45"/>
     </a>
   </div>
 
