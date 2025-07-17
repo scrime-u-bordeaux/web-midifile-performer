@@ -32,6 +32,7 @@
         @dragover="onDragOver"
         @drop="onDrop">
 
+        <!--
         <div class="contextualization tooltip" v-if="true || !mfpMidiFile.buffer">
           <span>
             <p>{{ $t('midiFilePerformer.contextualization.firstLine') }}</p>
@@ -40,6 +41,7 @@
           </span>
           <span class="tooltiptext">utilisez les 4 rangées de touches alphanumériques de votre clavier d'ordinateur</span>
         </div>
+        -->
 
         <div class="corpora-navigation">
           <div class="corpora-selectors">
@@ -192,6 +194,10 @@
 </template>
 
 <style scoped>
+.tooltiptext {
+  z-index: 1000;
+}
+
 .loading-screen {
   position: absolute;
   width: 100%;
@@ -258,6 +264,7 @@
 .corpora-navigation {
   display: flex;
   flex-direction: row;
+  margin-top: 1em;
 }
 
 .corpora-selectors {
@@ -390,6 +397,11 @@
 }
 .keyboard {
   max-width: var(--controls-width);
+  margin: 0.5em;
+  padding: 0;
+  visibility: hidden;
+  max-height: 0;
+  display: block !important;
 }
 .pseudo-link {
   font-style: italic;
