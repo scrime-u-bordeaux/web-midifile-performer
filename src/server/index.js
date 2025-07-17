@@ -1,25 +1,15 @@
-// const path = require('path');
-// const express = require('express');
-// const history = require('connect-history-api-fallback');
-import path from 'path';
-// import { fileURLToPath } from 'url';
+import path from 'node:path';
 import express from 'express';
+import history from 'connect-history-api-fallback'; // for vue-router history mode
 import ViteExpress from 'vite-express'; // for vite hot reloading, if needed
-
-// mimick webpack's dev server hot reload
-// const webpack = require('webpack');
-// const middleware = require('webpack-dev-middleware'); //webpack hot reloading middleware
-// const compiler = webpack({}); //move your `devServer` config from `webpack.config.js`
 
 import Corpora from './Corpora.js';
 
-const __dirname = import.meta.dirname;
-console.log(__dirname);
-//const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
-//const __dirname = path.dirname(__filename); // get the name of the directory
+const basePath = process.env.PUBLIC_PATH || '/';
 
-// const guido = require('@grame/guidolib');
-const corpora = new Corpora('corpora/').build(path.join(__dirname, '../dependencies/dcml_corpora_musicxml_exports'));
+const __dirname = import.meta.dirname;
+
+const corpora = new Corpora().build(path.join(__dirname, '../dependencies/dcml_corpora_musicxml_exports'));
 
 const app = express();
 
@@ -27,26 +17,16 @@ const app = express();
 //   // webpack-dev-middleware options
 // }));
 
-// app.use(history()); // use this once figured out how to pass env vars to webpack
-// app.use(history({
-//   rewrites: [
-//     // { from: '*', to: '' }
-//   ]
-// }));
-
-// app.use(express.static(path.join(process.cwd(), 'dist')));
-// app.use(express.static('dist'));
-
 // our mini corpora API :
 // * get the list of corpora at /corpora
 // * get files by <corpusname> <filename> requests like /corpora/:corpus/:piece
 
-app.get('/corpora', (req, res) => {
+app.get(`/corpora`, (req, res) => {
   console.log('corpora required');
   res.send(corpora);
 });
 
-app.get('/corpora/:corpus/:piece', (req, res) => {
+app.get(`/corpora/:corpus/:piece`, (req, res) => {
   const { piece, corpus } = req.params;
   // console.log(`piece ${piece} required from corpus ${corpus}`);
   const filePath = path.join(
@@ -58,10 +38,43 @@ app.get('/corpora/:corpus/:piece', (req, res) => {
 });
 
 // '/' seems to default to the index.html in the static folder (?)
-// app.get('/{*any}', (req, res) => {
-//   // res.redirect(`${(process.env.PUBLIC_PATH + '/') || '/'}/#/404`);
-//   res.redirect(`${process.env.PUBLIC_PATH || '/'}/#/404`);
-// });
+if (process.env.NODE_ENV === 'production') { 
+  // app.use(`${basePath}`, express.static(path.join(__dirname, '../../dist')));
+  app.use('/', express.static(path.join(__dirname, '../../dist')));
+  // app.get(`${basePath}`, (req, res) => {
+  app.get('/', (req, res) => {
+  //   console.log(req.url);
+    res.sendFile(path.join(__dirname, '../../dist/index.html'))
+  });
+  // app.get('/{*any}', (req, res) => {
+  //   console.log('redirecting to 404');
+  //   res.redirect(`${basePath}/doc`);
+  //   // res.redirect('/404');
+  // });
+} else {
+  // app.get(/\/.+/, (req, res, next) => {
+  //   console.log(req.url);
+  //   res.redirect(`${basePath}/#/404`);
+  // });
+}
+
+app.use(history({
+  disableDotRule: true,
+  htmlAcceptHeaders: [
+    'text/html',
+    'application/xhtml+xml'
+  ],
+  rewrites: [
+    {
+      from: /^.*$/,
+      to: function(ctx) {
+        // console.log(ctx.parsedUrl);
+        // console.log('redirecting to 404');
+        return `${basePath}/404`; // redirect to 404 page
+      },
+    }
+  ]
+}));
 
 const serverPort = process.env.PORT || 8000;
 
@@ -69,8 +82,3 @@ ViteExpress.listen(app, serverPort, () => {
   console.log(`.Env port : ${process.env.PORT}`);
   console.log(`Server is listening on port ${serverPort}...`)
 });
-
-// app.listen(serverPort, () => {
-//   console.log(`.Env port : ${process.env.PORT}`)
-//   console.log(`Express listening on port ${serverPort}`);
-// });

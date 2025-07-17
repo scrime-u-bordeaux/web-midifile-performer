@@ -8,10 +8,11 @@ import pages from './pages';
 
 const router = createRouter({
   // '/' seems sufficient for local dev and prod with nginx reverse proxy :
-  history: createWebHashHistory('/'),
-  // history: createWebHashHistory(process.env.PUBLIC_PATH),
+  // history: createWebHashHistory('/'),
+  // history: createWebHashHistory(import.meta.env.BASE_URL),
 
-  // history: createWebHistory(process.env.PUBLIC_PATH),
+  // history: createWebHistory('/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
@@ -28,31 +29,6 @@ const router = createRouter({
       name: 'About',
       component: pages.About,
     },
-    // {
-    //   path: '/',
-    //   name: 'Home',
-    //   component: pages.Home,
-    // },
-    // {
-    //   path: '/first-steps',
-    //   name: 'FirstSteps',
-    //   component: pages.FirstSteps,
-    // },
-    // {
-    //   path: '/midifile-performer',
-    //   name: 'MidifilePerformer',
-    //   component: pages.MidifilePerformer,
-    // },
-    // {
-    //   path: '/credits',
-    //   name: 'Credits',
-    //   component: pages.Credits
-    // },
-    // {
-    //   path: '/guide',
-    //   name: 'Guide',
-    //   component: pages.Guide,
-    // },
     {
       path: '/look-for-scores',
       name: 'LookForScores',
@@ -62,7 +38,7 @@ const router = createRouter({
       path: '/:catchAll(.*)',
       name: 'NotFound',
       component: pages.NotFound,
-    }
+    },
   ],
 });
 
