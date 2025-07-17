@@ -3,13 +3,13 @@ import express from 'express';
 import history from 'connect-history-api-fallback'; // for vue-router history mode
 import ViteExpress from 'vite-express'; // for vite hot reloading, if needed
 
-import Corpora from './Corpora.js';
+import buildCorpora from './buildCorpora.js';
 
 const basePath = process.env.PUBLIC_PATH || '/';
 
 const __dirname = import.meta.dirname;
 
-const corpora = new Corpora().build(path.join(__dirname, '../dependencies/dcml_corpora_musicxml_exports'));
+const corpora = buildCorpora(path.join(__dirname, '../dependencies/dcml_corpora_musicxml_exports'));
 
 const app = express();
 
