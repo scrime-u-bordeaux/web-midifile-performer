@@ -160,43 +160,43 @@ Because they are the only alternative to setting URLs with event listeners,
 Which is UNGODLY slow.*/
 
 img.piano.on {
-  content: url('../assets/pics/piano_icon_on_normal.png')
+  content: url('../pics/piano_icon_on_normal.png')
 }
 
 img.piano.on:hover {
-  content: url('../assets/pics/piano_icon_on_hover.png')
+  content: url('../pics/piano_icon_on_hover.png')
 }
 
 img.piano.off {
-  content: url('../assets/pics/piano_icon_off_normal.png')
+  content: url('../pics/piano_icon_off_normal.png')
 }
 
 .img-and-touch-feedback:not(.disabled) img.piano.off:hover {
-  content: url('../assets/pics/piano_icon_off_hover.png')
+  content: url('../pics/piano_icon_off_hover.png')
 }
 
 img.volume.on, img.volume.expander {
-  content: url('../assets/pics/volume_icon_on_normal.png')
+  content: url('../pics/volume_icon_on_normal.png')
 }
 
 img.volume.on:hover, img.volume.expander:hover, .img-and-touch-feedback:has(+ span:hover) img.volume.expander {
-  content: url('../assets/pics/volume_icon_on_hover.png')
+  content: url('../pics/volume_icon_on_hover.png')
 }
 
 img.volume.off {
-  content: url('../assets/pics/volume_icon_off_normal.png')
+  content: url('../pics/volume_icon_off_normal.png')
 }
 
 img.volume.off:hover {
-  content: url('../assets/pics/volume_icon_off_hover.png')
+  content: url('../pics/volume_icon_off_hover.png')
 }
 
 img.sliders.displayed, img.sliders.not-displayed:hover {
-  content: url('../assets/pics/sliders_enabled.png')
+  content: url('../pics/sliders_enabled.png')
 }
 
 img.sliders.not-displayed, img.sliders.displayed:hover {
-  content: url('../assets/pics/sliders_disabled.png')
+  content: url('../pics/sliders_disabled.png')
 }
 
 .touch-feedback {
