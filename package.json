@@ -12,7 +12,7 @@
   },
   "scripts": {
     "dev": "nodemon src/server/index.js -w src/server",
-    "start": "NODE_ENV=production node src/server/main.js",
+    "start": "NODE_ENV=production node src/server/index.js",
     "build": "vite build"
   },
   "repository": {
@@ -43,6 +43,7 @@
     "musicxml-interfaces": "^0.0.21",
     "opensheetmusicdisplay": "^1.8.9",
     "vite-express": "^0.21.1",
+    "vite-plugin-vue-devtools": "^7.7.7",
     "vue": "^3.5.17",
     "vue-i18n": "^11.1.7",
     "vue-router": "^4.5.1",
