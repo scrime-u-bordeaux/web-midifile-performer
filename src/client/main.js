@@ -27,6 +27,8 @@ Promise.all([
 
   const app = createApp(App);
 
+  app.config.globalProperties.$baseUrl = router.options.history.base;
+
   // Exterior dependencies
 
   app.use(i18n);
@@ -38,7 +40,7 @@ Promise.all([
   app.provide('DEFAULT_IO_ID', DEFAULT_IO_ID)
   app.provide('NUMBER_OF_KEYS', NUMBER_OF_KEYS)
   app.provide('NUMBER_OF_SOUNDFILES', NUMBER_OF_SOUNDFILES)
-
+  
   // Default variables
 
   app.provide('defaultMidiInput', defaultInputs);
