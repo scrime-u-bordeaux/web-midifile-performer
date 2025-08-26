@@ -55,10 +55,10 @@
       "secondLine": "You can use an external MIDI controller, or your computer keyboard.",
       "thirdLine": "Try altering legato, tempo or velocity."
     },
-    "upload": {
-      "first": "Upload a MIDI/MusicXML file",
-      "change": "Upload a different file"
-    },
+    "openBtn": "Open current selected corpus file",
+    "uploadBtn": "Upload a MIDI or MusicXML file",
+    "settingsBtn": "Modify settings",
+    "helpBtn": "Help",
     "export": "Export",
     "noScores": {
       "message": "Looking for scores? You can find some",
@@ -74,9 +74,7 @@
       "measure": "Every bar",
       "beat": "Every beat",
       "all": "Every event"
-    },
-    "help": "? Help",
-    "settings": "⚙ Settings"
+    }
   },
   "credits": {
     "metapiano": "Metapiano demonstration video",
@@ -351,7 +349,8 @@
   },
   "loading": {
     "afterClick": "Loading synth samples...",
-    "beforeClick": "Please click anywhere to load the synth.",
+    "beforeClickSynth": "Please click anywhere to load the synth.",
+    "beforeClick": "Click anywhere to start the app.",
     "fetched": "Samples fetched:",
     "decoded": "Samples decoded:",
     "midiAccess": "Requesting MIDI access from browser",

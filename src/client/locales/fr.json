@@ -55,10 +55,10 @@
       "secondLine": "Vous pouvez utiliser un contrôleur MIDI externe, ou bien votre clavier d'ordinateur.",
       "thirdLine": "Essayez de jouer sur le legato, le tempo, ou encore la vélocité."
     },
-    "upload": {
-      "first": "Charger un fichier MIDI/MusicXML",
-      "change": "Changer de fichier"
-    },
+    "openBtn": "Ouvrir le fichier du corpus sélectionné",
+    "uploadBtn": "Charger un fichier MIDI ou MusicXML",
+    "settingsBtn": "Modifier les paramètres",
+    "helpBtn": "Aide",
     "export": "Exporter",
     "noScores": {
       "message": "Vous n'avez pas de partitions ? Trouvez-en de nouvelles",
@@ -74,9 +74,7 @@
       "measure": "À la mesure",
       "beat": "Au battement",
       "all": "À la note"
-    },
-    "help": "? Aide",
-    "settings": "⚙ Paramètres"
+    }
   },
   "credits": {
     "metapiano": "Métapiano et vidéo de l'interprétation",
@@ -351,7 +349,8 @@
   },
   "loading": {
     "afterClick": "Chargement des samples...",
-    "beforeClick": "Veuillez cliquer sur la page pour charger le synthétiseur.",
+    "beforeClickSynth": "Veuillez cliquer sur la page pour charger le synthétiseur.",
+    "beforeClick": "Cliquez sur la page pour démarrer l'application.",
     "fetched": "Samples récupérés :",
     "decoded": "Samples décodés :",
     "midiAccess": "Demande d'accès MIDI au navigateur",

@@ -45,24 +45,37 @@
 
         <div class="corpora-navigation">
           <div class="corpora-selectors">
-            <select id="corpus-selector" ref="corpus-selector" @change="onCorpusChanged">
+            <select id="corpus-selector" ref="corpus-selector" title="corpus" @change="onCorpusChanged">
               <option v-for="corpus in Object.keys(corpora)" :value="corpus">
                 {{ corpus }}
               </option>
             </select>
-            <select ref="piece-selector">
+            <select id="piece-selector" ref="piece-selector" title="piece" @change="onPieceChanged">
               <option v-for="piece in corpora[selectedCorpus]" :value="piece.name">
                 {{ piece.name }}
               </option>
             </select>
           </div>
           <div class="corpora-buttons">
+            <OpenBtn
+              :title="$t('midiFilePerformer.openBtn')"
+              @click="loadSelectedPiece"
+              style="padding: .4em;"/>
+            <UploadBtn
+              :title="$t('midiFilePerformer.uploadBtn')"
+              style="padding: 0;"
+              :padding="'.35em'"
+              @change="onFileInput"/>
+            <GearBtn
+              :title="$t('midiFilePerformer.settingsBtn')"
+              @click="openSettings"
+              style="padding: .35em;"/>
             <button
-              @click="loadSelectedPiece">
-              <!-- @click="$router.push('/guide')"> -->
-              <!-- {{ $t("midiFilePerformer.help") }} -->
-              Charger
-            </button>            
+              style="display: none;"
+              :title="$t('midiFilePerformer.helpBtn')"
+              @click="$router.push('/doc')">
+              ?
+            </button>
           </div>
         </div>
 
@@ -138,6 +151,7 @@
           @speed="onSpeedChange"
           @silence="onSilence"/>
 
+        <!--
         <div class="file-and-control">
           <div class="file-input-wrapper">
             <div class="file-input" :class="!mfpMidiFile.buffer ? 'align-column' : ''">
@@ -162,7 +176,7 @@
                 {{ $t("midiFilePerformer.help") }}
               </button>
 
-              <button
+              <button class="settings-button"
                 @click="openSettings">
                 {{ $t('midiFilePerformer.settings') }}
               </button>
@@ -176,10 +190,11 @@
             </div>
           </div>
         </div>
-
+        
         <div v-if="!!mfpMidiFile.buffer" class="search-score-hint link" @click="$router.push('/look-for-scores')">
           {{ $t('midiFilePerformer.noScores.standalone') }}
         </div>
+      -->
       </div>
     </div>
     
@@ -264,27 +279,81 @@
 .corpora-navigation {
   display: flex;
   flex-direction: row;
-  margin-top: 1em;
+  width: var(--score-width);
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .corpora-selectors {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  /* align-items: center; */
+  /* justify-content: start; */
+  /* flex: 0 1 auto; */
+  /* align-self: stretch; */
+  /* word-break: break-word; */
+  /* display: flex; */
+  flex: 1; /* prend tout l’espace restant */
+  gap: 0.5rem;
+  flex-wrap: wrap; /* or nowrap in case we run into wrapping issues again */
+  /* important pour que le contenu des selects ne force pas la croissance */
+  min-width: 0;
 }
 
-#corpus-selector {
-  margin-bottom: .25em;
+.corpora-selectors select {
+  /* croissance égale, base nulle */
+  flex: 1 1 0; 
+  /* partage l’espace disponible avec les autres selects */
+  /* flex: 1; */
+  /* évite que ça devienne trop petit */
+  /* min-width: 100px; */
+  min-width: 0;
+  max-width: 100%; /* évite que ça devienne trop grand */
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* padding: 0.25rem; */
+}
+
+.corpora-buttons button, .corpora-buttons div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 1.75em;
+  width: 2em;
+  /* padding: .5em; */
+  font-weight: bold;
+  /* background: none; */
+  /* border: none; */
+  /* cursor: pointer; */
+  /* color: var(--hint-blue); */
+}
+
+.file-name {
+  padding: 0 1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .corpora-buttons {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: end;
+  /* flex: 1 0 auto; */
+  flex: 0;
+  /* word-break: break-word; */
 }
 
 .mfp-bottom-controls {
   margin: 0 auto;
+  margin-top: 1em;
+  margin-bottom: 2em;
 }
 
 .mfp-and-controls.hide {
@@ -397,7 +466,8 @@
 }
 .keyboard {
   max-width: var(--controls-width);
-  margin: 0.5em;
+  /* margin: 0.5em; */
+  margin: 0;
   padding: 0;
   visibility: hidden;
   max-height: 0;
@@ -425,6 +495,9 @@ import { nextTick } from 'vue';
 import { mapMutations, mapGetters, mapState } from 'vuex';
 import Keyboard from '../components/Keyboard.vue';
 import ScrollBar from '../components/ScrollBar.vue';
+import OpenBtn from '../components/OpenBtn.vue';
+import UploadBtn from '../components/UploadBtn.vue';
+import GearBtn from '../components/GearBtn.vue';
 import ChannelManager from '../components/ChannelManager.vue';
 import PerformGranularity from '../components/PerformGranularity.vue';
 import LoadingScreen from '../components/LoadingScreen.vue';
@@ -444,6 +517,7 @@ export default {
     'ioctl',
     'performer',
     'parseMusicXml',
+    'generateDigestXmlTitle',
     'getRootFileFromMxl',
     'defaultMidiInput',
     'defaultKeyboardVelocities',
@@ -454,6 +528,9 @@ export default {
   components: {
     Keyboard,
     ScrollBar,
+    OpenBtn,
+    UploadBtn,
+    GearBtn,
     ChannelManager,
     PerformGranularity,
     LoadingScreen,
@@ -467,6 +544,7 @@ export default {
     return {
       selectedVisualizer: null, // computed properties cannot be accessed in data
       loadingFlag: false,
+
       fileArrayBuffer: null,
       spacePressed: false,
       pauseWithRelease: false,
@@ -475,6 +553,8 @@ export default {
       noUpdateTriggers: false,
       corpora: {},
       selectedCorpus: undefined,
+      loadedCorpus: undefined,
+      loadedFile: undefined,
     };
   },
   computed: {
@@ -506,10 +586,13 @@ export default {
       return this.selectedVisualizer === "sheet"
     },
     trimmedTitle() {
+      /*
       return this.mfpMidiFile.title.replace(this.fileExtension, '').length < 45 ?
         this.mfpMidiFile.title : this.mfpMidiFile.title.slice(0,45)
         + " ... "
         + this.fileExtension
+      */
+     return this.mfpMidiFile.title;
     },
     fileExtension() {
       return '.' + this.getFileExtension(this.mfpMidiFile.title)
@@ -715,11 +798,16 @@ export default {
         isFileMusicXml.isCompressed ?
           this.getRootFileFromMxl(file) :
           file.text()
-      )
+      );
+
+      const title = !isFileSignatureMidi
+                  ? (this.generateDigestXmlTitle(fileContents) || file.name)
+                  : file.name;
+
 
       const mfpFile = {
         id: 'mfp',
-        title: file.name,
+        title: file.corpus ? `${file.corpus} / ${title}` : title,
         url: '',
         isMidi: isFileSignatureMidi,
         musicXmlString: isFileSignatureMidi ? '' : fileContents,
@@ -732,14 +820,15 @@ export default {
       this.resetChannelControls()
 
       // Otherwise wait for the SheetMusic to finish rendering
-      if(mfpFile.isMidi) this.loadingFlag = false;
+      if (mfpFile.isMidi) this.loadingFlag = false;
       // (no, await'ing this.$refs.sheetMusic.updateScore() here instead of doing it in a watcher
       // will not work ; I tried.)
     },
 
     musicXmlToMidi(xmlString) {
       try {
-        return this.parseMusicXml(xmlString)
+        const midiJson = this.parseMusicXml(xmlString);
+        return midiJson;
       } catch(e) {
         this.loadingFlag = false;
         throw new Error("MusicXML parsing failed", {cause: e});
@@ -751,8 +840,10 @@ export default {
       const piece = this.$refs['piece-selector'].value;
 
       this.loadingFlag = true;
+      console.log(`Loading piece ${piece} from corpus ${corpus}`);
       const res = await fetch(`corpora/${corpus}/${piece}`);
       const blob = await res.blob();
+      blob.corpus = corpus;
       blob.name = piece;
       await this.loadFile(blob);
       this.setAppropriateVisualizer();
