@@ -5,8 +5,9 @@ import ioctl, { defaultInputs, DEFAULT_IO_ID } from './utilities/IOController';
 import performer          from './utilities/MidifilePerformer';
 import synth, { NUMBER_OF_KEYS, NUMBER_OF_SOUNDFILES }  from './utilities/Synth';
 
-import parseMusicXml from '../shared/musicxml/MusicXMLParser';
-import getRootFileFromMxl from '../shared/musicxml/MXLParser';
+import parseMusicXml from './utilities/musicxml/MusicXMLParser';
+import generateDigestXmlTitle from './utilities/musicxml/MusicXMLHeaderParser';
+import getRootFileFromMxl from './utilities/musicxml/MXLParser';
 
 import * as polyfills from './polyfills';
 
@@ -27,6 +28,7 @@ Promise.all([
 
   const app = createApp(App);
 
+  // no need to make a plugin for this, just inject the base URL
   app.config.globalProperties.$baseUrl = router.options.history.base;
 
   // Exterior dependencies
@@ -57,6 +59,7 @@ Promise.all([
   // TODO : However, for these, use direct imports from components instead.
   // They are functions and have no this-binding problem.
   app.provide('parseMusicXml', parseMusicXml)
+  app.provide('generateDigestXmlTitle', generateDigestXmlTitle)
   app.provide('getRootFileFromMxl', getRootFileFromMxl)
 
   app.mount('#app');
