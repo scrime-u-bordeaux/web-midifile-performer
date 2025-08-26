@@ -56,7 +56,7 @@
       "thirdLine": "Try altering legato, tempo or velocity."
     },
     "openBtn": "Open current selected corpus file",
-    "uploadBtn": "Upload a MIDI or MusicXML file",
+    "uploadBtn": "Import a MIDI or MusicXML file",
     "settingsBtn": "Modify settings",
     "helpBtn": "Help",
     "export": "Export",

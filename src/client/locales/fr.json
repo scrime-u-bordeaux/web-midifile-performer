@@ -56,7 +56,7 @@
       "thirdLine": "Essayez de jouer sur le legato, le tempo, ou encore la vélocité."
     },
     "openBtn": "Ouvrir le fichier du corpus sélectionné",
-    "uploadBtn": "Charger un fichier MIDI ou MusicXML",
+    "uploadBtn": "Importer un fichier MIDI ou MusicXML",
     "settingsBtn": "Modifier les paramètres",
     "helpBtn": "Aide",
     "export": "Exporter",
