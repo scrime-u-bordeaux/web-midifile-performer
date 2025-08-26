@@ -1,9 +1,11 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import history from 'connect-history-api-fallback'; // for vue-router history mode
 import ViteExpress from 'vite-express'; // for vite hot reloading, if needed
 
 import buildCorpora from './buildCorpora.js';
+
 
 const basePath = process.env.PUBLIC_PATH || '/';
 
@@ -22,7 +24,7 @@ const app = express();
 // * get files by <corpusname> <filename> requests like /corpora/:corpus/:piece
 
 app.get(`/corpora`, (req, res) => {
-  console.log('corpora required');
+  // console.log('corpora required');
   res.send(corpora);
 });
 
@@ -33,6 +35,7 @@ app.get(`/corpora/:corpus/:piece`, (req, res) => {
     corpora[corpus].find(p => p.name === piece).path,
     piece
   );
+
   // console.log(`sending file at location : ${filePath}`);
   res.sendFile(filePath);
 });
