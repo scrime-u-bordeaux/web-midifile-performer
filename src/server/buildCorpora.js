@@ -1,9 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-function buildCorpora(corporaDir = "") {
+// blackList is of the form { "corpusName": "*", "corpusName2" : [ "aaa", "bbb", "ccc" ] }
+
+function buildCorpora(corporaDir = "", whiteList = {}, blackList = {}) {
+  if (!fs.existsSync(corporaDir)) {
+    console.warn(`corpora directory ${corporaDir} does not exist`);
+    return {};
+  }
+
   const corporaDirs = fs.readdirSync(corporaDir, { withFileTypes: true })
-    .filter(d => d.isDirectory() && d.name !== '.git')
+    .filter(d => d.isDirectory() && d.name !== '.git' && blackList[d.name] !== '*')
     .sort((d1, d2) => d1.name < d2.name);
 
   const walkFolder = (folder, parentFolderContents = []) => {
@@ -37,7 +44,15 @@ function buildCorpora(corporaDir = "") {
 
   for (let i = 0; i < corporaDirs.length; ++i) {
     const corpusDir = corporaDirs[i];
-    const corpusContents = walkFolder(corpusDir, []);
+    const corpusContents = walkFolder(corpusDir, []).filter(f => {
+      if (Array.isArray(whiteList[corpusDir.name])) {
+        return whiteList[corpusDir.name].indexOf(f.name) !== -1;
+      }
+      if (Array.isArray(blackList[corpusDir.name])) {
+        return blackList[corpusDir.name].indexOf(f.name) === -1;
+      }
+      return true;
+    });
     res[corpusDir.name] = corpusContents;
   }
   return res;
