@@ -198,6 +198,7 @@
       </div>
     </div>
     
+    <!--
     <PerformGranularity
         v-show="!mfpMidiFile.isMidi"
         ref="performGranularity"
@@ -205,6 +206,10 @@
         :modelValue="musicXmlGranularity"
         @update:modelValue="changeMusicXmlGranularity"
       />
+    -->
+    <AssistanceSettings
+        v-show="!mfpMidiFile.isMidi"
+    />
   </div>
 </template>
 
@@ -509,6 +514,7 @@ import Settings from '../components/Settings.vue';
 
 // const isEqual = require('lodash.isequal');
 import isEqual from 'lodash/isEqual';
+import AssistanceSettings from '../components/AssistanceSettings.vue';
 
 const MIDI_FILE_SIGNATURE = [..."MThd"].map(c => c.charCodeAt())
 
@@ -538,7 +544,8 @@ export default {
     SheetMusic,
     PianoRollBtn,
     PianoRoll,
-    Settings
+    Settings,
+    AssistanceSettings,
   },
   data() {
     return {
@@ -572,11 +579,15 @@ export default {
       'synthNotesDecoded',
       'preferredVisualizer',
       'preferredVelocityStrategy',
-      'conserveVelocity'
+      'conserveVelocity',
+      'measurePlayIsDisabled',
+      'beatPlayIsDisabled',
+      'performGranularity',
+      'autoAdaptTempo',
     ]),
 
     ...mapGetters([
-      'isModeSilent'
+      'isModeSilent',
     ]),
 
     pianoRollSelected() {
@@ -641,7 +652,15 @@ export default {
 
     looping(newVal, oldVal) {
       this.performer.setLooping(newVal)
-    }
+    },
+
+    performGranularity(newVal, oldVal) {
+      this.changeMusicXmlGranularity(newVal)
+    },
+
+    autoAdaptTempo(newVal, oldVal) {
+      // TODO
+    },
   },
   created() {
     this.preloadAllImages()
@@ -965,11 +984,13 @@ export default {
     },
 
     onIsMeasurePlayDisabled(isIt) {
-      this.$refs.performGranularity.updateIsMeasurePlayDisabled(isIt)
+      this.measurePlayIsDisabled = isIt
+      //this.$refs.assistanceSettings.updateMeasurePlayIsDisabled(isIt)
     },
 
     onIsBeatPlayDisabled(isIt) {
-      this.$refs.performGranularity.updateIsBeatPlayDisabled(isIt)
+      this.beatPlayIsDisabled = isIt
+      //this.$refs.assistanceSettings.updateBeatPlayIsDisabled(isIt)
 
       // Tell OSMD not to draw time signatures if the file has none,
       // Because it would give it a 4/4 time signature by default :

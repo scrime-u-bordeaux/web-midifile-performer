@@ -150,7 +150,15 @@ const store = createStore({
       // because modifying *any* of them means reconstructing the performer from scratch.
       performerConstructorOptions: startingSettings.performer.constructorOptions,
 
-      meta: metaJson
+      // Shall we really expose these ?
+      measurePlayIsDisabled: true,
+      beatPlayIsDisabled: true,
+
+      // These are assistance settings
+      performGranularity: 'all',
+      autoAdaptTempo: false,
+
+      meta: metaJson,
     };
   },
   getters: {
@@ -199,6 +207,16 @@ const store = createStore({
           conserveVelocity: state.conserveVelocity,
           constructorOptions: toRaw(state.performerConstructorOptions),
         }
+      }
+    },
+
+    measurePlayIsDisabled: state => state.measurePlayIsDisabled,
+    beatPlayIsDisabled: state => state.beatPlayIsDisabled,
+
+    currentAssistanceSettings: state => {
+      return {
+        performGranularity: state.performGranularity,
+        autoAdaptTempo: state.autoAdaptTempo,
       }
     }
   },
@@ -257,7 +275,6 @@ const store = createStore({
     },
 
     updateSettings(state, settings) {
-
       state.currentInputIds = settings.io.inputIds
       state.currentOutputId = settings.io.outputId
       state.currentKeyboardVelocities = settings.io.keyboardRowVelocities
@@ -272,6 +289,27 @@ const store = createStore({
       state.performerConstructorOptions = settings.performer.constructorOptions
 
       localStorage.setItem("settings", JSON.stringify(settings))
+    },
+
+    updateMeasurePlayIsDisabled(state, isIt) {
+      state.measurePlayIsDisabled = isIt
+    },
+
+    updateBeatPlayIsDisabled(state, isIt) {
+      state.beatPlayIsDisabled = isIt
+    },
+
+    updatePerformGranularity(state, value) {
+      state.performGranularity = value
+    },
+
+    updateAutoAdaptTempo(state, value) {
+      state.autoAdaptTempo = value
+    },
+
+    updateAssistanceSettings(state, settings) {
+      state.performGranularity = settings.performGranularity
+      state.autoAdaptTempo = settings.autoAdaptTempo
     },
 
     // Channel-based settings are not to be saved, and thus are stored separately.

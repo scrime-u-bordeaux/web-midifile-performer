@@ -1,4 +1,5 @@
-<template lang="html">
+<!-- <template lang="html"> -->
+<template>
   <div class="granularities-container">
     <GranMeasureIcon
       style="width: 200px; height: auto; margin-bottom: 0.5em;"
@@ -27,9 +28,9 @@
 
 <style lang="css" scoped>
 .granularities-container {
-  position: absolute;
-  right: 0;
-  padding: 15px 15px 0 0;
+  /* position: absolute; */
+  /* right: 0; */
+  /* padding: 15px 15px 0 0; */
   background-color: rgba(255,255,255,0.75);
 }
 
@@ -64,6 +65,7 @@ img {
 <script>
 import GranMeasureIcon from './GranMeasureIcon.vue';
 import OptionTabs from './OptionTabs.vue';
+
 export default {
   components: { GranMeasureIcon, OptionTabs },
 
@@ -87,17 +89,14 @@ export default {
   },
 
   methods: {
-
     updateIsMeasurePlayDisabled(isIt) {
       if(isIt) this.disabledGranularities.add('measure')
       else this.disabledGranularities.delete('measure')
     },
-
     updateIsBeatPlayDisabled(isIt) {
       if(isIt) this.disabledGranularities.add('beat')
       else this.disabledGranularities.delete('beat')
     }
-
   }
 }
 </script>

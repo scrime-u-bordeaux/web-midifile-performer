@@ -16,7 +16,7 @@ const demoCorpus = buildCorpora(
 );
 
 const whiteList = {
-  mozart_piano_sonatas: [
+  mozart_piano_sonatas: [ // todo: check other safe files and add them
     'K331-1.musicxml',
     'K331-2.musicxml',
     'K331-3.musicxml',
